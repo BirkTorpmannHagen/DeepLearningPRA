@@ -1,0 +1,29 @@
+model_params:
+  name: 'ResNetVAE'
+  in_channels: 3
+  latent_dim: 256
+
+
+data_params:
+  data_path: "folds/ind_fold.yaml"
+  train_batch_size: 8
+  val_batch_size:  8
+  patch_size: 512
+  num_workers: 5
+
+
+exp_params:
+  LR: 0.00005
+  weight_decay: 0.0
+  scheduler_gamma: 0.95
+  kld_weight: 0.00025
+  manual_seed: 1265
+
+trainer_params:
+  devices: [1]
+  max_epochs: 500
+
+logging_params:
+  save_dir: "vae_logs/"
+  name: "nico_dim"
+  
