@@ -7,14 +7,13 @@ from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import PolynomialFeatures
 from os import listdir
 from tqdm import tqdm
-from scipy.stats import ks_2samp
+from scipy.stats import ks_2samp, mannwhitneyu
 from sklearn.preprocessing import StandardScaler
 from os.path import join
 import pygam
 import matplotlib.patches as patches
 
 from scipy.stats import spearmanr, pearsonr, kendalltau
-from metrics import ba, spearman, pearson, kendall, auroc, variance
 
 pd.set_option("display.precision", 3)
 pd.set_option('display.float_format', lambda x: '%.3f' % x)
@@ -66,46 +65,6 @@ def merge_by_features(dataframe):
     # merged.drop("level_4", axis=1, inplace=True) #wtf pandas
     # # merged.drop("index", axis=1, inplace=True)
     # return merged
-
-def build_gam_for_all(data, simulate=False):
-    if simulate:
-        df = data[data["KS"]==True]
-    else:
-        df = data
-    df = merge_by_features(df)
-
-    # print(df["Dataset"])
-    # input()
-    for dataset in df["Dataset"].unique():
-        for shift in df["Shift"].unique():
-            X_train = df[(df["Dataset"]==dataset) & (df["Shift"]==shift)]
-            X_test = df[(df["Dataset"]==dataset) & (df["Shift"]!=shift)]
-
-            y_train = X_train["loss"].to_numpy()
-            y_test = X_test["loss"].to_numpy()
-
-            X_train = X_train.drop(columns=["level_4", "Dataset", "Shift", "fold", "loss", "KS"]).to_numpy()
-            X_test = X_test.drop(columns=["level_4", "Dataset", "Shift", "fold", "loss", "KS"]).to_numpy()
-
-            # scaler = StandardScaler()
-            # scaler.fit_transform(X_train)
-            # scaler.transform(X_test)
-            gam = pygam.LinearGAM()
-            gam.fit(X_train, y_train)
-            preds = gam.predict(X_test)
-            mape = np.mean(np.abs(preds - y_test) / np.abs(y_test))
-
-            fig, axs = plt.subplots(1, X_train.shape[1], figsize=(20, 5))
-            for i, ax in enumerate(axs):
-                XX = gam.generate_X_grid(term=i)
-                ax.plot(XX[:, i], gam.partial_dependence(term=i, X=XX))
-                ax.plot(XX[:, i], gam.partial_dependence(term=i, X=XX, width=.95)[1], c='r', ls='--')
-                ax.scatter(X_train[:, i], y_train, c='b', alpha=0.1)
-                ax.scatter(X_test[:, i], y_test, c='r', alpha=0.1)
-            fig.suptitle(f"Dataset: {dataset} Shift: {shift} MAPE: {mape}")
-            plt.show()
-            # print(f"Train: {shift}, {mape}")
-
 
 
 def get_gam_data(load=True):
@@ -195,24 +154,6 @@ def get_gam_data(load=True):
         df.to_csv(f"gam_results_ks.csv")
         return df
 
-def chatterjee_ks(df, cols=("feature_name","KS")):
-    def chatterjee_test(x, y):
-        df = pd.DataFrame(zip(x, y), columns=["x", "y"])
-        df["yranks"] = df["y"].rank()
-        df.head()
-        df = df.sort_values("x")  # Sort by the rank of X
-        df.head()
-        rank_series = df["yranks"].reset_index(drop=True)
-        diff = []
-        for i in range(len(rank_series) - 1):
-            diff.append(abs(rank_series[i + 1] - rank_series[i]))
-
-        xi = 1 - 3 * (sum(diff) / (len(y) ** 2 - 1))
-        return xi
-
-    return df.groupby(cols).apply(lambda x: chatterjee_test(x["feature"], x["loss"]))
-
-
 
 def simulate_sampling(df, samples, sample_size):
     def sample_loss_feature(group, n_samples, n_size):
@@ -222,8 +163,7 @@ def simulate_sampling(df, samples, sample_size):
             mean_loss = sample['loss'].mean()
             mean_feature = sample['feature'].mean()
             samples.append({'loss': mean_loss, 'feature': mean_feature, "KS":False})
-            # samples.append({'loss': mean_loss, 'feature': ks_2samp(df[df["fold"]=="train"]["feature"], sample['feature'])[0], "KS":True})
-        return pd.DataFrame(samples)
+          return pd.DataFrame(samples)
         # Return a DataFrame of means with the original group keys
     cols = list(df.columns)
     cols.remove("loss")
@@ -266,6 +206,8 @@ def compare_ks_vs_no_ks(sample_size):
     g.map_dataframe(sns.scatterplot, x="feature", y="loss", hue="Shift", hue_order=hues, alpha=0.5)
     g.add_legend()
     plt.show()
+
+
 def regplots(sample_size, simulate):
     def bin_Y(group, bins):
         group['feature_bin'] = pd.qcut(group['feature'], bins, labels=False, duplicates='drop')
@@ -304,35 +246,6 @@ def show_thresholding_problems():
     plt.show()
 
 
-def classification_metrics(sample_size=100, simulate=True):
-    df = load_dfs(sample_size, simulate=simulate)
-    # auroc(df)
-    variance(df)
-
-def correleations(sample_size=100, simulate=False):
-    df = load_dfs(sample_size, simulate=simulate)
-    sprm = spearman(df, cols=["Dataset", "feature_name", "KS"])
-    kndl = kendall(df, cols=["Dataset", "feature_name", "KS"])
-    prs = pearson(df, cols=["Dataset", "feature_name", "KS"])
-    chatterjee = chatterjee_ks(df, cols=["Dataset", "feature_name","KS"])
-    merged = pd.concat([sprm, kndl, prs, chatterjee], axis=1)
-    merged.rename(columns={0:"Spearman R", 1:"Kendall Tau", 2:"Pearson R", 3:"Chatterjee CC"}, inplace=True)
-    return merged.reset_index()
-
-def quantize_values_and_plot_kdes():
-    df = load_dfs(100)
-    pal = sns.cubehelix_palette(10, rot=-.25, light=.7)
-    df = df[df["loss"]!=0]
-    for dataset in df["Dataset"].unique():
-        for fname in df["feature_name"].unique():
-            subdf = df[(df["Dataset"]==dataset) &(df["feature_name"]==fname)]
-            subdf["bin"] = pd.cut(subdf["feature"], bins=5)
-            g = sns.FacetGrid(data=subdf, row="bin", aspect=15, height=1, palette=pal)
-            g.map_dataframe(sns.kdeplot, x="loss", bw_adjust=.5, clip_on=False,
-      fill=True, alpha=1, linewidth=1.5)
-            plt.show()
-
-
 def regplot_by_shift(sample_size, simulate=False):
 
     df = load_dfs(sample_size=sample_size, simulate=simulate)
@@ -347,13 +260,6 @@ def regplot_by_shift(sample_size, simulate=False):
     g = sns.FacetGrid(df, row="Shift", col="Feature", margin_titles=True, sharex=False, sharey=False)
     g.map_dataframe(sns.scatterplot, x="feature", y="loss", hue="Shift Severity", hue_order=hues)
     g.add_legend()
-    plt.show()
-
-
-def sanity_check():
-    df = load_dfs(100, simulate=False)
-    g = sns.FacetGrid(df, row="Shift", margin_titles=True)
-    g.map_dataframe(sns.kdeplot, x="feature", hue="feature_name", common_norm=False)
     plt.show()
 
 
@@ -416,25 +322,6 @@ def plot_variances(df):
     plt.show()
 
 
-def plot_sample_size_effect(load=True):
-    if load:
-        corr_df = pd.read_csv("sample_size_effect.csv")
-    else:
-        corr_dfs_by_sample_size = [correleations(sample_size=i, simulate=True) for i in [10,30,50, 100, 200, 500, 1000]]
-
-        for i, df in enumerate(corr_dfs_by_sample_size):
-            df["Sample Size"] = [5,10,30,50,75, 100, 200, 500, 1000][i]
-
-
-        corr_df = pd.concat(corr_dfs_by_sample_size)
-    corr_df["Spearman R"] = corr_df["Spearman R"].abs()
-    corr_df.to_csv("sample_size_effect.csv")
-    g = sns.FacetGrid(corr_df, row="Dataset", col="feature_name", margin_titles=True, sharex=True, sharey=True)
-    g.map_dataframe(sns.scatterplot, x="Sample Size", y="Spearman R", hue="KS")
-    # g.map_dataframe(sns.lineplot, x="Sample Size", y="Spearman R", hue="KS")
-    g.add_legend()
-    plt.show()
-
 def compare_gam_errors():
     df = get_gam_data()
     df = df[df["KS"]==False]
@@ -486,11 +373,6 @@ def gam_fits(metric="monotonic mae", KS=True):
             ax[i,j].scatter(subdf_train["feature"], subdf_train["loss"], alpha=0.5, label="train")
     plt.tight_layout()
     plt.show()
-
-
-def find_best_train_shift():
-    df = get_gam_data()
-    print(df.groupby(["train_shift"])[["monotonic mape"]].mean())
 
 if __name__ == '__main__':
     # plot_sample_size_effect()

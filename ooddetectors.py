@@ -24,10 +24,10 @@ def process_dataframe(data, filter_noise=False, combine_losses=True, filter_by_s
     data["oodness"] = data["loss"] / data[data["fold"] == "ind"]["loss"].quantile(0.95)
     return data
 
-def convert_stats_to_pandas_df(train_norms, train_loss, ind_val_features, ood_features, ind_val_losses, ood_losses, feature_name):
+def convert_stats_to_pandas_df(train_features, train_loss, ind_val_features, ood_features, ind_val_losses, ood_losses, feature_name):
     dataset = []
-    for i in range(len(train_norms)):
-        dataset.append({"fold": "train", "feature_name":feature_name, "feature": train_norms[i], "loss": train_loss[i]})
+    for i in range(len(train_features)):
+        dataset.append({"fold": "train", "feature_name":feature_name, "feature": train_features[i], "loss": train_loss[i]})
     for fold, ind_fs in ind_val_features.items():
         for i in range(len(ind_fs)):
             dataset.append({"fold": fold, "feature_name":feature_name, "feature": ind_fs[i], "loss": ind_val_losses[fold][i]})
@@ -38,22 +38,22 @@ def convert_stats_to_pandas_df(train_norms, train_loss, ind_val_features, ood_fe
     df = pd.DataFrame(dataset)
     return df
 
-def convert_to_pandas_df(train_norms, train_losses, ind_val_features, ood_features, ind_val_losses, ood_losses, feature_names):
+def convert_to_pandas_df(train_features, train_losses, ind_val_features, ind_val_losses, ind_test_features, ind_test_losses, ood_features, ood_losses, feature_names):
 
     dataframes = []
     for fi, feature_name in enumerate(feature_names):
 
         dataset = []
-        for fold, train_fs in train_norms.items():
+        for fold, train_fs in train_features.items():
             for i in range(train_fs.shape[0]):
-                print(train_norms)
-                print(i)
-                dataset.append({"fold": "train", "feature_name": feature_name, "feature": train_fs[i][fi], "loss": train_losses["train"][i]})
-        print(dataset)
-        for fold, ind_fs in ind_val_features.items():
-            for i in range(ind_fs.shape[0]):
-                dataset.append({"fold": fold, "feature_name":feature_name, "feature": ind_fs[i][fi], "loss": ind_val_losses[fold][i]})
+                dataset.append({"fold": "train", "feature_name": feature_name, "feature": train_fs[i][fi], "loss": train_losses[fold][i]})
+        for fold, ind_val_fs in ind_val_features.items():
+            for i in range(ind_val_fs.shape[0]):
+                dataset.append({"fold": fold, "feature_name":feature_name, "feature": ind_val_fs[i][fi], "loss": ind_val_losses[fold][i]})
 
+        for fold, ind_test_fs in ind_test_features.items():
+            for i in range(ind_test_fs.shape[0]):
+                dataset.append({"fold": fold, "feature_name":feature_name, "feature": ind_test_fs[i][fi], "loss": ind_test_losses[fold][i]})
         for fold, ood_fs in ood_features.items():
             for i in range(ood_fs.shape[0]):
                 dataset.append({"fold": fold, "feature_name":feature_name, "feature": ood_fs[i][fi], "loss": ood_losses[fold][i]})
@@ -90,27 +90,28 @@ class FeatureSD(BaseSD):
     def get_features(self, dataloader):
         features = np.zeros((len(dataloader), self.testbed.batch_size, self.num_features))
         if self.testbed.batch_size==1:
-            features = np.zeros((len(dataloader), self.num_features))
+            features = np.zeros((len(dataloader),1, self.num_features))
 
         for i, data in tqdm(enumerate(dataloader), total=len(dataloader)):
             x = data[0].cuda()
             feats = np.zeros((self.num_features, self.testbed.batch_size))
             for j, feature_fn in enumerate(self.feature_fns):
+                # print(feature_fn)
                 if feature_fn.__name__=="typicality":
-                    features[i,:, j]=feature_fn(self.testbed.glow, x, self.train_test_norms).detach().cpu().numpy()
+                    features[i,:, j]=feature_fn(self.testbed.glow, x, self.train_test_features).detach().cpu().numpy()
                 else:
-                    features[i,:, j]=feature_fn(self.rep_model, x, self.train_test_norms).detach().cpu().numpy()
+                    features[i,:, j]=feature_fn(self.rep_model, x, self.train_test_features).detach().cpu().numpy()
 
         features = features.reshape((len(dataloader)*self.testbed.batch_size, self.num_features))
 
         return features
 
     def get_encodings(self, dataloader):
+
         features = np.zeros((len(dataloader), self.testbed.batch_size, self.rep_model.latent_dim))
         if self.testbed.batch_size==1:
-            features = np.zeros((len(dataloader), self.num_features))
+            features = np.zeros((len(dataloader), self.rep_model.latent_dim))
         for i, data in tqdm(enumerate(dataloader), total=len(dataloader)):
-
             x = data[0].cuda()
             features[i] = self.rep_model.get_encoding(x).detach().cpu().numpy()
         return features
@@ -138,30 +139,33 @@ class FeatureSD(BaseSD):
         :return ind_sample_losses: losses for each sampler on ind fold, in correct order
         :return ood_sample_losses: losses for each sampler on ood fold, in correct order
         """
-        # sample_size=min(sample_size, len(self.testbed.ind_val_loaders()[0]))
 
-        # resubstitution estimation of entropy
-        self.train_test_norms = self.get_encodings(self.testbed.ind_test_loader()["train_test"])
+        #these features are necessary to compute before-hand in order to compute knn and typicality
+        self.train_test_features = self.get_encodings(self.testbed.ind_loader()["ind_train"])
 
         try:
-            train_norms = self.load("train_norms")
+            train_features = self.load("train_features")
             train_loss = self.load("train_loss")
-            train_test_norms = self.load("train_test_norms")
-            train_test_losses = self.load("train_test_norms")
-            ind_val_features = self.load("val_norms")
+            train_test_features = self.load("train_test_features")
+            train_test_losses = self.load("train_test_features")
+            ind_val_features = self.load("val_features")
             ind_val_losses = self.load("val_loss")
+            ind_test_features = self.load("test_features")
+            ind_test_losses = self.load("test_loss")
         except FileNotFoundError as e:
             print(e)
-            train_norms, train_loss = self.compute_features_and_loss_for_loaders(self.testbed.ind_loader())
-            ind_val_features, ind_val_losses = self.compute_features_and_loss_for_loaders(self.testbed.ind_val_loaders())
-            self.save(train_norms, "train_norms")
+            train_features, train_loss = self.compute_features_and_loss_for_loaders(self.testbed.ind_loader())
+            ind_val_features, ind_val_losses = self.compute_features_and_loss_for_loaders(self.testbed.ind_val_loader())
+            ind_test_features, ind_test_losses = self.compute_features_and_loss_for_loaders(self.testbed.ind_test_loader())
+            self.save(train_features, "train_features")
             self.save(train_loss, "train_loss")
-            self.save(self.train_test_norms, "train_test_norms")
-            self.save(ind_val_features, "val_norms")
+            self.save(ind_val_features, "val_features")
             self.save(ind_val_losses, "val_loss")
+            self.save(ind_test_features, "test_features")
+            self.save(ind_test_losses, "test_loss")
 
         ood_features, ood_losses = self.compute_features_and_loss_for_loaders(self.testbed.ood_loaders())
-        return train_norms, train_loss, ind_val_features, ood_features, ind_val_losses, ood_losses
+        return train_features, train_loss, ind_val_features,ind_val_losses, ind_test_features, ind_test_losses, ood_features,  ood_losses
 
 
 

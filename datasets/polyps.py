@@ -4,14 +4,15 @@ from os.path import join
 import albumentations as alb
 import numpy as np
 import torch
+import matplotlib.pyplot as plt
 from PIL import Image
-from torch.utils import data
+from torch.utils.data import Dataset, DataLoader
 from torch.utils.data import ConcatDataset
 from torchvision import transforms as transforms
 from torchvision.transforms import ToTensor
 
 
-class KvasirSegmentationDataset(data.Dataset):
+class KvasirSegmentationDataset(Dataset):
     """
         Dataset class that fetches images with the associated segmentation mask.
     """
@@ -44,6 +45,7 @@ class KvasirSegmentationDataset(data.Dataset):
 
 
     def __len__(self):
+        # return 16 #debug
         return self.size
 
     def __getitem__(self, index):
@@ -61,39 +63,25 @@ class KvasirSegmentationDataset(data.Dataset):
         return image,mask
 
 
-class EtisDataset(data.Dataset):
+class EtisDataset(Dataset):
     """
         Dataset class that fetches Etis-LaribPolypDB images with the associated segmentation mask.
         Used for testing.
     """
 
-    def __init__(self, path, val_alb, split="train"):
+    def __init__(self, path, trans):
         super(EtisDataset, self).__init__()
         self.path = path
         self.len = len(listdir(join(self.path, "Original")))
-        indeces = range(self.len)
-        self.train_indeces = indeces[:int(0.8*self.len)]
-        self.val_indeces = indeces[int(0.8*self.len):]
-        self.transforms = val_alb
-        self.split = split
-        if self.split=="train":
-            self.len=len(self.train_indeces)
-        else:
-            self.len=len(self.val_indeces)
+        self.transforms = trans
         self.tensor = ToTensor()
 
     def __len__(self):
         return self.len
 
     def __getitem__(self, i):
-        if self.split=="train":
-            index = self.train_indeces[i]
-        else:
-            index = self.val_indeces[i]
-
-
-        img_path = join(self.path, "Original/{}.jpg".format(index + 1))
-        mask_path = join(self.path, "GroundTruth/p{}.jpg".format(index + 1))
+        img_path = join(self.path, "Original/{}.jpg".format(i + 1))
+        mask_path = join(self.path, "GroundTruth/p{}.jpg".format(i + 1))
         image = np.asarray(Image.open(img_path))
         mask = np.asarray(Image.open(mask_path))
         image, mask = self.transforms(image=image, mask=mask).values()
@@ -101,32 +89,22 @@ class EtisDataset(data.Dataset):
         return self.tensor(image), self.tensor(mask)[0].unsqueeze(0).int()
 
 
-class CVC_ClinicDB(data.Dataset):
-    def __init__(self, path, transforms, split="train"):
+class CVC_ClinicDB(Dataset):
+    def __init__(self, path, transforms):
         super(CVC_ClinicDB, self).__init__()
+
         self.path = path
         self.len = len(listdir(join(self.path, "Original")))
         indeces = range(self.len)
         self.train_indeces = indeces[:int(0.8*self.len)]
         self.val_indeces = indeces[int(0.8*self.len):]
         self.transforms = transforms
-        self.split = split
-        if self.split=="train":
-            self.len=len(self.train_indeces)
-        else:
-            self.len=len(self.val_indeces)
         self.common_transforms = transforms
         self.tensor = ToTensor()
 
     def __getitem__(self, i):
-        if self.split=="train":
-            index = self.train_indeces[i]
-        else:
-            index = self.val_indeces[i]
-
-
-        img_path = join(self.path, "Original/{}.png".format(index + 1))
-        mask_path = join(self.path, "Ground Truth/{}.png".format(index + 1))
+        img_path = join(self.path, "Original/{}.png".format(i+ 1))
+        mask_path = join(self.path, "Ground Truth/{}.png".format(i + 1))
         image = np.asarray(Image.open(img_path))
         mask = np.asarray(Image.open(mask_path))
         image, mask = self.transforms(image=image, mask=mask).values()
@@ -134,40 +112,51 @@ class CVC_ClinicDB(data.Dataset):
         return self.tensor(image), self.tensor(mask)[0].unsqueeze(0).int()
 
     def __len__(self):
+        # return 16 #debug
+        #
         return self.len
 
+class EndoCV2020(Dataset):
+    def __init__(self, root_directory, tans):
+        super(EndoCV2020, self).__init__()
+        self.root = root_directory
+        self.mask_fnames = listdir(join(self.root, "masksPerClass", "polyp"))
+        self.mask_locs = [join(self.root, "masksPerClass", "polyp", i) for i in self.mask_fnames]
+        self.img_locs = [join(self.root, "originalImages", i.replace("_polyp", "").replace(".tif", ".jpg")) for i in
+                         self.mask_fnames]
+        self.trans = transforms.Compose([transforms.Resize((512, 512)), transforms.ToTensor()])
+        self.tensor = ToTensor()
 
-def build_polyp_dataset(root, ex=False, img_size=512):
-    if ex:
-        translist = [alb.Compose([
-            i,
-            alb.Resize(img_size, img_size)]) for i in [alb.HorizontalFlip(p=0), alb.HorizontalFlip(always_apply=True),
-                                             alb.VerticalFlip(always_apply=True), alb.RandomRotate90(always_apply=True),
-                                             ]]
-    else:
-        translist = [alb.Compose([
-            alb.Resize(img_size, img_size)])]
-    inds = []
-    vals = []
-    oods = []
-    for trans in translist:
-        cvc_train_set = CVC_ClinicDB(join(root, "CVC-ClinicDB"),trans, split="train")
-        cvc_val_set = CVC_ClinicDB(join(root, "CVC-ClinicDB"),trans, split="val")
-        kvasir_train_set = KvasirSegmentationDataset(join(root, "HyperKvasir"), train_alb=trans, val_alb=trans)
-        kvasir_val_set = KvasirSegmentationDataset(join(root, "HyperKvasir"), train_alb=trans, val_alb=trans, split="val")
-        etis_train_set = EtisDataset(join(root, "ETIS-LaribPolypDB"), trans, split="train")
-        etis_val_set = EtisDataset(join(root, "ETIS-LaribPolypDB"), trans, split="val")
 
-        inds.append(kvasir_train_set)
-        inds.append(cvc_train_set)
+    def __getitem__(self, i):
+        image = Image.open(self.img_locs[i])
+        mask = Image.open(self.mask_locs[i])
+        image = self.trans(image)
+        mask = self.trans(mask)
+        return image, mask[0].unsqueeze(0).int()
 
-        vals.append(kvasir_val_set)
-        vals.append(cvc_val_set)
+    def __len__(self):
+        # return 16 #debug
+        return len(self.mask_fnames)
 
-        oods.append(etis_train_set)
-        oods.append(etis_val_set)
 
-    ind = ConcatDataset(inds)
-    ind_val = ConcatDataset(vals)
-    ood = ConcatDataset(oods)
-    return ind, ind_val, ood
+def build_polyp_dataset(root, img_size=512):
+    train_trans = alb.Compose([alb.Resize(img_size, img_size), alb.HorizontalFlip(), alb.RandomRotate90(), alb.Transpose()])
+    val_trans = alb.Compose([alb.Resize(img_size, img_size)])
+    kvasir_root = join(root, "HyperKvasir")
+    train_dataset = KvasirSegmentationDataset(kvasir_root, train_trans, val_trans, split="train")
+    train_val = KvasirSegmentationDataset(kvasir_root, train_trans, val_trans, split="val")
+    train_test = KvasirSegmentationDataset(kvasir_root, train_trans, val_trans, split="test")
+    etis = EtisDataset(join(root, "ETIS-LaribPolypDB"), val_trans)
+    cvc = CVC_ClinicDB(join(root, "CVC-ClinicDB"), val_trans)
+    endo = EndoCV2020(join(root,"EndoCV2020"), val_trans)
+    return train_dataset, train_val, train_test, etis, cvc, endo
+
+
+if __name__ == '__main__':
+    endocv2020 = EndoCV2020("../../../Datasets/Polyps/EndoCV2020", alb.Compose([alb.Resize(512, 512)]))
+    loader = DataLoader(endocv2020, batch_size=1, shuffle=True)
+    for i, (image, mask) in enumerate(loader):
+        plt.imshow(image.squeeze(0).permute(1, 2, 0))
+        plt.imshow(mask.squeeze(0).permute(1,2,0), alpha=0.5)
+        plt.show()

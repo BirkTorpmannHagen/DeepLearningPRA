@@ -1,12 +1,7 @@
 import torch.nn
 from torch.utils.data import ConcatDataset
 
-from datasets.nico import build_nico_dataset
-from datasets.njord_dataset import build_njord_datasets
-from datasets.office31 import build_office31_dataset
-from datasets.officehome import build_officehome_dataset
 from datasets.polyps import build_polyp_dataset
-from datasets.eccv import build_ECCV
 from vae.vae_experiment import VAEXperiment
 from segmentor.deeplab import SegmentationModel
 import yaml
@@ -30,6 +25,9 @@ DEFAULT_PARAMS = {
 
 }
 class BaseTestBed:
+    """
+    Abstract class for testbeds; feel free to override for your own datasets!
+    """
     def __init__(self, num_workers=5, mode="normal"):
         self.mode=mode
         self.num_workers=5
@@ -44,63 +42,56 @@ class BaseTestBed:
 
 
     def ind_loader(self):
-        return  {"train":self.dl(self.ind)}
+        return  {"ind_train":self.dl(self.ind_train)}
+
+    def ind_val_loader(self):
+        return  {"ind_val":self.dl(self.ind_val)}
+
     def ind_test_loader(self):
-        return  {"train_test":self.dl(self.ind_test)}
+        return  {"ind_test":self.dl(self.ind_test)}
 
     def ood_loaders(self):
         if self.mode=="noise":
-            ood_sets = [self.dl(TransformedDataset(self.ind_val, additive_noise, "noise", noise)) for noise in self.noise_range]
-            dicted = dict(zip(["noise_{}".format(noise_val) for noise_val in self.noise_range], ood_sets))
-            return dicted
+            ood_sets = [self.dl(TransformedDataset(self.ind_test, additive_noise, "noise", noise)) for noise in self.noise_range]
+            loaders = dict(zip(["noise_{}".format(noise_val) for noise_val in self.noise_range], ood_sets))
         elif self.mode=="dropout":
-            ood_sets = [self.dl(TransformedDataset(self.ind_val, random_occlusion, "dropout", noise)) for
+            ood_sets = [self.dl(TransformedDataset(self.ind_test, random_occlusion, "dropout", noise)) for
                         noise in self.noise_range]
-            dicted = dict(zip(["dropout_{}".format(noise_val) for noise_val in self.noise_range], ood_sets))
-            return dicted
+            loaders = dict(zip(["dropout_{}".format(noise_val) for noise_val in self.noise_range], ood_sets))
         elif self.mode=="saturation":
-            ood_sets = [self.dl(TransformedDataset(self.ind_val, desaturate, "saturation", noise)) for
+            ood_sets = [self.dl(TransformedDataset(self.ind_test, desaturate, "saturation", noise)) for
                         noise in self.noise_range]
-            dicted = dict(zip(["contrast_{}".format(noise_val) for noise_val in self.noise_range], ood_sets))
-            return dicted
+            loaders = dict(zip(["contrast_{}".format(noise_val) for noise_val in self.noise_range], ood_sets))
         elif self.mode=="brightness":
-            ood_sets = [self.dl(TransformedDataset(self.ind_val, brightness_shift, "brightness", noise)) for
+            ood_sets = [self.dl(TransformedDataset(self.ind_test, brightness_shift, "brightness", noise)) for
                         noise in self.noise_range]
-            dicted = dict(zip(["brightness_{}".format(noise_val) for noise_val in self.noise_range], ood_sets))
-            return dicted
+            loaders = dict(zip(["brightness_{}".format(noise_val) for noise_val in self.noise_range], ood_sets))
         elif self.mode=="hue":
-            ood_sets = [self.dl(TransformedDataset(self.ind_val, hue_shift, "hue", noise)) for
+            ood_sets = [self.dl(TransformedDataset(self.ind_test, hue_shift, "hue", noise)) for
                         noise in self.noise_range]
-            dicted = dict(zip(["hue_{}".format(noise_val) for noise_val in self.noise_range], ood_sets))
-            return dicted
+            loaders = dict(zip(["hue_{}".format(noise_val) for noise_val in self.noise_range], ood_sets))
         elif self.mode=="fgsm":
-            ood_sets = [self.dl(TransformedDataset(self.ind_val, targeted_fgsm, "fgsm", noise)) for
+            ood_sets = [self.dl(TransformedDataset(self.ind_test, targeted_fgsm, "fgsm", noise)) for
                         noise in self.noise_range]
-            dicted = dict(zip(["adv_{}".format(noise_val) for noise_val in self.noise_range], ood_sets))
-            return dicted
-        elif self.mode=="multnoise":
-            ood_sets = [self.dl(TransformedDataset(self.ind_val, multiplicative_noise, "multnoise", noise)) for
-                        noise in self.noise_range]
-            dicted = dict(zip(["multnoise_{}".format(noise_val) for noise_val in self.noise_range], ood_sets))
-            return dicted
-        elif self.mode=="saltpepper":
-            ood_sets = [self.dl(TransformedDataset(self.ind_val, salt_and_pepper, "saltpepper", noise)) for
-                        noise in self.noise_range]
-            dicted = dict(zip(["saltpepper_{}".format(noise_val) for noise_val in self.noise_range], ood_sets))
-            return dicted
-        elif self.mode=="smear":
-            ood_sets = [self.dl(TransformedDataset(self.ind_val, smear, "smear", noise)) for
-                        noise in self.noise_range]
-            dicted = dict(zip(["smear_{}".format(noise_val) for noise_val in self.noise_range], ood_sets))
-            return dicted
-        else:
-            loaders =  {"ood": self.dl(self.ood)}
+            loaders = dict(zip(["adv_{}".format(noise_val) for noise_val in self.noise_range], ood_sets))
             return loaders
-
-
-    def ind_val_loaders(self):
-        loaders =  {"ind": self.dl(self.ind_val)}
+        elif self.mode=="multnoise":
+            ood_sets = [self.dl(TransformedDataset(self.ind_test, multiplicative_noise, "multnoise", noise)) for
+                        noise in self.noise_range]
+            loaders = dict(zip(["multnoise_{}".format(noise_val) for noise_val in self.noise_range], ood_sets))
+            return loaders
+        elif self.mode=="saltpepper":
+            ood_sets = [self.dl(TransformedDataset(self.ind_test, salt_and_pepper, "saltpepper", noise)) for
+                        noise in self.noise_range]
+            loaders = dict(zip(["saltpepper_{}".format(noise_val) for noise_val in self.noise_range], ood_sets))
+        elif self.mode=="smear":
+            ood_sets = [self.dl(TransformedDataset(self.ind_test, smear, "smear", noise)) for
+                        noise in self.noise_range]
+            loaders = dict(zip(["smear_{}".format(noise_val) for noise_val in self.noise_range], ood_sets))
+        else:
+            loaders =  self.get_ood_dict()
         return loaders
+
 
 
     def compute_losses(self, loader):
@@ -113,85 +104,12 @@ class BaseTestBed:
                 yhat = self.classifier(x)
                 losses[i] = criterion(yhat, y).cpu().numpy()
         return losses.flatten()
-class Office31TestBed(BaseTestBed):
-    def __init__(self, sample_size, rep_model="vae", mode="severity"):
-        super().__init__(sample_size)
-        self.trans = transforms.Compose([
-            transforms.Resize((512, 512)),
-            transforms.ToTensor(), ])
-        self.ind, self.ind_val, self.ood = build_office31_dataset("../../Datasets/office31", self.trans, self.trans)
-
-        self.num_classes = num_classes = self.ind.num_classes
-        self.contexts = len(self.ind.contexts)
-        # self.ind, self.ind_test = random_split(self.ind, [0.5, 0.5])
-        range1 = range(int(0.5 * len(self.ind)))
-        range2 = range(int(0.5 * len(self.ind)) + 2, int(len(self.ind)))
-        assert len(set(range1).intersection(range2)) == 0
-        self.ind_test = torch.utils.data.Subset(self.ind, range1)
-        self.ind = torch.utils.data.Subset(self.ind, range2)
-
-        self.classifier = ResNetClassifier.load_from_checkpoint(
-            "Office31Dataset_logs/checkpoints/epoch=95-step=13536.ckpt", num_classes=num_classes,
-            resnet_version=101).to("cuda").eval()
-        self.glow = Glow(3, 32, 4).cuda().eval()
-        self.glow.load_state_dict(torch.load("glow_logs/Office31Dataset_checkpoint/model_040001.pt"))
-        # self.rep_model = self.glow
-        # self.vae = VanillaVAE(3, 512).to("cuda").eval()
-        # self.rep_model = self.vae
-        self.mode = mode
-
-class OfficeHomeTestBed(BaseTestBed):
-    def __init__(self, sample_size, rep_model="vae", mode="severity"):
-        super().__init__(sample_size)
-        self.trans = transforms.Compose([
-            transforms.Resize((512, 512)),
-            transforms.ToTensor(), ])
-        self.ind, self.ind_val, self.ood = build_officehome_dataset("../../Datasets/OfficeHome", self.trans, self.trans)
-
-        self.num_classes = num_classes = self.ind.num_classes
-        self.contexts = len(self.ind.contexts)
-        # self.ind, self.ind_test = random_split(self.ind, [0.5, 0.5])
-        range1 = range(int(0.5 * len(self.ind)))
-        range2 = range(int(0.5 * len(self.ind)) + 2, int(len(self.ind)))
-        assert len(set(range1).intersection(range2)) == 0
-        self.ind_test = torch.utils.data.Subset(self.ind, range1)
-        self.ind = torch.utils.data.Subset(self.ind, range2)
-
-        self.classifier = ResNetClassifier.load_from_checkpoint(
-            "OfficeHome_logs/checkpoints/epoch=153-step=33572.ckpt", num_classes=num_classes,
-            resnet_version=101).to("cuda").eval()
-        self.glow = Glow(3, 32, 4).cuda().eval()
-        self.glow.load_state_dict(torch.load("glow_logs/OfficeHome_checkpoint/model_040001.pt"))
-        # self.rep_model = self.glow
-        # self.vae = VanillaVAE(3, 512).to("cuda").eval()
-        # self.rep_model = self.vae
-        self.mode = mode
-
-class ECCVTestBed(BaseTestBed):
-    def __init__(self, sample_size, rep_model="vae", mode="severity"):
-        super().__init__(sample_size)
-        self.trans = transforms.Compose([
-            transforms.Resize((512, 512)),
-            transforms.ToTensor(), ])
-        self.ind, self.ind_val, self.ind_test, self.ood = build_ECCV("../../Datasets/ECCV", self.trans, self.trans)
-        self.num_classes = num_classes = self.ind.num_classes
-        self.classifier = ResNetClassifier.load_from_checkpoint(
-            "ECCV_logs/checkpoints/epoch=96-step=85360.ckpt", num_classes=num_classes,
-            resnet_version=101).to("cuda").eval()
-        self.glow = Glow(3, 32, 4).cuda().eval()
-        self.glow.load_state_dict(torch.load("glow_logs/ECCV_checkpoint/model_040001.pt"))
-
-        # self.rep_model = self.glow
-        # self.vae = VanillaVAE(3, 512).to("cuda").eval()
-        # self.rep_model = self.vae
-        self.mode = mode
-
 
 
 class PolypTestBed(BaseTestBed):
     def __init__(self,rep_model, mode="normal"):
         super().__init__()
-        self.ind, self.ind_val, self.ood = build_polyp_dataset("../../Datasets/Polyps", ex=False)
+        self.ind_train, self.ind_val, self.ind_test, self.etis, self.cvc, self.endo = build_polyp_dataset("../../Datasets/Polyps")
         self.noise_range = np.arange(0.05, 0.3, 0.05)
         self.batch_size=1
         #vae
@@ -204,21 +122,18 @@ class PolypTestBed(BaseTestBed):
 
         #segmodel
         self.classifier = SegmentationModel.load_from_checkpoint(
-            "segmentation_logs/lightning_logs/version_14/checkpoints/epoch=199-step=64600.ckpt").to("cuda")
+            "segmentation_logs/checkpoints/best.ckpt").to("cuda")
         self.classifier.eval()
 
         #assign rep model
-        if rep_model == "vae":
-            self.rep_model = self.vae
-        elif rep_model=="glow":
-            self.glow = Glow(3, 32, 4).cuda().eval()
-            self.glow.load_state_dict(torch.load("glow_logs/Polyp_checkpoint/model_040001.pt"))
-            self.rep_model = self.glow
-        else:
-            self.rep_model = self.classifier
-
+        self.glow = Glow(3, 32, 4).cuda().eval()
+        self.glow.load_state_dict(torch.load("glow_logs/Polyp_checkpoint/model_040001.pt"))
         self.mode = mode
 
+    def get_ood_dict(self):
+        return {"EtisLaribDB":self.dl(self.etis),
+                "CVC-ClinicDB":self.dl(self.cvc),
+                "EndoCV2020":self.dl(self.endo)}
 
     def compute_losses(self, loader):
         losses = np.zeros(len(loader))

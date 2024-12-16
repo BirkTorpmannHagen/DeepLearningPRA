@@ -19,6 +19,7 @@ from torch.utils.data import DataLoader
 import pytorch_lightning as pl
 
 
+
 class SegmentationModel(pl.LightningModule):
     def __init__(self, transfer=True,
                  optimizer='adam', lr=1e-3, batch_size=16):
