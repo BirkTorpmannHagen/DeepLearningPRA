@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 
 from simulations import *
 import seaborn as sns
@@ -116,7 +117,37 @@ def plot_ba_rate_sensitivity():
     plt.show()
 
 def fetch_dsd_accuracies():
-    pass
+    data = []
+    for dsd in ["knn", "energy", "cross_entropy","typicality"]:
+        data = load_pra_df(dsd, batch_size=10, samples=1000)
+        ind_val = data["ind_val"]
+        ood_val = data[ETISLARIB]
+        ood_test = data[ENDOCV]
+        ind_test = data["ind_test"]
+        val = pd.concat(ind_val, ood_val)
+        ba = 0
+        best_tpr = 0
+        best_tnr = 0
+        for i in np.linspace(val["feature"].min(), val["feature"].max(), 100):
+            if ind_val["feature"].mean()<i<ood_val["feature"].mean():
+                tpr = (ind_val["feature"]<i).mean()
+                tnr = (ood_val["feature"]>i).mean()
+                this_ba = (tpr + tnr) / 2
+                if this_ba>ba:
+                    ba = this_ba
+                    best_tpr = tpr
+                    best_tnr = tnr
+            else:
+                tpr = (ind_val["feature"]>i).mean()
+                tnr = (ood_val["feature"]<i).mean()
+                this_ba = (tpr + tnr) / 2
+                if this_ba>ba:
+                    ba = this_ba
+                    best_tpr = tpr
+                    best_tnr = tnr
+        data.append({"dsd":dsd, "ba":ba})
+    return pd.DataFrame(data)
+
 
 def eval_rate_estimator():
     data = []
@@ -157,6 +188,7 @@ def plot_rate_estimates():
     plt.show()
 
 
+
 if __name__ == '__main__':
     # data = load_pra_df("knn", batch_size=10, samples=1000)
     # print("asdadsa")
@@ -166,4 +198,6 @@ if __name__ == '__main__':
     # plot_tpr_tnr_sensitivity()
     # plot_ba_rate_sensitivity(uniform_bernoulli(data, load=False))
     # eval_rate_estimator()
-    plot_rate_estimates()
+    #plot_rate_estimates()
+    print(fetch_dsd_accuracies())
+
