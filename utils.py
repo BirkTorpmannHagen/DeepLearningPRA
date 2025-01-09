@@ -1,11 +1,12 @@
-import albumentations as alb
-import torchvision.transforms as transforms
-import PIL.Image as img
+
 import torch
-from torch.utils import data
-import torchvision.transforms as transforms
 import torch.nn as nn
 
+
+
+ETISLARIB = "EtisLaribDB" #training set
+CVCCLINIC = "CVC-ClinicDB" #validation set
+ENDOCV = "EndoCV2020" #test set
 
 
 class WrappedResnet(nn.Module):

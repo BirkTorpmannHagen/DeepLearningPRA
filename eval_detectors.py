@@ -30,7 +30,7 @@ def collect_gradient_data(sample_range, testbed_constructor, dataset_name, grad_
 def collect_data(testbed_constructor, dataset_name, mode="noise"):
     bench = testbed_constructor("classifier", mode=mode)
 
-    features = [cross_entropy, knn, grad_magnitude, energy, softmax, typicality]
+    features = [cross_entropy, grad_magnitude, energy, typicality]
     tsd = FeatureSD(bench.classifier,features)
     tsd.register_testbed(bench)
     compute_stats(*tsd.compute_pvals_and_loss(),

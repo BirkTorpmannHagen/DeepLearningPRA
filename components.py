@@ -2,8 +2,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from pygam import LinearGAM
 
-from pra import ETISLARIB
-
+from utils import *
 
 class OODDetector:
     def __init__(self, df):
@@ -37,12 +36,15 @@ class SyntheticOODDetector:
 
 
     def predict(self, batch):
-        if batch["OOD"]: #if the sample is ood
+        # print(batch.columns)
+        # input()
+        assert batch["ood"].nunique()==1
+        if batch["ood"].all(): #if the sample is ood
             #return true with likelihood = tpr, else false (1-tpr)
-            return batch["OOD"] if np.random.rand() < self.tpr else ~batch["OOD"]
+            return 1 if np.random.rand() < self.tpr else 0
         else: #if the sample is ind
             #return true with likelihood = tnr, else false (1-tnr)
-            return batch["OOD"] if np.random.rand() < self.tnr else ~batch["OOD"]
+            return 0 if np.random.rand() < self.tnr else 1
 
     def get_likelihood(self):
         return self.tpr, self.tnr

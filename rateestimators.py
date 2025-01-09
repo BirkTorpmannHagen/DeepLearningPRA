@@ -22,10 +22,16 @@ class BernoulliEstimator(RateEstimator):
         prior_dist = beta(self.alpha, self.beta)
         self.rate = prior_dist.mean()
 
-    def update(self, trace):
+    def update_tpr_tnr(self, dsd_tpr, dsd_tnr):
+        self.tpr = dsd_tpr
+        self.tnr = dsd_tnr
+
+    def update(self, trace_list):
         """Update the posterior using DSD predictions."""
         # Compute weighted evidence for shift (alpha) and no-shift (beta)
 
+        # print(self.tpr, self.tnr)
+        trace = np.array(trace_list)
         positive_likelihood = trace * self.tpr + (1 - trace) * (1 - self.tnr)
         negative_likelihood = (1 - trace) * self.tnr + trace * (1 - self.tpr)
 
@@ -37,7 +43,9 @@ class BernoulliEstimator(RateEstimator):
         self.rate = self.get_posterior_mean()
         return self.rate
 
-
+    def sample(self, n, rate_groundtruth):
+        event = np.random.binomial(1, rate_groundtruth, n)
+        return event
 
     def get_posterior_mean(self):
         """Return the mean of the posterior distribution."""

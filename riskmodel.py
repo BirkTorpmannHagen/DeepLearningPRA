@@ -1,5 +1,6 @@
 import numpy as np
 
+from components import LossEstimator
 from rateestimators import BernoulliEstimator
 
 MISDIAGNOSIS = 6100
@@ -68,6 +69,7 @@ class RiskModelWithDSD(RiskModel):
         self.dsd_tpr, self.dsd_tnr = dsd_tpr, dsd_tnr
         self.ind_ndsd_acc  = ind_ndsd_acc
         print(f"Initializing Risk Model with {dsd_tpr, dsd_tnr, ind_ndsd_acc}")
+        self.rate_estimator.update_tpr_tnr(dsd_tpr, dsd_tnr) #todo, dumb shortcut
         self.root = RiskNode(1) #root
         self.maximum_loss = maximum_loss
         self.update_tree()
