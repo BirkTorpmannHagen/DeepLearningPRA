@@ -118,13 +118,13 @@ def plot_ba_rate_sensitivity():
 
 def fetch_dsd_accuracies():
     data = []
-    for dsd in ["knn", "energy", "cross_entropy","typicality"]:
-        data = load_pra_df(dsd, batch_size=10, samples=1000)
-        ind_val = data["ind_val"]
-        ood_val = data[ETISLARIB]
-        ood_test = data[ENDOCV]
-        ind_test = data["ind_test"]
-        val = pd.concat(ind_val, ood_val)
+    for dsd in ["knn", "energy", "cross_entropy","typicality", "grad_magnitude"]:
+        df = load_pra_df(dsd, batch_size=10, samples=100)
+        ind_val = df[df["fold"]=="ind_val"]
+        ood_val = df[df["fold"]==ETISLARIB]
+        ood_test = df[df["fold"]==ENDOCV]
+        ind_test = df[df["fold"]=="ind_test"]
+        val = pd.concat([ind_val, ood_val])
         ba = 0
         best_tpr = 0
         best_tnr = 0
@@ -145,7 +145,7 @@ def fetch_dsd_accuracies():
                     ba = this_ba
                     best_tpr = tpr
                     best_tnr = tnr
-        data.append({"dsd":dsd, "ba":ba})
+        data.append({"dsd":dsd, "ba":ba, "tpr":best_tpr, "tnr":best_tnr})
     return pd.DataFrame(data)
 
 
