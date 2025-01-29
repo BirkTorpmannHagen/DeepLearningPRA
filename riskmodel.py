@@ -15,6 +15,7 @@ class RiskNode:
         self.right = None
         self.probability = probability #probability of right child
         self.consequence = 0 #if non leaf node
+        self.corresponds_to_correct_prediction = False
 
     def is_leaf(self):
         return self.left is None and self.right is None
@@ -58,9 +59,27 @@ class RiskModel:
         # Total risk is the sum of risks from both branches
         return left_risk + right_risk
 
+    def calculate_expected_accuracy(self, node, accumulated_prob=1.0):
+        if node is None:
+            return 0
+        # Multiply the probability of the current node with the accumulated probability so far
+        current_prob = accumulated_prob * node.probability
 
-class RiskModelWithDSD(RiskModel):
-    def __init__(self, dsd_tpr, dsd_tnr, ind_ndsd_acc, maximum_loss, estimator):
+        if node.is_leaf():
+            if node.corresponds_to_correct_prediction:
+                return current_prob
+            else:
+                return 0
+
+        # Recursively calculate risk for left and right children
+        left_risk = self.calculate_expected_accuracy(node.left, current_prob)
+        right_risk = self.calculate_expected_accuracy(node.right, current_prob)
+        # Total risk is the sum of risks from both branches
+        return left_risk + right_risk
+
+
+class DetectorEventTree(RiskModel):
+    def __init__(self, dsd_tpr, dsd_tnr, ind_ndsd_acc, ind_dsd_acc, ood_ndsd_acc, ood_dsd_acc, maximum_loss, estimator):
         """
                 Binary Tree defined by the following structure:
                 ood+/- -> dsd+/- -> prediction+/- -> consequence
@@ -68,23 +87,36 @@ class RiskModelWithDSD(RiskModel):
         super().__init__(estimator)
         self.dsd_tpr, self.dsd_tnr = dsd_tpr, dsd_tnr
         self.ind_ndsd_acc  = ind_ndsd_acc
-        print(f"Initializing Risk Model with {dsd_tpr, dsd_tnr, ind_ndsd_acc}")
+        self.ood_ndsd_acc = ood_ndsd_acc
+        self.ind_dsd_acc = ind_dsd_acc
+        self.ood_dsd_acc = ood_dsd_acc
         self.rate_estimator.update_tpr_tnr(dsd_tpr, dsd_tnr) #todo, dumb shortcut
         self.root = RiskNode(1) #root
         self.maximum_loss = maximum_loss
         self.update_tree()
         # self.print_tree()
 
+        # self.print_tree()
+
     def get_true_risk_for_sample(self, is_ood, detected_as_ood, loss):
         if is_ood:
             if detected_as_ood:
-                return NECESSARY_INTERVENTION
-            else:
-                return MISDIAGNOSIS
+                if loss < self.maximum_loss:
+                    return UNNECESSARY_INTERVENTION
+                else:
+                    return NECESSARY_INTERVENTION
+            elif not detected_as_ood:
+                if loss < self.maximum_loss:
+                    return CORRECT_DIAGNOSIS
+                else:
+                    return MISDIAGNOSIS
         else:
             if detected_as_ood:
-                return UNNECESSARY_INTERVENTION
-            else:
+                if loss < self.maximum_loss:
+                    return UNNECESSARY_INTERVENTION
+                else:
+                    return NECESSARY_INTERVENTION
+            elif not detected_as_ood:
                 return CORRECT_DIAGNOSIS if loss < self.maximum_loss else MISDIAGNOSIS
 
     def update_tree(self):
@@ -96,50 +128,74 @@ class RiskModelWithDSD(RiskModel):
         self.root.right.left = RiskNode(1-self.dsd_tpr) #data is ood, dsd predicts ind
         self.root.right.right = RiskNode(self.dsd_tpr) #data is ood, dsd predicts ood
 
-        #dsd consequences
-        self.root.left.right.consquence = UNNECESSARY_INTERVENTION #data is ind, dsd predicts ood
-        self.root.right.left.consequence = MISDIAGNOSIS #data is ood, dsd predicts ind
-        self.root.right.right.consequence = NECESSARY_INTERVENTION #data is ood, dsd predicts ood
+        self.root.right.left.left = RiskNode(self.ood_ndsd_acc) #data is ood, dsd predicts ind, prediciton is correct
+        self.root.right.left.left.corresponds_to_correct_prediction = True
+        self.root.right.left.right = RiskNode(1-self.ood_ndsd_acc) #data is ood, dsd predicts ind, predictions is incorrect
+        self.root.right.right.left = RiskNode(self.ood_dsd_acc)
+        self.root.right.right.left.corresponds_to_correct_prediction = True
+        self.root.right.right.right = RiskNode(1-self.ood_dsd_acc)
 
-        #dsd predicts ind, accuracy of model
         self.root.left.left.left = RiskNode(self.ind_ndsd_acc) #data is ind, dsd predicts ind, prediction is correct
+        self.root.left.left.left.corresponds_to_correct_prediction = True
         self.root.left.left.right = RiskNode(1-self.ind_ndsd_acc) #data is ind, dsd predicts ind, prediction is incorrect
+        self.root.left.right.left = RiskNode(self.ind_dsd_acc)
+        self.root.left.right.left.corresponds_to_correct_prediction = True
+        self.root.left.right.right = RiskNode(1-self.ind_dsd_acc)
+
+        #note that no further branching is needed here, since the outcome is deterministic if dsd predicts ood
+
+        self.root.left.right.left.consquence = UNNECESSARY_INTERVENTION #data is ind, dsd predicts ood, prediction is correct
+        self.root.left.right.right.consequence = NECESSARY_INTERVENTION #data is ind, dsd predicts ood, prediction is incorrect
+        self.root.right.right.left.consequence = UNNECESSARY_INTERVENTION #data is ood, dsd predicts ood, prediction is correct
+        self.root.right.right.right.consequence = NECESSARY_INTERVENTION #data is ood, dsd predicts ood, prediction is incorrect
+
+
+        #data is ood but dsd predicts ind
+
+        self.root.right.left.left.consequence = CORRECT_DIAGNOSIS #data is ood, dsd predicts ind, prediction is correct
+        self.root.right.left.right.consequence = MISDIAGNOSIS #data is ood, dsd predicts ind, prediction is incorrect
+
+
+        #data is ind, dsd predicts ind
 
         self.root.left.left.left.consequence = CORRECT_DIAGNOSIS  # data is ind, dsd predicts ind, prediction is correct (no intervention)
         self.root.left.left.right.consequence = MISDIAGNOSIS  # data is ind, dsd predicts ind, prediction is incorrect (loss)
 
-
     def print_tree(self):
         print("\t\t\t\tRoot\t\t\t\t")
-        print(f"{self.root.left.probability}*{self.root.left.consequence} \t\t\t {self.root.right.probability}*{self.root.right.consequence}")
-        print(f"{self.root.left.left.probability}*{self.root.left.left.consequence} \t\t\t {self.root.left.right.probability}*{self.root.left.right.consequence}\t\t\t{self.root.right.left.probability}*{self.root.right.left.consequence}\t\t\t{self.root.right.right.probability}*{self.root.right.right.consequence}")
-        print(f"{self.root.left.left.left.probability}*{self.root.left.left.left.consequence} \t\t\t {self.root.left.left.right.probability}*{self.root.left.left.right.consequence}")
+        print(f"\t\t{self.root.left.probability} \t\t\t {self.root.right.probability}")
+        print(f"\t{self.root.left.left.probability}\t\t\t {self.root.left.right.probability}\t\t\t{self.root.right.left.probability}\t\t\t{self.root.right.right.probability}")
+        print(f"{self.root.left.left.left.probability}\t\t\t {self.root.left.left.right.probability}\t\t\t {self.root.left.right.left.probability}, \t\t\t {self.root.left.right.right.probability},"
+              f"\t\t\t {self.root.right.left.left.probability}, \t\t\t {self.root.right.left.right.probability}, \t\t\t {self.root.right.right.left.probability}, \t\t\t {self.root.right.right.right.probability}")
 
 
-class RiskModelWithoutDSD(RiskModel):
-    def __init__(self, ood_acc, ind_acc, maximum_loss=0.5, estimator=BernoulliEstimator):
+class BaseEventTree(RiskModel):
+    def __init__(self, dsd_tpr, dsd_tnr, ood_acc, ind_acc, maximum_loss=0.5, estimator=BernoulliEstimator):
         super().__init__(estimator=estimator)
         self.maximum_loss = maximum_loss
-        print(self.maximum_loss)
         self.ood_acc = ood_acc
         self.ind_acc = ind_acc
+        self.rate_estimator.update_tpr_tnr(dsd_tpr, dsd_tnr) #todo, dumb shortcut
+
         self.root = RiskNode(1)
         self.update_tree()
 
-    def get_true_risk_for_sample(self, is_ood, loss):
-        # print(loss, self.maximum_loss)
-        # input()
+    def get_true_risk_for_sample(self, loss):
         if loss>self.maximum_loss:
             return MISDIAGNOSIS
         else:
             return CORRECT_DIAGNOSIS
-    def update_tree(self):
 
+
+    def update_tree(self):
+        # print(self.rate)
         self.root.left = RiskNode(1-self.rate)
         self.root.right = RiskNode(self.rate)
         self.root.left.left = RiskNode(self.ind_acc) #data is ind, prediction is correct
+        self.root.left.left.corresponds_to_correct_prediction = True
         self.root.left.right = RiskNode(1-self.ind_acc) #data is ind, prediction is incorrect
         self.root.right.left = RiskNode(self.ood_acc)
+        self.root.right.left.corresponds_to_correct_prediction = True
         self.root.right.right = RiskNode(1-self.ood_acc)
         self.root.left.left.consequence = CORRECT_DIAGNOSIS
         self.root.left.right.consequence = MISDIAGNOSIS

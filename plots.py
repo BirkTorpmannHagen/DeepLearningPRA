@@ -3,6 +3,7 @@ import seaborn as sns
 import numpy as np
 import pandas as pd
 import torch.nn
+from matplotlib.pyplot import yticks, xticks
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import PolynomialFeatures
 from os import listdir
@@ -11,9 +12,12 @@ from scipy.stats import ks_2samp, mannwhitneyu
 from sklearn.preprocessing import StandardScaler
 from os.path import join
 import pygam
+import seaborn.objects as so
 import matplotlib.patches as patches
 
 from scipy.stats import spearmanr, pearsonr, kendalltau
+
+from utils import load_pra_df, ETISLARIB, ENDOCV, CVCCLINIC
 
 pd.set_option("display.precision", 3)
 pd.set_option('display.float_format', lambda x: '%.3f' % x)
@@ -163,7 +167,7 @@ def simulate_sampling(df, samples, sample_size):
             mean_loss = sample['loss'].mean()
             mean_feature = sample['feature'].mean()
             samples.append({'loss': mean_loss, 'feature': mean_feature, "KS":False})
-          return pd.DataFrame(samples)
+        return pd.DataFrame(samples)
         # Return a DataFrame of means with the original group keys
     cols = list(df.columns)
     cols.remove("loss")
@@ -374,7 +378,28 @@ def gam_fits(metric="monotonic mae", KS=True):
     plt.tight_layout()
     plt.show()
 
+def plot_loss_distributions(data):
+    data.replace({"ind_test": "InD Test"}, inplace=True)
+    # print(data["fold"].unique())
+    data= data[["fold", "feature", "loss"]]
+    data = data[(data["fold"]==ETISLARIB)|(data["fold"]==ENDOCV)|(data["fold"]==CVCCLINIC)|(data["fold"]=="InD Test")]
+    equalized_df = data.groupby("fold").apply(lambda x: x.sample(1000, replace=True)).reset_index(drop=True)
+    fig, ax = plt.subplots(1, 1, figsize=(7, 4))
+    plot = so.Plot(data=equalized_df, x="loss", color="fold").add(so.Bar(), so.Hist(), so.Stack()).on(ax).plot()
+    fig.legend(data["fold"].unique(), loc="upper center", ncol=4)
+    ax.set_yticks([])
+    ax.set_ylabel("Density")
+    plot.show()
+    plt.savefig("loss_distributions.eps")
+     # plt.yticks([])
+    # plt.show()
+    # sns.kdeplot(data=data, x="feature", hue="fold", fill=True)
+    # plt.show()
+
+
 if __name__ == '__main__':
+    data = load_pra_df("knn", batch_size=1, samples=1000)
+    plot_loss_distributions(data)
     # plot_sample_size_effect()
     # show_thresholding_problems()
     # test = pd.read_csv("gam_results.csv")
@@ -390,7 +415,7 @@ if __name__ == '__main__':
     # gam_fits(KS=False)
     # compare_gam_errors()
     # build_gam_for_each(dfs)
-    regplots(100, simulate=True)
+    # regplots(100, simulate=True)
     # compare_ks_vs_no_ks(500)
     # correleations(100, simulate=True)
     # correleations(100, simulate=True)

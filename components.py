@@ -50,11 +50,13 @@ class SyntheticOODDetector:
         return self.tpr, self.tnr
 
 
+
+
 class LossEstimator:
     def __init__(self, df):
         self.df = df
         self.gam = LinearGAM(constraints="monotonic_inc")
-        self.train_set = df[(df["shift"]=="ind_val")|(df["shift"]==ETISLARIB)]
+        self.train_set = df[(df["shift"]=="ind_val")|(df["shift"]==ETISLARIB) | (df["shift"]=="noise") |(df["shift"]=="adv")]
         self.train(self.train_set["feature"], self.train_set["loss"])
         # self.plot_gam()
 
@@ -65,6 +67,7 @@ class LossEstimator:
         plt.plot(x, self.gam.predict(x), label="gam")
         plt.legend()
         plt.savefig("gam.png")
+        plt.title("Loss Estimator")
         plt.show()
 
     def train(self, X, Y):
@@ -76,6 +79,43 @@ class LossEstimator:
 
     def predict(self, batch):
         return self.gam.predict(batch["feature"])
+
+
+class SplitLossEstimator:
+    def __init__(self, df):
+        self.df = df
+        self.gam = LinearGAM(constraints="monotonic_inc")
+        self.ind_loss = df[df["shift"]=="ind_test"]["loss"].mean()
+        self.train_set = df[(df["shift"]==ETISLARIB) | (df["shift"]=="noise") |(df["shift"]=="adv")]
+        self.train(self.train_set["feature"], self.train_set["loss"])
+        self.ood_detector = OODDetector(df)
+        self.plot_gam()
+    #
+    def plot_gam(self):
+        plt.figure()
+        plt.scatter(self.train_set["feature"], self.train_set["loss"], label="train")
+        x = np.linspace(self.train_set["feature"].min(), self.train_set["feature"].max(), 100)
+        plt.plot(x, self.gam.predict(x), label="gam")
+        plt.legend()
+        plt.title("Split Loss Estimator")
+        plt.show()
+
+    def train(self, X, Y):
+        self.gam.fit(X, Y)
+        return np.sqrt(((self.gam.predict(X)-Y)**2).mean()) #MSE
+
+    def evaluate(self, batch):
+        if self.ood_detector.predict(batch):
+            return batch["loss"].mean()-self.ind_loss
+        return np.sqrt(((self.gam.predict(batch["feature"])-batch["loss"])**2).mean())
+
+    def predict(self, batch):
+        assert batch["ood"].nunique()==1
+        if batch["ood"].all():
+            return self.gam.predict(batch["feature"])
+        else:
+            return self.ind_loss
+
 
 
 class Trace:
@@ -91,3 +131,8 @@ class Trace:
             self.trace.pop(0)
         self.trace.append(item)
         return self.trace
+
+if __name__ == '__main__':
+    data = load_pra_df("knn", batch_size=10, samples=1000)
+    le_s = SplitLossEstimator(data)
+    le = LossEstimator(data)
