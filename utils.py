@@ -56,7 +56,7 @@ class ArgumentIterator:
         return len(self.iterable)
 
 
-def load_pra_df(feature_name, batch_size=30, samples=100):
+def load_pra_df(feature_name, batch_size=30, samples=100, max_loss=0.5):
     df = pd.concat(
         [pd.read_csv(join("single_data", fname)) for fname in os.listdir("single_data") if "Polyp" in fname])
     df.drop(columns=["Unnamed: 0"], inplace=True)

@@ -1,3 +1,4 @@
+import pandas as pd
 from anaconda_project.requirements_registry.provider import ProvideResult
 from rich.pretty import pretty_repr
 from seaborn import FacetGrid
@@ -46,22 +47,34 @@ def uniform_bernoulli(data, estimator=BernoulliEstimator, load=True):
     return results
 
 def single_run(data, estimator=BernoulliEstimator):
-    sim = SystemSimulator(data, ood_test_shift=ENDOCV, ood_val_shift=ETISLARIB, maximum_loss=0.5, estimator=estimator, dsd_tnr=1, dsd_tpr=1)
+    sim = SystemSimulator(data, ood_test_shift=CVCCLINIC, ood_val_shift=ENDOCV, maximum_loss=0.5, estimator=estimator, dsd_tnr=1, dsd_tpr=1)
     results = sim.uniform_rate_sim(1, 10000)
     sim.detector_tree.print_tree()
-    sim.detector_tree.calculate_expected_accuracy(sim.detector_tree.root, debug=True)
-    print(results.mean())
+    results["Error"] = np.abs(results['E[f(x)=y]'] - results['Accuracy'])
+    print(results.groupby(["Tree"]).mean())
+    sim = SystemSimulator(data, ood_test_shift=CVCCLINIC, ood_val_shift="noise", maximum_loss=0.5, estimator=estimator, dsd_tnr=1, dsd_tpr=1)
+    results = sim.uniform_rate_sim(1, 10000)
+    results["Error"] = np.abs(results['E[f(x)=y]'] - results['Accuracy'])
+    sim.detector_tree.print_tree()
+    print(results.groupby(["Tree"]).mean())
+    sim = SystemSimulator(data, ood_test_shift=CVCCLINIC, ood_val_shift="random", maximum_loss=0.5, estimator=estimator, dsd_tnr=1, dsd_tpr=1)
+    results = sim.uniform_rate_sim(1, 10000)
+    results["Error"] = np.abs(results['E[f(x)=y]'] - results['Accuracy'])
+    sim.detector_tree.print_tree()
+    print(results.groupby(["Tree"]).mean())
+
     # sim = SystemSimulator(data, ood_test_shift=CVCCLINIC, maximum_loss=0.5, estimator=estimator)
     # results = sim.uniform_rate_sim(0.5, 10000)
     # print(results.mean())
 
 def collect_tpr_tnr_sensitivity_data(data):
-    dfs = []
-    bins = 26
+    bins = 11
     total_num_tpr_tnr = np.sum([i+j/2>=0.5 for i in np.linspace(0, 1, bins) for j in np.linspace(0, 1, bins)])
-    with tqdm(total=6*bins*total_num_tpr_tnr) as pbar:
-        for test_set in [CVCCLINIC, ETISLARIB, ENDOCV]:
-            for val_set in [CVCCLINIC, ETISLARIB, ENDOCV]:
+    with tqdm(total=12*bins*total_num_tpr_tnr) as pbar:
+        for val_set in [CVCCLINIC, ETISLARIB, ENDOCV, "noise", "random"]:
+            dfs = []
+            for test_set in [CVCCLINIC, ETISLARIB, ENDOCV]:
+
                 if test_set == val_set:
                     continue
                 for rate in np.linspace(0, 1, bins):
@@ -69,7 +82,7 @@ def collect_tpr_tnr_sensitivity_data(data):
                         for tnr in np.linspace(0, 1, bins):
                             if tnr+tpr/2 < 0.5:
                                 continue
-                            sim = SystemSimulator(data, ood_test_shift=test_set, ood_val_shift=val_set, maximum_loss=0.5, estimator=BernoulliEstimator, dsd_tpr=tpr, dsd_tnr=tnr)
+                            sim = SystemSimulator(data, ood_test_shift=test_set, ood_val_shift=val_set, estimator=BernoulliEstimator, dsd_tpr=tpr, dsd_tnr=tnr)
                             results = sim.uniform_rate_sim(rate, 1000)
                             # results = results.mean()
                             results["tpr"] = tpr
@@ -79,11 +92,10 @@ def collect_tpr_tnr_sensitivity_data(data):
                             results["val_set"] = val_set
                             results = results.groupby(["tpr", "tnr", "rate", "test_set", "val_set", "Tree"]).mean().reset_index()
                             # print(results)
-                            results = results.to_dict()
                             dfs.append(results)
                             pbar.update(1)
-    df_final = pd.DataFrame(dfs)
-    df_final.to_csv("tpr_tnr_sensitivity.csv")
+        df_final = pd.concat(dfs)
+        df_final.to_csv(f"{val_set}_tpr_tnr_sensitivity.csv")
 
 def compare_risk_tree_accuracy_estimators():
     df = pd.read_csv("tpr_tnr_sensitivity.csv").groupby(["tpr", "tnr", "rate", "test_set", "val_set"]).mean().reset_index()
@@ -105,7 +117,7 @@ def compare_risk_tree_accuracy_estimators():
 
 def plot_tpr_tnr_sensitivity():
     # Load and preprocess data
-    df = pd.read_csv("tpr_tnr_sensitivity.csv").groupby(["tpr", "tnr", "rate", "test_set", "val_set"]).mean().reset_index()
+    df = pd.read_csv("tpr_tnr_sensitivity.csv").groupby(["tpr", "tnr", "rate", "test_set", "val_set", "Tree"]).mean().reset_index()
     df["tpr"] = df["tpr"].round(2)
     df["tnr"] = df["tnr"].round(2)
     df["Error"] = np.abs(df['E[f(x)=y]'] - df['correct_prediction'])
@@ -115,7 +127,7 @@ def plot_tpr_tnr_sensitivity():
     df["rate"] = df["rate"].round(2)
     df["ba"] = round((df["tpr"] + df["tnr"]) / 2, 2)
     df = df[df["ba"] >= 0.5]
-
+    print(df.groupby(["val_set", "rate", "test_set", "Tree"])[["E[f(x)=y]", "correct_prediction", "Error"]].mean())
     # Prepare data for heatmaps
     facet = df.groupby(["ba", "rate", "val_set", "test_set"])[["E[f(x)=y]", "correct_prediction", "Error"]].mean().reset_index()
     # facet = facet.pivot(index=["val_set", "test_set"], columns="rate", values="Error")
@@ -245,10 +257,8 @@ def risk_tree_cba():
 
 
 if __name__ == '__main__':
-    data = load_pra_df("knn", batch_size=1, samples=500)
-    data["correct_prediction"] = data["loss"] < 0.5
-    print(data[data["fold"]==CVCCLINIC]["correct_prediction"].mean())
-    print(data[data["fold"]=="ind_val"]["correct_prediction"].mean())
+    data = load_pra_df("knn", batch_size=30, samples=500, max_loss=0.29)
+
     # print("asdadsa")
     # single_run(data)
     # uniform_bernoulli(data, load = False)

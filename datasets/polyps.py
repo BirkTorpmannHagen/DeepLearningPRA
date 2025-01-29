@@ -140,7 +140,7 @@ class EndoCV2020(Dataset):
         return len(self.mask_fnames)
 
 
-def build_polyp_dataset(root, img_size=512):
+def build_polyp_dataset(root, img_size=512, ind="Kvasir"):
     train_trans = alb.Compose([alb.Resize(img_size, img_size), alb.HorizontalFlip(), alb.RandomRotate90(), alb.Transpose()])
     val_trans = alb.Compose([alb.Resize(img_size, img_size)])
     kvasir_root = join(root, "HyperKvasir")
