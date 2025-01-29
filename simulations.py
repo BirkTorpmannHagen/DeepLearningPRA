@@ -94,22 +94,22 @@ class SystemSimulator:
         if index>self.dsd_trace.trace_length: #update lambda after trace length
             self.detector_tree.update_rate(self.dsd_trace.trace)
             self.base_tree.update_rate(self.dsd_trace.trace)
-
+        batch_loss = batch["loss"].mean()
         current_risk = self.detector_tree.calculate_risk(self.detector_tree.root)
         current_expected_accuracy = self.detector_tree.calculate_expected_accuracy(self.detector_tree.root)
-        true_dsd_risk = self.detector_tree.get_true_risk_for_sample(shifted, ood_pred, batch["loss"].mean())
+        true_dsd_risk = self.detector_tree.get_true_risk_for_sample(shifted, ood_pred, batch_loss)
 
         current_base_risk = self.base_tree.calculate_risk(self.base_tree.root)
         current_base_expected_accuracy = self.base_tree.calculate_expected_accuracy(self.base_tree.root)
-        true_base_risk = self.base_tree.get_true_risk_for_sample(batch["loss"].mean())
-
+        true_base_risk = self.base_tree.get_true_risk_for_sample(batch_loss)
+        accuracy = (batch["loss"] < self.maximum_loss).mean()
         return [
             {"Tree": "Detector Tree", "Risk Estimate": current_risk, "True Risk": true_dsd_risk,
-              "E[f(x)=y]":current_expected_accuracy, "Accuracy": (batch["loss"] < self.maximum_loss).mean(),
+              "E[f(x)=y]":current_expected_accuracy, "Accuracy": accuracy,
              "ood_pred": ood_pred, "is_ood": shifted, "Estimated Rate":self.detector_tree.rate,
              "ind_acc": self.ind_val_acc, "ood_val_acc": self.ood_val_acc, "ood_test_acc": self.ood_test_acc},
             {"Tree": "Base Tree", "Risk Estimate": current_base_risk, "True Risk": true_base_risk,
-                "E[f(x)=y]":current_base_expected_accuracy, "Accuracy": (batch["loss"] < self.maximum_loss).mean(),
+                "E[f(x)=y]":current_base_expected_accuracy, "Accuracy": accuracy,
                  "ood_pred": ood_pred, "is_ood": shifted, "Estimated Rate":self.base_tree.rate,
                  "ind_acc": self.ind_val_acc, "ood_val_acc": self.ood_val_acc, "ood_test_acc": self.ood_test_acc}
         ]

@@ -57,7 +57,7 @@ def single_run(data, estimator=BernoulliEstimator):
 
 def collect_tpr_tnr_sensitivity_data(data):
     dfs = []
-    bins = 4
+    bins = 26
     total_num_tpr_tnr = np.sum([i+j/2>=0.5 for i in np.linspace(0, 1, bins) for j in np.linspace(0, 1, bins)])
     with tqdm(total=6*bins*total_num_tpr_tnr) as pbar:
         for test_set in [CVCCLINIC, ETISLARIB, ENDOCV]:
@@ -245,7 +245,7 @@ def risk_tree_cba():
 
 
 if __name__ == '__main__':
-    data = load_pra_df("knn", batch_size=1, samples=1000)
+    data = load_pra_df("knn", batch_size=1, samples=500)
     data["correct_prediction"] = data["loss"] < 0.5
     print(data[data["fold"]==CVCCLINIC]["correct_prediction"].mean())
     print(data[data["fold"]=="ind_val"]["correct_prediction"].mean())
