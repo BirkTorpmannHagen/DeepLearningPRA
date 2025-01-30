@@ -11,7 +11,7 @@ from tqdm import tqdm
 from scipy.stats import ks_2samp, mannwhitneyu
 from sklearn.preprocessing import StandardScaler
 from os.path import join
-import pygam
+#import pygam
 import seaborn.objects as so
 import matplotlib.patches as patches
 

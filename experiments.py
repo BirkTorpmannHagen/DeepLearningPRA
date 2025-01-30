@@ -1,6 +1,4 @@
-from anaconda_project.requirements_registry.provider import ProvideResult
-from rich.pretty import pretty_repr
-from seaborn import FacetGrid
+
 
 from simulations import *
 import matplotlib.pyplot as plt
