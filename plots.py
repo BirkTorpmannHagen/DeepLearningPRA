@@ -381,12 +381,41 @@ def gam_fits(metric="monotonic mae", KS=True):
 def plot_loss_distributions(data):
     data.replace({"ind_test": "InD Test"}, inplace=True)
     # print(data["fold"].unique())
+    # print(data["fold"].unique())
+    # print(data[data["fold"]=="ind_val"]["loss"].mean()+ data[data["fold"] == "ind_val"]["loss"].std() * 2)
     data= data[["fold", "feature", "loss"]]
     data = data[(data["fold"]==ETISLARIB)|(data["fold"]==ENDOCV)|(data["fold"]==CVCCLINIC)|(data["fold"]=="InD Test")]
     equalized_df = data.groupby("fold").apply(lambda x: x.sample(1000, replace=True)).reset_index(drop=True)
+    unique_folds = equalized_df["fold"].unique()
+    cmap = sns.color_palette(n_colors=len(unique_folds))
+    color_map = {
+        ETISLARIB: cmap[0],
+        ENDOCV: cmap[1],
+        CVCCLINIC: cmap[2],
+        "InD Test": cmap[3]
+    }
+    print(unique_folds)
     fig, ax = plt.subplots(1, 1, figsize=(7, 4))
-    plot = so.Plot(data=equalized_df, x="loss", color="fold").add(so.Bar(), so.Hist(), so.Stack()).on(ax).plot()
-    fig.legend(data["fold"].unique(), loc="upper center", ncol=4)
+    plot = so.Plot(data=equalized_df, x="loss", color="fold").add(so.Bar(), so.Hist(), so.Stack()).on(ax).scale(color=color_map).plot()
+    handles = [plt.Line2D([0], [0], marker='s', color='w', markerfacecolor=color_map[fold], markersize=10) for fold in unique_folds]
+    labels = unique_folds
+    ax.legend(
+        handles, labels,
+        loc="lower center",  # Anchor point for the legend
+        bbox_to_anchor=(0.5, 1.02),  # Position the legend above the plot
+        ncol=len(unique_folds),  # Number of columns in the legend
+        frameon=False  # Remove the legend frame (optional)
+    )
+
+    for i, fold in enumerate(unique_folds):
+        mean_val = equalized_df[equalized_df["fold"]==fold]["loss"].mean()
+        ax.axvline(mean_val, color=color_map[fold], linestyle="--")
+        y_offset = ax.get_ylim()[1] * (0.85 - i * 0.05)  # Move text up/down
+        x_offset = 0.03 * (ax.get_xlim()[1] - ax.get_xlim()[0])  # 2% of x-axis range
+
+        ax.text(mean_val+x_offset,y_offset, rf"$\mu=${mean_val:.2f}", color=color_map[fold],
+                ha='left')
+
     ax.set_yticks([])
     ax.set_ylabel("Density")
     plot.show()
@@ -398,7 +427,7 @@ def plot_loss_distributions(data):
 
 
 if __name__ == '__main__':
-    data = load_pra_df("knn", batch_size=1, samples=1000)
+    data = load_pra_df("knn", batch_size=30, samples=1000)
     plot_loss_distributions(data)
     # plot_sample_size_effect()
     # show_thresholding_problems()

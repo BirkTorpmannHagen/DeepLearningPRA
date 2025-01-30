@@ -25,7 +25,7 @@ def train_segmentor():
     # trans = transforms.Compose([
     #                     transforms.Resize((512,512)),
     #                     transforms.ToTensor(), ])
-    ind, val, test, _, _, _ = build_polyp_dataset("../../Datasets/Polyps")
+    ind, val, test, _, _, _ = build_polyp_dataset("../../Datasets/Polyps", img_size=512, ind="Kvasir")
     train_loader = DataLoader(ind, batch_size=16, shuffle=True, num_workers=4)
     val_loader = DataLoader(val, batch_size=16, shuffle=True, num_workers=4)
     trainer.fit(model, train_dataloaders=train_loader,val_dataloaders=val_loader)

@@ -79,7 +79,7 @@ class RiskModel:
 
 
 class DetectorEventTree(RiskModel):
-    def __init__(self, dsd_tpr, dsd_tnr, ind_ndsd_acc, ind_dsd_acc, ood_ndsd_acc, ood_dsd_acc, maximum_loss, estimator):
+    def __init__(self, dsd_tpr, dsd_tnr, ind_ndsd_acc, ind_dsd_acc, ood_ndsd_acc, ood_dsd_acc, estimator):
         """
                 Binary Tree defined by the following structure:
                 ood+/- -> dsd+/- -> prediction+/- -> consequence
@@ -92,32 +92,35 @@ class DetectorEventTree(RiskModel):
         self.ood_dsd_acc = ood_dsd_acc
         self.rate_estimator.update_tpr_tnr(dsd_tpr, dsd_tnr) #todo, dumb shortcut
         self.root = RiskNode(1) #root
-        self.maximum_loss = maximum_loss
         self.update_tree()
         # self.print_tree()
 
         # self.print_tree()
 
-    def get_true_risk_for_sample(self, is_ood, detected_as_ood, loss):
+    def get_true_risk_for_sample(self, data):
+        assert len(data) == 1
+        is_ood = data["ood"].all()
+        detected_as_ood = data["ood_pred"].all()
+        correct = data["correct_prediction"].all()
         if is_ood:
             if detected_as_ood:
-                if loss < self.maximum_loss:
+                if correct:
                     return UNNECESSARY_INTERVENTION
                 else:
                     return NECESSARY_INTERVENTION
             elif not detected_as_ood:
-                if loss < self.maximum_loss:
+                if correct:
                     return CORRECT_DIAGNOSIS
                 else:
                     return MISDIAGNOSIS
         else:
             if detected_as_ood:
-                if loss < self.maximum_loss:
+                if correct:
                     return UNNECESSARY_INTERVENTION
                 else:
                     return NECESSARY_INTERVENTION
             elif not detected_as_ood:
-                return CORRECT_DIAGNOSIS if loss < self.maximum_loss else MISDIAGNOSIS
+                return CORRECT_DIAGNOSIS if correct else MISDIAGNOSIS
 
     def update_tree(self):
         self.root.left = RiskNode(1-self.rate) #data is ind
@@ -170,9 +173,8 @@ class DetectorEventTree(RiskModel):
 
 
 class BaseEventTree(RiskModel):
-    def __init__(self, dsd_tpr, dsd_tnr, ood_acc, ind_acc, maximum_loss=0.5, estimator=BernoulliEstimator):
+    def __init__(self, dsd_tpr, dsd_tnr, ood_acc, ind_acc, estimator=BernoulliEstimator):
         super().__init__(estimator=estimator)
-        self.maximum_loss = maximum_loss
         self.ood_acc = ood_acc
         self.ind_acc = ind_acc
         self.rate_estimator.update_tpr_tnr(dsd_tpr, dsd_tnr) #todo, dumb shortcut
@@ -180,11 +182,12 @@ class BaseEventTree(RiskModel):
         self.root = RiskNode(1)
         self.update_tree()
 
-    def get_true_risk_for_sample(self, loss):
-        if loss>self.maximum_loss:
-            return MISDIAGNOSIS
-        else:
+    def get_true_risk_for_sample(self, data):
+        assert len(data) == 1
+        if data["correct_prediction"].all():
             return CORRECT_DIAGNOSIS
+        else:
+            return MISDIAGNOSIS
 
 
     def update_tree(self):
