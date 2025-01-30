@@ -69,14 +69,16 @@ def single_run(data, estimator=BernoulliEstimator):
 
 def collect_tpr_tnr_sensitivity_data(data):
     bins = 11
-    total_num_tpr_tnr = np.sum([i+j/2>=0.5 for i in np.linspace(0, 1, bins) for j in np.linspace(0, 1, bins)])
-    with tqdm(total=12*bins*total_num_tpr_tnr) as pbar:
-        for val_set in [CVCCLINIC, ETISLARIB, ENDOCV, "noise", "random"]:
+    for val_set in [CVCCLINIC, ETISLARIB, ENDOCV, "noise", "random"]:
+        for test_set in [CVCCLINIC, ETISLARIB, ENDOCV]:
             dfs = []
-            for test_set in [CVCCLINIC, ETISLARIB, ENDOCV]:
+            total_num_tpr_tnr = np.sum(
+                [i + j / 2 >= 0.5 for i in np.linspace(0, 1, bins) for j in np.linspace(0, 1, bins)])
 
-                if test_set == val_set:
-                    continue
+            with tqdm(total=bins * total_num_tpr_tnr) as pbar:
+
+                # if test_set == val_set:
+                #     continue
                 for rate in np.linspace(0, 1, bins):
                     for tpr in np.linspace(0, 1, bins):
                         for tnr in np.linspace(0, 1, bins):
@@ -87,15 +89,16 @@ def collect_tpr_tnr_sensitivity_data(data):
                             # results = results.mean()
                             results["tpr"] = tpr
                             results["tnr"] = tnr
+                            results["ba"] = (tpr + tnr) / 2
                             results["rate"] = rate
                             results["test_set"] = test_set
                             results["val_set"] = val_set
-                            results = results.groupby(["tpr", "tnr", "rate", "test_set", "val_set", "Tree"]).mean().reset_index()
-                            # print(results)
+                            # results = results.groupby(["tpr", "tnr", "rate", "test_set", "val_set", "Tree"]).mean().reset_index()
                             dfs.append(results)
                             pbar.update(1)
-        df_final = pd.concat(dfs)
-        df_final.to_csv(f"{val_set}_tpr_tnr_sensitivity.csv")
+                df_final = pd.concat(dfs)
+                print(df_final.head(10))
+                df_final.to_csv(f"pra_data/{val_set}_{test_set}_results.csv")
 
 def compare_risk_tree_accuracy_estimators():
     df = pd.read_csv("tpr_tnr_sensitivity.csv").groupby(["tpr", "tnr", "rate", "test_set", "val_set"]).mean().reset_index()
@@ -257,7 +260,7 @@ def risk_tree_cba():
 
 
 if __name__ == '__main__':
-    data = load_pra_df("knn", batch_size=30, samples=500, max_loss=0.29)
+    data = load_pra_df("knn", batch_size=30, samples=1000)
 
     # print("asdadsa")
     # single_run(data)

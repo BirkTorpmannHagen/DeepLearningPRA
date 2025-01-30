@@ -56,7 +56,8 @@ class ArgumentIterator:
         return len(self.iterable)
 
 
-def load_pra_df(feature_name, batch_size=30, samples=100, max_loss=0.5):
+def load_pra_df(feature_name, batch_size=30, samples=1000):
+
     df = pd.concat(
         [pd.read_csv(join("single_data", fname)) for fname in os.listdir("single_data") if "Polyp" in fname])
     df.drop(columns=["Unnamed: 0"], inplace=True)
@@ -83,7 +84,9 @@ def load_pra_df(feature_name, batch_size=30, samples=100, max_loss=0.5):
 
         df = df.groupby(cols).apply(sample_loss_feature, samples, batch_size).reset_index()
         df.drop(columns=["level_2"], inplace=True)
-    df["correct_prediction"] = df["loss"] < 0.5  # arbitrary threshold
+    ind_99th = min(df[df["fold"] == "ind_val"]["loss"].quantile(0.95), 0.5)
+    print(ind_99th)
+    df["correct_prediction"] = df["loss"] < ind_99th  # arbitrary threshold
     df["shift"] = df["fold"].apply(lambda x: x.split("_")[0] if "_0." in x else x)            #what kind of shift has occured?
     df["shift_intensity"] = df["fold"].apply(lambda x: x.split("_")[1] if "_" in x else x)  #what intensity?
     df["ood"] = ~df["fold"].isin(["train", "ind_val", "ind_test"])#&~df["correct_prediction"] #is the prediction correct?
