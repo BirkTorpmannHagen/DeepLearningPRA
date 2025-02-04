@@ -120,14 +120,15 @@ class FeatureSD(BaseSD):
 
     def compute_features_and_loss_for_loaders(self, dataloaders):
 
+        losses = dict(
+            zip(dataloaders.keys(),
+                [self.testbed.compute_losses(loader) for fold_name, loader in dataloaders.items()]))
         features = dict(
             zip(dataloaders.keys(),
                           [self.get_features(loader)
                            for fold_name, loader in dataloaders.items()]))
 
-        losses = dict(
-            zip(dataloaders.keys(),
-                [self.testbed.compute_losses(loader) for fold_name, loader in dataloaders.items()]))
+
         return features, losses
 
     def compute_pvals_and_loss(self):

@@ -1,6 +1,7 @@
 # from yellowbrick.features import PCA
 from testbeds import *
 
+
 def compute_stats_statistical(ind_pvalues, ood_pvalues_fold, ind_sample_losses, ood_sample_losses_fold, fname, feature_name):
     df = convert_stats_to_pandas_df(ind_pvalues, ood_pvalues_fold, ind_sample_losses, ood_sample_losses_fold, feature_name=feature_name)
     df.to_csv(fname)
@@ -50,7 +51,7 @@ if __name__ == '__main__':
     from features import *
     torch.multiprocessing.set_start_method('spawn')
 
-    collect_data(PolypTestBed, "Polyp", mode="normal")
+    # collect_data(PolypTestBed, "Polyp", mode="normal")
     # collect_data(PolypTestBed, "Polyp", mode="noise")
     # collect_data(PolypTestBed, "Polyp", mode="hue")
     # collect_data(PolypTestBed, "Polyp", mode="smear")
@@ -62,7 +63,7 @@ if __name__ == '__main__':
     # collect_data(PolypTestBed, "Polyp", mode="fgsm")
 
 
-    # collect_data(ECCVTestBed, "ECCV", mode="normal")
+    collect_data(ECCVTestBed, "ECCV", mode="normal")
     # collect_data(ECCVTestBed, "ECCV", mode="noise")
     # collect_data(ECCVTestBed, "ECCV", mode="hue")
     # collect_data(ECCVTestBed, "ECCV", mode="smear")
@@ -73,7 +74,7 @@ if __name__ == '__main__':
     # collect_data(ECCVTestBed, "ECCV", mode="saltpepper")
     # collect_data(ECCVTestBed, "ECCV", mode="fgsm")
 
-    # collect_data(OfficeHomeTestBed, "OfficeHome", mode="normal")
+    collect_data(OfficeHomeTestBed, "OfficeHome", mode="normal")
     # collect_data(OfficeHomeTestBed, "OfficeHome", mode="noise")
     # collect_data(OfficeHomeTestBed, "OfficeHome", mode="hue")
     # collect_data(OfficeHomeTestBed, "OfficeHome", mode="smear")
@@ -85,7 +86,7 @@ if __name__ == '__main__':
     # collect_data(OfficeHomeTestBed, "OfficeHome", mode="saltpepper")
     # collect_data(OfficeHomeTestBed, "OfficeHome", mode="fgsm")
 
-    # collect_data(Office31TestBed, "Office31", mode="normal")
+    collect_data(Office31TestBed, "Office31", mode="normal")
     # collect_data(Office31TestBed, "Office31", mode="noise")
     # collect_data(Office31TestBed, "Office31", mode="hue")
     # collect_data(Office31TestBed, "Office31", mode="smear")
@@ -93,11 +94,11 @@ if __name__ == '__main__':
     # collect_data(Office31TestBed, "Office31", mode="brightness")
     # collect_data(Office31TestBed, "Office31", mode="contrast")
 
-    # collect_data(Office31TestBed, "Office31", mode="multnoise")
+    collect_data(Office31TestBed, "Office31", mode="multnoise")
     # collect_data(Office31TestBed, "Office31", mode="saltpepper")
     # collect_data(Office31TestBed, "Office31", mode="fgsm")
 
-    # collect_data(NicoTestBed, "NICO", mode="normal")
+    collect_data(NicoTestBed, "NICO", mode="normal")
     # collect_data(NicoTestBed, "NICO", mode="noise")
     # collect_data(NicoTestBed, "NICO", mode="hue")
     # collect_data(NicoTestBed, "NICO", mode="smear")

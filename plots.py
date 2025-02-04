@@ -1,8 +1,14 @@
+import os
+from termios import INPCK
+
 import matplotlib.pyplot as plt
+import numpy
+import pandas
 import seaborn as sns
 import numpy as np
 import pandas as pd
 import torch.nn
+from matplotlib import pyplot as plt
 from matplotlib.pyplot import yticks, xticks
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import PolynomialFeatures
@@ -425,10 +431,52 @@ def plot_loss_distributions(data):
     # sns.kdeplot(data=data, x="feature", hue="fold", fill=True)
     # plt.show()
 
+def plot_tpr_tnr_sensitivity():
+    # Load and preprocess data
+    dfs = []
+    for filename in os.listdir("pra_data"):
+        df = pd.read_csv(f"pra_data/{filename}")
+        dfs.append(df)
+    df = pd.concat(dfs)
+    print(df.head(10))
+    df = df[df["ba"] >= 0.5]
+    print(df.groupby(["ba", "Tree", "val_set"])[["Rate Error", "Accuracy Error"]].mean())
+    # input()
+    df["ba"] = round(df["ba"], 2)
+    df["rate"] = round(df["rate"], 2)
+    # Prepare data for heatmaps
+    facet = df.groupby(["ba", "rate", "val_set", "test_set"])[["Accuracy Error"]].mean().reset_index()
+    # facet = facet.pivot(index=["val_set", "test_set"], columns="rate", values="Error")
+
+    # Define heatmap function
+    def draw_heatmap(data, **kws):
+        # Extract numeric data for the heatmap
+        heatmap_data = data.pivot(index="ba", columns="rate", values="Accuracy Error")
+        heatmap_data = heatmap_data.loc[::-1]
+
+        sns.heatmap(heatmap_data, **kws, cmap="mako", vmin=0, vmax=(df["ind_acc"]-df["ood_val_acc"]).mean())
+
+    # Create FacetGrid and plot heatmaps
+    g = sns.FacetGrid(facet.reset_index(), col="test_set", row="val_set", col_order=[CVCCLINIC, ETISLARIB, ENDOCV], row_order=[CVCCLINIC, ETISLARIB, ENDOCV], margin_titles=True)
+    g.map_dataframe(draw_heatmap)
+    plt.savefig("cross_validated_accuracy_estimation_error.eps")
+    plt.show()
+
+    # Additional analysis and plotting
+    print(df[df["ba"] == 1].groupby(["ba", "rate"])[["E[f(x)=y]", "Accuracy Error"]].mean().reset_index())
+    df = df.groupby(["ba", "rate"])["Accuracy Error"].mean().reset_index()
+    pivot_table = df.pivot(index="ba", columns="rate", values="Accuracy Error")
+    pivot_table = pivot_table.loc[::-1]
+    sns.heatmap(pivot_table, cmap="mako")
+    plt.legend()
+    plt.savefig("tpr_tnr_sensitivity.eps")
+    plt.show()
+
 
 if __name__ == '__main__':
     data = load_pra_df("knn", batch_size=30, samples=1000)
-    plot_loss_distributions(data)
+    # plot_loss_distributions(data)
+    plot_tpr_tnr_sensitivity()
     # plot_sample_size_effect()
     # show_thresholding_problems()
     # test = pd.read_csv("gam_results.csv")
@@ -457,3 +505,5 @@ if __name__ == '__main__':
     # correleations(sample_size=100)
     # load_old_dfs()
     # quantize_values_and_plot_kdes()
+
+

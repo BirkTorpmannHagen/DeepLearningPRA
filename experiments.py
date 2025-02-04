@@ -1,8 +1,4 @@
-import pandas as pd
-from anaconda_project.requirements_registry.provider import ProvideResult
-from rich.pretty import pretty_repr
-from seaborn import FacetGrid
-
+from plots import plot_tpr_tnr_sensitivity
 from simulations import *
 import matplotlib.pyplot as plt
 from utils import *
@@ -69,12 +65,13 @@ def single_run(data, estimator=BernoulliEstimator):
 
 def collect_tpr_tnr_sensitivity_data(data):
     bins = 11
-    for val_set in [CVCCLINIC, ETISLARIB, ENDOCV, "noise", "random"]:
+    for val_set in [CVCCLINIC, ETISLARIB, ENDOCV]:
         for test_set in [CVCCLINIC, ETISLARIB, ENDOCV]:
             dfs = []
             total_num_tpr_tnr = np.sum(
                 [i + j / 2 >= 0.5 for i in np.linspace(0, 1, bins) for j in np.linspace(0, 1, bins)])
-
+            if test_set == CVCCLINIC and val_set == CVCCLINIC:
+                continue
             with tqdm(total=bins * total_num_tpr_tnr) as pbar:
 
                 # if test_set == val_set:
@@ -117,49 +114,6 @@ def compare_risk_tree_accuracy_estimators():
     # baseline error is just the small risk tree
 
     sns.barplot(df, x="ba", )
-
-def plot_tpr_tnr_sensitivity():
-    # Load and preprocess data
-    df = pd.read_csv("tpr_tnr_sensitivity.csv").groupby(["tpr", "tnr", "rate", "test_set", "val_set", "Tree"]).mean().reset_index()
-    df["tpr"] = df["tpr"].round(2)
-    df["tnr"] = df["tnr"].round(2)
-    df["Error"] = np.abs(df['E[f(x)=y]'] - df['correct_prediction'])
-
-
-    df = df.sort_values(by=["tpr", "tnr"])
-    df["rate"] = df["rate"].round(2)
-    df["ba"] = round((df["tpr"] + df["tnr"]) / 2, 2)
-    df = df[df["ba"] >= 0.5]
-    print(df.groupby(["val_set", "rate", "test_set", "Tree"])[["E[f(x)=y]", "correct_prediction", "Error"]].mean())
-    # Prepare data for heatmaps
-    facet = df.groupby(["ba", "rate", "val_set", "test_set"])[["E[f(x)=y]", "correct_prediction", "Error"]].mean().reset_index()
-    # facet = facet.pivot(index=["val_set", "test_set"], columns="rate", values="Error")
-
-    # Define heatmap function
-    def draw_heatmap(data, **kws):
-        # Extract numeric data for the heatmap
-        heatmap_data = data.pivot(index="ba", columns="rate", values="Error")
-        heatmap_data = heatmap_data.loc[::-1]
-
-        sns.heatmap(heatmap_data, **kws, cmap="mako", vmin=0, vmax=(df["ind_acc"]-df["ood_val_acc"]).mean())
-
-    # Create FacetGrid and plot heatmaps
-    g = sns.FacetGrid(facet.reset_index(), col="test_set", row="val_set", col_order=[CVCCLINIC, ETISLARIB, ENDOCV], row_order=[CVCCLINIC, ETISLARIB, ENDOCV], margin_titles=True)
-    g.map_dataframe(draw_heatmap)
-    plt.savefig("cross_validated_accuracy_estimation_error.eps")
-    plt.show()
-
-    # Additional analysis and plotting
-    print(df[df["ba"] == 1].groupby(["ba", "rate"])[["E[f(x)=y]", "correct_prediction", "Error"]].mean().reset_index())
-    df = df.groupby(["ba", "rate", "val_set", "test_set"]).mean().reset_index()
-    df = df.groupby(["ba", "rate"])["Error"].mean().reset_index()
-    pivot_table = df.pivot(index="ba", columns="rate", values="Error")
-    pivot_table = pivot_table.loc[::-1]
-    sns.heatmap(pivot_table, cmap="mako")
-    plt.legend()
-    plt.savefig("tpr_tnr_sensitivity.eps")
-    plt.show()
-
 
 
 def plot_ba_rate_sensitivity():
@@ -266,7 +220,7 @@ if __name__ == '__main__':
     # single_run(data)
     # uniform_bernoulli(data, load = False)
     collect_tpr_tnr_sensitivity_data(data)
-    # plot_tpr_tnr_sensitivity()
+    plot_tpr_tnr_sensitivity()
     # plot_ba_rate_sensitivity(uniform_bernoulli(data, load=False))
     # eval_rate_estimator()
     #plot_rate_estimates()
