@@ -147,8 +147,6 @@ class FeatureSD(BaseSD):
         try:
             train_features = self.load("train_features")
             train_loss = self.load("train_loss")
-            train_test_features = self.load("train_test_features")
-            train_test_losses = self.load("train_test_features")
             ind_val_features = self.load("val_features")
             ind_val_losses = self.load("val_loss")
             ind_test_features = self.load("test_features")
