@@ -69,20 +69,3 @@ def build_nico_dataset(use_track, root, val_ratio, train_transform, val_transfor
     val_dataset = NICODataset(image_path_list[:n], label_map_json, val_transform)
     return train_dataset, val_dataset
 
-
-class NICOTestDataset(data.Dataset):
-    def __init__(self, image_path_list, transform):
-        super().__init__()
-        self.image_path_list = image_path_list
-        self.transform = transform
-
-    def __len__(self):
-        #debug
-        return 32
-        # return len(self.image_path_list)
-
-    def __getitem__(self, index):
-        image_path = self.image_path_list[index]
-        image = Image.open(image_path)
-        image = self.transform(image)
-        return image

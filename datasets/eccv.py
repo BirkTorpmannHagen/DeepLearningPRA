@@ -43,6 +43,19 @@ class ECCV(Dataset):
         self.val_transform = val_transform
         self.fold = fold
         self.label_encoder = sklearn.preprocessing.LabelEncoder()
+
+        #use custom splits
+        ind_merged_paths = list(self.train_image_paths) + list(self.cis_val_image_paths) + list(self.cis_test_image_paths)
+        ind_merged_labels = list(self.train_labels) + list(self.cis_val_labels) + list(self.cis_test_labels)
+        ind_merged_locations = list(self.train_locations) + list(self.cis_val_locations) + list(self.cis_test_locations)
+        self.train_image_paths, self.cis_val_image_paths, self.cis_test_image_paths, self.train_labels, self.cis_val_labels, self.cis_test_labels, self.train_locations, self.cis_val_locations, self.cis_test_locations = train_test_split(ind_merged_paths, ind_merged_labels, ind_merged_locations, test_size=0.2, stratify=ind_merged_labels, random_state=42)
+
+        ood_merged_paths = list(self.trans_val_image_paths) + list(self.trans_test_image_paths)
+        ood_merged_labels = list(self.trans_val_labels) + list(self.trans_test_labels)
+        ood_merged_locations = list(self.trans_val_locations) + list(self.trans_test_locations)
+        self.ood_val_image_paths, self.ood_test_image_paths, self.ood_val_labels, self.ood_test_labels, self.ood_val_locations, self.ood_test_locations = train_test_split(ood_merged_paths, ood_merged_labels, ood_merged_locations, test_size=0.5, stratify=ood_merged_labels, random_state=42)
+
+
         if fold=="train":
             self.file_names = self.train_image_paths
             self.labels = self.train_labels

@@ -6,7 +6,7 @@ from torchvision.datasets import ImageFolder
 
 
 class OfficeHome(Dataset):
-    def __init__(self, path, train_transform, val_transform, context="Real Worldbr", fold="train"):
+    def __init__(self, path, train_transform, val_transform, context="Real World", fold="train"):
         super().__init__()
         self.path = path
         self.contexts = os.listdir(path)
@@ -25,13 +25,25 @@ class OfficeHome(Dataset):
             stratify=targets,
             random_state=42  # Ensures determinism
         )
+        val_idx, test_idx = train_test_split(
+            val_idx,
+            test_size=0.5,
+            stratify=[targets[i] for i in val_idx],
+            random_state=42  # Ensures determinism
+        )
 
         if fold == "train":
             self.dataset = Subset(full_dataset, train_idx)
             self.dataset.dataset.transform = train_transform
-        else:
+        elif fold == "val":
             self.dataset = Subset(full_dataset, val_idx)
             self.dataset.dataset.transform = val_transform
+        elif fold == "test":
+            self.dataset = Subset(full_dataset, test_idx)
+            self.dataset.dataset.transform = val_transform
+        elif fold == "ood":
+            self.dataset = full_dataset
+            self.dataset.transform = val_transform
 
     def __len__(self):
         return len(self.dataset)
