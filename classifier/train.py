@@ -33,7 +33,7 @@ def train_classifier(train_set, val_set, ood_set=None):
     )
 
     # ResNetClassifier.load_from_checkpoint("Imagenette_logs/checkpoints/epoch=82-step=24568.ckpt", resnet_version=101, nj
-    trainer = Trainer(max_epochs=1000, logger=tb_logger, accelerator="gpu",callbacks=checkpoint_callback)
+    trainer = Trainer(max_epochs=500, logger=tb_logger, accelerator="gpu",callbacks=checkpoint_callback)
     trainer.fit(model, train_dataloaders=DataLoader(train_set, shuffle=True, batch_size=16, num_workers=24),
                 val_dataloaders=DataLoader(val_set, batch_size=16, shuffle=True, num_workers=24))
 
@@ -53,8 +53,8 @@ if __name__ == '__main__':
 
     # train_set, val_set = build_nico_dataset(1, "../../Datasets/NICO++", 0.2, trans, val_trans, context="dim", seed=0)
     # train_set, val_set = build_imagenette_dataset("../../Datasets/imagenette2", train_trans=trans, val_trans=val_trans)
-    train_set, val_set, ood_set = build_officehome_dataset("../../Datasets/OfficeHome", train_transform=trans, val_transform=val_trans )
-    train_classifier(train_set, val_set)
+    # train_set, val_set, ood_set = build_officehome_dataset("../../Datasets/OfficeHome", train_transform=trans, val_transform=val_trans )
+    # train_classifier(train_set, val_set)
 
     train_set, val_set, ood_set = build_office31_dataset("../../Datasets/office31", train_transform=trans, val_transform=val_trans )
     train_classifier(train_set, val_set)

@@ -25,12 +25,8 @@ class Office31Dataset(Dataset):
             stratify=targets,
             random_state=42  # Ensures determinism
         )
-        val_idx, test_idx = train_test_split(
-            val_idx,
-            test_size=0.5,
-            stratify=[targets[i] for i in val_idx],
-            random_state=42  # Ensures determinism
-        )
+        test_idx = val_idx[:len(val_idx)//2]
+        val_idx = val_idx[len(val_idx)//2:]
 
         if fold == "train":
             self.dataset = Subset(full_dataset, train_idx)
