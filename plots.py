@@ -438,9 +438,10 @@ def plot_tpr_tnr_sensitivity():
         df = pd.read_csv(f"pra_data/{filename}")
         dfs.append(df)
     df = pd.concat(dfs)
+
     print(df.head(10))
     df = df[df["ba"] >= 0.5]
-    print(df.groupby(["ba", "Tree", "val_set"])[["Rate Error", "Accuracy Error"]].mean())
+    print(df.groupby(["ba", "Tree", "val_set", "test_set"])[["Rate Error", "Accuracy Error"]].mean())
     # input()
     df["ba"] = round(df["ba"], 2)
     df["rate"] = round(df["rate"], 2)

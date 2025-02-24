@@ -65,7 +65,7 @@ def single_run(data, estimator=BernoulliEstimator):
 
 def collect_tpr_tnr_sensitivity_data(data):
     bins = 11
-    for val_set in [CVCCLINIC, ETISLARIB, ENDOCV]:
+    for val_set in ["noise", "random"]:
         for test_set in [CVCCLINIC, ETISLARIB, ENDOCV]:
             dfs = []
             total_num_tpr_tnr = np.sum(
@@ -82,7 +82,7 @@ def collect_tpr_tnr_sensitivity_data(data):
                             if tnr+tpr/2 < 0.5:
                                 continue
                             sim = SystemSimulator(data, ood_test_shift=test_set, ood_val_shift=val_set, estimator=BernoulliEstimator, dsd_tpr=tpr, dsd_tnr=tnr)
-                            results = sim.uniform_rate_sim(rate, 1000)
+                            results = sim.uniform_rate_sim(rate, 600)
                             # results = results.mean()
                             results["tpr"] = tpr
                             results["tnr"] = tnr
@@ -219,7 +219,7 @@ if __name__ == '__main__':
     # print("asdadsa")
     # single_run(data)
     # uniform_bernoulli(data, load = False)
-    collect_tpr_tnr_sensitivity_data(data)
+    #collect_tpr_tnr_sensitivity_data(data)
     plot_tpr_tnr_sensitivity()
     # plot_ba_rate_sensitivity(uniform_bernoulli(data, load=False))
     # eval_rate_estimator()

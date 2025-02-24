@@ -2,8 +2,6 @@ import numpy as np
 import pandas as pd
 from decimal import getcontext
 
-from watchdog.observers.inotify_c import inotify_init
-
 from components import LossEstimator, Trace, SyntheticOODDetector, SplitLossEstimator
 from rateestimators import BernoulliEstimator
 from riskmodel import DetectorEventTree, BaseEventTree
