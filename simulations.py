@@ -31,6 +31,7 @@ class SystemSimulator:
         self.ood_val_acc = self.get_predictor_accuracy(self.ood_val_shift)
         self.ood_test_acc = self.get_predictor_accuracy(self.ood_test_shift)
         self.ind_val_acc = self.get_predictor_accuracy("ind_val")
+        self.ind_test_acc = self.get_predictor_accuracy("ind_test")
         dsd_tnr, dsd_tpr = self.ood_detector.get_likelihood()
         ind_ndsd_acc = self.get_conditional_prediction_likelihood_estimates("ind_val", False)
         ind_dsd_acc = self.get_conditional_prediction_likelihood_estimates("ind_val", True)
@@ -104,6 +105,7 @@ class SystemSimulator:
             current_base_expected_accuracy = self.base_tree.calculate_expected_accuracy(self.base_tree.root)
             true_base_risk = self.base_tree.get_true_risk_for_sample(batch)
             accuracy = batch["correct_prediction"].mean()
+            # accuracy = self.ind_test_acc
             data = pd.DataFrame( {"Tree": ["Detector Tree", "Base Tree"], "Risk Estimate": [current_risk, current_base_risk],
                                            "True Risk": [true_dsd_risk, true_base_risk], "E[f(x)=y]":[current_expected_accuracy, current_base_expected_accuracy],
                                            "Accuracy": [accuracy, accuracy], "ood_pred": [ood_pred, ood_pred], "is_ood": [shifted, shifted],

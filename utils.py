@@ -4,8 +4,7 @@ from os.path import join
 import pandas as pd
 import torch
 import torch.nn as nn
-
-
+from cffi.cffi_opcode import PRIM_SIZE
 
 ETISLARIB = "EtisLaribDB" #training set
 CVCCLINIC = "CVC-ClinicDB" #validation set
@@ -56,12 +55,11 @@ class ArgumentIterator:
         return len(self.iterable)
 
 
-def load_pra_df(feature_name, batch_size=30, samples=1000):
+def load_pra_df(dataset_name, feature_name, batch_size=30, samples=1000):
 
     df = pd.concat(
-        [pd.read_csv(join("single_data", fname)) for fname in os.listdir("single_data") if "Polyp" in fname])
+        [pd.read_csv(join("single_data", fname)) for fname in os.listdir("single_data") if dataset_name in fname])
     df.drop(columns=["Unnamed: 0"], inplace=True)
-    df = df[df["feature_name"] == feature_name]
     df = df[df["fold"]!="ind"]
     # df["intensity"] = df["shift"].apply(lambda x: x.split("_")[1] if "_" in x else x)
     df = df[~df["fold"].isin(["smear", "saturation", "brightness"])]
@@ -81,12 +79,16 @@ def load_pra_df(feature_name, batch_size=30, samples=1000):
         cols = list(df.columns)
         cols.remove("loss")
         cols.remove("feature")
-
         df = df.groupby(cols).apply(sample_loss_feature, samples, batch_size).reset_index()
         df.drop(columns=["level_2"], inplace=True)
-    ind_99th = min(df[df["fold"] == "ind_val"]["loss"].quantile(0.95), 0.5)
-    print(ind_99th)
-    df["correct_prediction"] = df["loss"] < ind_99th  # arbitrary threshold
+    if dataset_name=="Polyp":
+        df["fold"] = df["fold"].apply(lambda x: x.split("_")[0])
+        ind_99th = min(df[df["fold"] == "ind_val"]["loss"].quantile(0.95), 0.5)
+        print(ind_99th)
+        df["correct_prediction"] = df["loss"] < ind_99th  # arbitrary threshold
+    else:
+        # print(df[df["fold"]=="ind_val"]["loss"].quantile(0.05))
+        df["correct_prediction"] = df["loss"]>0.5 #arbitrary threshold; todo replace
     df["shift"] = df["fold"].apply(lambda x: x.split("_")[0] if "_0." in x else x)            #what kind of shift has occured?
     df["shift_intensity"] = df["fold"].apply(lambda x: x.split("_")[1] if "_" in x else x)  #what intensity?
     df["ood"] = ~df["fold"].isin(["train", "ind_val", "ind_test"])#&~df["correct_prediction"] #is the prediction correct?

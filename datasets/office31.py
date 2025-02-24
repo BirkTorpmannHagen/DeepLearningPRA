@@ -25,13 +25,21 @@ class Office31Dataset(Dataset):
             stratify=targets,
             random_state=42  # Ensures determinism
         )
+        test_idx = val_idx[:len(val_idx)//2]
+        val_idx = val_idx[len(val_idx)//2:]
 
         if fold == "train":
             self.dataset = Subset(full_dataset, train_idx)
             self.dataset.dataset.transform = train_transform
-        else:
+        elif fold=="val":
             self.dataset = Subset(full_dataset, val_idx)
             self.dataset.dataset.transform = val_transform
+        elif fold=="test":
+            self.dataset = Subset(full_dataset, test_idx)
+            self.dataset.dataset.transform = val_transform
+        elif fold=="ood":
+            self.dataset = full_dataset
+            self.dataset.transform = val_transform
 
     def __len__(self):
         return len(self.dataset)
@@ -45,5 +53,5 @@ def build_office31_dataset(root, train_transform, val_transform, context="amazon
     val = Office31Dataset(root, train_transform, val_transform, context, fold="val")
     ood_contexts = train.contexts
     ood_contexts.remove(context)
-    oods = ConcatDataset([Office31Dataset(root, train_transform, val_transform, context, fold="val") for context in ood_contexts])
+    oods = dict([[context, Office31Dataset(root, train_transform, val_transform, context, fold="val") ]for context in ood_contexts])
     return train, val, oods

@@ -43,19 +43,16 @@ def uniform_bernoulli(data, estimator=BernoulliEstimator, load=True):
     return results
 
 def single_run(data, estimator=BernoulliEstimator):
-    sim = SystemSimulator(data, ood_test_shift=CVCCLINIC, ood_val_shift=ENDOCV, maximum_loss=0.5, estimator=estimator, dsd_tnr=1, dsd_tpr=1)
+    sim = SystemSimulator(data, ood_test_shift="OoD Test", ood_val_shift="OoD Val", maximum_loss=0.5, estimator=estimator, dsd_tnr=1, dsd_tpr=1)
     results = sim.uniform_rate_sim(1, 10000)
     sim.detector_tree.print_tree()
-    results["Error"] = np.abs(results['E[f(x)=y]'] - results['Accuracy'])
     print(results.groupby(["Tree"]).mean())
-    sim = SystemSimulator(data, ood_test_shift=CVCCLINIC, ood_val_shift="noise", maximum_loss=0.5, estimator=estimator, dsd_tnr=1, dsd_tpr=1)
-    results = sim.uniform_rate_sim(1, 10000)
-    results["Error"] = np.abs(results['E[f(x)=y]'] - results['Accuracy'])
+    sim = SystemSimulator(data, ood_test_shift="OoD Test", ood_val_shift="OoD Val", maximum_loss=0.5, estimator=estimator, dsd_tnr=1, dsd_tpr=1)
+    results = sim.uniform_rate_sim(0.5, 10000)
     sim.detector_tree.print_tree()
     print(results.groupby(["Tree"]).mean())
-    sim = SystemSimulator(data, ood_test_shift=CVCCLINIC, ood_val_shift="random", maximum_loss=0.5, estimator=estimator, dsd_tnr=1, dsd_tpr=1)
-    results = sim.uniform_rate_sim(1, 10000)
-    results["Error"] = np.abs(results['E[f(x)=y]'] - results['Accuracy'])
+    sim = SystemSimulator(data, ood_test_shift="OoD Test", ood_val_shift="OoD Val", maximum_loss=0.5, estimator=estimator, dsd_tnr=1, dsd_tpr=1)
+    results = sim.uniform_rate_sim(0, 10000)
     sim.detector_tree.print_tree()
     print(results.groupby(["Tree"]).mean())
 
@@ -214,15 +211,7 @@ def risk_tree_cba():
 
 
 if __name__ == '__main__':
-    data = load_pra_df("knn", batch_size=30, samples=1000)
-
+    data = load_pra_df(dataset_name="ECCV", feature_name="knn", batch_size=30, samples=1000)
     # print("asdadsa")
-    # single_run(data)
+    single_run(data)
     # uniform_bernoulli(data, load = False)
-    #collect_tpr_tnr_sensitivity_data(data)
-    plot_tpr_tnr_sensitivity()
-    # plot_ba_rate_sensitivity(uniform_bernoulli(data, load=False))
-    # eval_rate_estimator()
-    #plot_rate_estimates()
-    # print(fetch_dsd_accuracies())
-

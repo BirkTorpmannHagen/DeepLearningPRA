@@ -1,8 +1,10 @@
+from glow.plmodules import GlowPL
 from pytorch_lightning import Trainer
 from datasets import *
 
 
 from pytorch_lightning.callbacks import ModelCheckpoint
+import torch
 
 import warnings
 from pytorch_lightning.loggers import TensorBoardLogger
@@ -12,38 +14,34 @@ warnings.filterwarnings('ignore')
 # torch and lightning imports
 from torchvision import transforms
 from torch.utils.data import DataLoader
-from classifier.resnetclassifier import ResNetClassifier
 
 
-# Here we define a new class to turn the ResNet model that we want to use as a feature extractor
-# into a pytorch-lightning module so that we can take advantage of lightning's Trainer object.
-# We aim to make it a little more general by allowing users to define the number of prediction classes.
 
-def train_classifier(train_set, val_set, load_from_checkpoint=None):
-    num_classes =  train_set.num_classes
-    model =  ResNetClassifier(num_classes, 101, transfer=False, batch_size=32, lr=1e-4).to("cuda")
+def train_glow(train_set, val_set, load_from_checkpoint=None):
+
+    model =  GlowPL(3, 32,4, affine=True, conv_lu=True, optimizer="adam", batch_size=32, img_size=32, lr=1e-4).to("cuda")
 
     if load_from_checkpoint:
-        model = ResNetClassifier.load_from_checkpoint(load_from_checkpoint, num_classes=num_classes, resnet_version=101)
+        model = GlowPL.load_from_checkpoint(load_from_checkpoint, in_channel=3, n_flow=32,n_block=4, affine=True, conv_lu=True, optimizer="adam", batch_size=32, img_size=32, lr=1e-4)
     # model = cifarrr
-    tb_logger = TensorBoardLogger(save_dir=f"train_logs/{type(train_set).__name__}")
+    tb_logger = TensorBoardLogger(save_dir=f"glow_logs/{type(train_set).__name__}")
     checkpoint_callback = ModelCheckpoint(
-        dirpath=f"train_logs/{type(train_set).__name__}/checkpoints",
+        dirpath=f"glow_logs/{type(train_set).__name__}/checkpoints",
         save_top_k=3,
         verbose=True,
-        monitor="val_acc",
-        mode="max"
+        monitor="val_loss",
+        mode="min"
     )
 
     # ResNetClassifier.load_from_checkpoint("Imagenette_logs/checkpoints/epoch=82-step=24568.ckpt", resnet_version=101, nj
-    trainer = Trainer(max_epochs=200, logger=tb_logger, accelerator="gpu",callbacks=checkpoint_callback)
-    trainer.fit(model, train_dataloaders=DataLoader(train_set, shuffle=True, batch_size=16, num_workers=24),
-                val_dataloaders=DataLoader(val_set, batch_size=16, shuffle=True, num_workers=24))
+    trainer = Trainer(max_epochs=200, logger=tb_logger, gradient_clip_val=1.0, accelerator="gpu",callbacks=checkpoint_callback)
+    trainer.fit(model, train_dataloaders=DataLoader(train_set, shuffle=False, batch_size=16, num_workers=24),
+                val_dataloaders=DataLoader(val_set, batch_size=16, shuffle=False, num_workers=24))
 
 
 if __name__ == '__main__':
     #NICO
-    size = 512
+    size = 32
     trans = transforms.Compose([transforms.RandomHorizontalFlip(),
                         transforms.RandomVerticalFlip(),
                         transforms.RandomRotation(90),
@@ -62,7 +60,7 @@ if __name__ == '__main__':
     # train_set, val_set, ood_set = build_office31_dataset("../../Datasets/office31", train_transform=trans, val_transform=val_trans )
     # train_classifier(train_set, val_set, load_from_checkpoint="train_logs/Office31/checkpoints/epoch=64-step=9165.ckpt")
     train_set, val_set, test_set, ood_val_set, ood_test_set = build_eccv_dataset("../../Datasets/ECCV", trans, val_trans)
-    train_classifier(train_set, val_set, load_from_checkpoint="train_logs/ECCV/checkpoints/epoch=60-step=50813.ckpt")
+    train_glow(train_set, val_set)
     # train_set, val_set, ood_set = build_officehome_dataset("../../Datasets/OfficeHome", train_transform=trans, val_transform=val_trans)
     # train_set, test_set,val_set, ood_set = get_pneumonia_dataset("../../Datasets/Pneumonia", trans, val_trans)
 
