@@ -9,12 +9,14 @@ import json
 import albumentations as alb
 import matplotlib.pyplot as plt
 import torch
+from gmpy2 import random_state
 from torch.utils.data import ConcatDataset
 import numpy as np
 from PIL import Image
 from glob import glob
 from torchvision.transforms import ToTensor
 from torch.utils import data
+from random import shuffle
 import torchvision.transforms as transforms
 from os import listdir
 import torchvision
@@ -44,38 +46,43 @@ class ECCV(Dataset):
         self.fold = fold
         self.label_encoder = sklearn.preprocessing.LabelEncoder()
 
+        ind_merged_paths = list(self.train_image_paths) + list(self.cis_val_image_paths)
+        ind_merged_labels = list(self.train_labels) + list(self.cis_val_labels)
+
         #use custom splits
-        ind_merged_paths = list(self.train_image_paths) + list(self.cis_val_image_paths) + list(self.cis_test_image_paths)
-        ind_merged_labels = list(self.train_labels) + list(self.cis_val_labels) + list(self.cis_test_labels)
-        ind_merged_locations = list(self.train_locations) + list(self.cis_val_locations) + list(self.cis_test_locations)
-        self.train_image_paths, self.cis_val_image_paths, self.cis_test_image_paths, self.train_labels, self.cis_val_labels, self.cis_test_labels, self.train_locations, self.cis_val_locations, self.cis_test_locations = train_test_split(ind_merged_paths, ind_merged_labels, ind_merged_locations, test_size=0.2, stratify=ind_merged_labels, random_state=42)
+        ind_merged_paths = list(self.train_image_paths) + list(self.cis_val_image_paths)
+        ind_merged_labels = list(self.train_labels) + list(self.cis_val_labels)
+
+        #split the ind data
+        train_paths, valtest_paths, train_labels, valtest_labels= train_test_split(ind_merged_paths, ind_merged_labels, test_size=0.2, random_state=42)
+        val_paths, test_paths, val_labels,  test_labels = train_test_split(valtest_paths, valtest_labels, test_size=0.5, random_state=42)
+
+        # ind_merged_paths = [ind_merged_paths[i] for i in permutation]a
+        # ind_merged_labels = [ind_merged_labels[i] for i in permutation]
+        # num_ind = len(ind_merged_paths)
+        # ind_split = [0.8, 0.1, 0.1]
 
         ood_merged_paths = list(self.trans_val_image_paths) + list(self.trans_test_image_paths)
         ood_merged_labels = list(self.trans_val_labels) + list(self.trans_test_labels)
-        ood_merged_locations = list(self.trans_val_locations) + list(self.trans_test_locations)
-        self.ood_val_image_paths, self.ood_test_image_paths, self.ood_val_labels, self.ood_test_labels, self.ood_val_locations, self.ood_test_locations = train_test_split(ood_merged_paths, ood_merged_labels, ood_merged_locations, test_size=0.5, stratify=ood_merged_labels, random_state=42)
+        ood_val_paths, ood_test_paths, ood_val_labels, ood_test_labels = train_test_split(ood_merged_paths, ood_merged_labels, test_size=0.5, random_state=42)
+
 
 
         if fold=="train":
-            self.file_names = self.train_image_paths
-            self.labels = self.train_labels
-            self.locations = self.train_locations
+            self.file_names = train_paths
+            self.labels = train_labels
         elif fold=="val":
-            self.file_names = self.cis_val_image_paths
-            self.labels = self.cis_val_labels
-            self.locations = self.cis_val_locations
+            self.file_names = val_paths
+            self.labels = val_labels
         elif fold=="test":
-            self.file_names = self.cis_test_image_paths
-            self.labels = self.cis_test_labels
-            self.locations = self.cis_test_locations
+            self.file_names = test_paths
+            self.labels = test_labels
         elif fold=="ood_val":
-            self.file_names = list(self.trans_val_image_paths)
-            self.labels = list(self.trans_val_labels)
-            self.locations = list(list(self.trans_test_locations))
+            self.file_names = ood_val_paths
+            self.labels = ood_val_labels
         elif fold=="ood_test":
-            self.file_names = list(self.trans_test_image_paths)
-            self.labels = list(self.trans_test_labels)
-            self.locations = list(self.trans_test_locations)
+            self.file_names = ood_test_paths
+            self.labels = ood_test_labels
         self.num_classes = len(np.unique(self.labels))
         self.label_encoder.fit(np.unique(self.labels))  # classes seen during training
 
@@ -140,13 +147,4 @@ def build_eccv_dataset(path, train_transform, val_transform):
 
 
 if __name__ == '__main__':
-    import torchvision.transforms as transforms
-    from torch.utils.data import DataLoader
-    trans = transforms.Compose([transforms.Resize((512,512)), transforms.ToTensor()])
-    dataset = ECCV("../../../Datasets/ECCV",trans, trans)
-    for x, y in DataLoader(dataset, batch_size=1):
-        plt.imshow(x[0].permute(1,2,0))
-        plt.title(y)
-        plt.show()
-        input()
-
+    ind_train, ind_val, ind_test, ood_val, ood_test = build_eccv_dataset("../../Datasets/ECCV", )

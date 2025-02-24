@@ -1,13 +1,12 @@
 from tqdm import tqdm
-from math import log
 from datasets.eccv import *
-from datasets.nico import *
-from datasets.officehome import *
 from datasets.office31 import *
 import torch
 from torch import optim
 from torch.utils.data import DataLoader
 from torchvision import transforms, utils
+
+from glow.plmodules import calc_loss
 from glow.model import Glow
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -44,18 +43,6 @@ def calc_z_shapes(n_channel, input_size, n_flow, n_block):
     return z_shapes
 
 
-def calc_loss(log_p, logdet, image_size, n_bins):
-    # log_p = calc_log_p([z_list])
-    n_pixel = image_size * image_size * 3
-    loss = -log(n_bins) * n_pixel
-    loss = loss + logdet + log_p
-    return (
-        (-loss / (log(2) * n_pixel)).mean(),
-        (log_p / (log(2) * n_pixel)).mean(),
-        (logdet / (log(2) * n_pixel)).mean(),
-    )
-
-
 def train(data, model, optimizer, img_size=32):
     dataset = iter(sample_data(data, 8))
     n_bins = 2.0 ** 5
@@ -77,7 +64,8 @@ def train(data, model, optimizer, img_size=32):
             image = torch.floor(image / 2 ** (8 - 5))
 
             image = image / n_bins - 0.5
-
+            # print(image)
+            # input()
 
             log_p, logdet, _ = model(image + torch.rand_like(image) / n_bins)
 
@@ -144,10 +132,10 @@ if __name__ == "__main__":
     # dataset, _,_ = build_officehome_dataset("../../Datasets/OfficeHome", train_transform=trans, val_transform=trans)
     # train_new(dataset, img_size=32)
 
-    dataset, _,_ = build_office31_dataset("../../Datasets/office31", train_transform=trans, val_transform=trans)
-    train_new(dataset, img_size=32)
+    # dataset, _,_ = build_office31_dataset("../../Datasets/office31", train_transform=trans, val_transform=trans)
+    # train_new(dataset, img_size=32)
 
-    dataset, _,_, _ = build_ECCV("../../Datasets/ECCV", train_transform=trans, val_transform=trans)
+    dataset, ind_val,_, _, _ = build_eccv_dataset("../../Datasets/ECCV", train_transform=trans, val_transform=trans)
     train_new(dataset, img_size=32)
 
     # trans = transforms.Compose([transforms.Resize((32,32)), transforms.RandomHorizontalFlip(), transforms.ToTensor()])

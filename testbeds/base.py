@@ -16,6 +16,7 @@ from datasets.officehome import build_officehome_dataset
 from datasets.office31 import build_office31_dataset
 from datasets.eccv import build_eccv_dataset
 from torchvision.transforms import transforms
+from glow.plmodules import GlowPL
 from glow.model import Glow
 from classifier.resnetclassifier import ResNetClassifier
 import os
