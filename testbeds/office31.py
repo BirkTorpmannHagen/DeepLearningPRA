@@ -6,7 +6,7 @@ class Office31TestBed(BaseTestBed):
         self.trans = transforms.Compose([
             transforms.Resize((512, 512)),
             transforms.ToTensor(), ])
-        self.ind, self.ind_val, self.ood = build_office31_dataset("../../Datasets/office31", self.trans, self.trans)
+        self.ind, self.ind_val, self.ood_val, self.ood_test = build_office31_dataset("../../Datasets/office31", self.trans, self.trans)
 
         self.num_classes = num_classes = self.ind.num_classes
         self.contexts = len(self.ind.contexts)
@@ -26,3 +26,5 @@ class Office31TestBed(BaseTestBed):
         # self.vae = VanillaVAE(3, 512).to("cuda").eval()
         # self.rep_model = self.vae
         self.mode = mode
+
+

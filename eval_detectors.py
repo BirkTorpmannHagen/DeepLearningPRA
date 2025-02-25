@@ -63,7 +63,7 @@ if __name__ == '__main__':
     # collect_data(PolypTestBed, "Polyp", mode="fgsm")
 
 
-    collect_data(ECCVTestBed, "ECCV", mode="normal")
+    #collect_data(ECCVTestBed, "ECCV", mode="normal")
     # collect_data(ECCVTestBed, "ECCV", mode="noise")
     # collect_data(ECCVTestBed, "ECCV", mode="hue")
     # collect_data(ECCVTestBed, "ECCV", mode="smear")
@@ -74,7 +74,7 @@ if __name__ == '__main__':
     # collect_data(ECCVTestBed, "ECCV", mode="saltpepper")
     # collect_data(ECCVTestBed, "ECCV", mode="fgsm")
 
-    # collect_data(OfficeHomeTestBed, "OfficeHome", mode="normal")
+    #collect_data(OfficeHomeTestBed, "OfficeHome", mode="normal")
     # collect_data(OfficeHomeTestBed, "OfficeHome", mode="noise")
     # collect_data(OfficeHomeTestBed, "OfficeHome", mode="hue")
     # collect_data(OfficeHomeTestBed, "OfficeHome", mode="smear")
@@ -86,7 +86,7 @@ if __name__ == '__main__':
     # collect_data(OfficeHomeTestBed, "OfficeHome", mode="saltpepper")
     # collect_data(OfficeHomeTestBed, "OfficeHome", mode="fgsm")
 
-    # collect_data(Office31TestBed, "Office31", mode="normal")
+    collect_data(Office31TestBed, "Office31", mode="normal")
     # collect_data(Office31TestBed, "Office31", mode="noise")
     # collect_data(Office31TestBed, "Office31", mode="hue")
     # collect_data(Office31TestBed, "Office31", mode="smear")

@@ -59,10 +59,10 @@ if __name__ == '__main__':
     # train_set, val_set, ood_set = build_officehome_dataset("../../Datasets/OfficeHome", train_transform=trans, val_transform=val_trans )
     # train_classifier(train_set, val_set)
 
-    # train_set, val_set, ood_set = build_office31_dataset("../../Datasets/office31", train_transform=trans, val_transform=val_trans )
-    # train_classifier(train_set, val_set, load_from_checkpoint="train_logs/Office31/checkpoints/epoch=64-step=9165.ckpt")
-    train_set, val_set, test_set, ood_val_set, ood_test_set = build_eccv_dataset("../../Datasets/ECCV", trans, val_trans)
-    train_classifier(train_set, val_set, load_from_checkpoint="train_logs/ECCV/checkpoints/epoch=60-step=50813.ckpt")
+    train_set, val_set, ood_val_set, ood_test_set = build_office31_dataset("../../Datasets/office31", train_transform=trans, val_transform=val_trans )
+    train_classifier(train_set, val_set)
+    #train_set, val_set, test_set, ood_val_set, ood_test_set = build_eccv_dataset("../../Datasets/ECCV", trans, val_trans)
+   # train_classifier(train_set, val_set, load_from_checkpoint="train_logs/ECCV/checkpoints/epoch=60-step=50813.ckpt")
     # train_set, val_set, ood_set = build_officehome_dataset("../../Datasets/OfficeHome", train_transform=trans, val_transform=val_trans)
     # train_set, test_set,val_set, ood_set = get_pneumonia_dataset("../../Datasets/Pneumonia", trans, val_trans)
 

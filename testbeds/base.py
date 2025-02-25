@@ -47,6 +47,9 @@ class BaseTestBed:
     def ind_test_loader(self):
         return  {"ind_test":self.dl(self.ind_test)}
 
+    def get_ood_dict(self):
+        return {"OoD Val": self.ood_val, "Ood Test": self.ood_test}
+
     def ood_loaders(self):
         if self.mode=="noise":
             ood_sets = [self.dl(TransformedDataset(self.ind_test, additive_noise, "noise", noise)) for noise in self.noise_range]
@@ -104,3 +107,4 @@ class BaseTestBed:
                 losses[i]=vec
                 # losses[i] = criterion(yhat, y).cpu().numpy()
         return losses.flatten()
+
