@@ -30,8 +30,9 @@ def collect_gradient_data(sample_range, testbed_constructor, dataset_name, grad_
 
 def collect_data(testbed_constructor, dataset_name, mode="noise"):
     bench = testbed_constructor("classifier", mode=mode)
+    # features = [knn, cross_entropy, grad_magnitude, energy, typicality]
 
-    features = [cross_entropy, grad_magnitude, energy, typicality]
+    features = [knn]
     tsd = FeatureSD(bench.classifier,features)
     tsd.register_testbed(bench)
     compute_stats(*tsd.compute_pvals_and_loss(),
@@ -63,8 +64,8 @@ if __name__ == '__main__':
     # collect_data(PolypTestBed, "Polyp", mode="fgsm")
 
 
-    collect_data(ECCVTestBed, "ECCV", mode="normal")
-    collect_data(ECCVTestBed, "ECCV", mode="noise")
+    # collect_data(ECCVTestBed, "ECCV", mode="normal")
+    #collect_data(ECCVTestBed, "ECCV", mode="noise")
     # collect_data(ECCVTestBed, "ECCV", mode="hue")
     # collect_data(ECCVTestBed, "ECCV", mode="smear")
     # collect_data(ECCVTestBed, "ECCV", mode="saturation")
@@ -87,7 +88,7 @@ if __name__ == '__main__':
     # collect_data(OfficeHomeTestBed, "OfficeHome", mode="fgsm")
 
     # collect_data(Office31TestBed, "Office31", mode="normal")
-    collect_data(Office31TestBed, "Office31", mode="noise")
+    #collect_data(Office31TestBed, "Office31", mode="noise")
     # collect_data(Office31TestBed, "Office31", mode="hue")
     # collect_data(Office31TestBed, "Office31", mode="smear")
     # collect_data(Office31TestBed, "Office31", mode="saturation")
@@ -98,8 +99,8 @@ if __name__ == '__main__':
     # collect_data(Office31TestBed, "Office31", mode="saltpepper")
     # collect_data(Office31TestBed, "Office31", mode="fgsm")
 
-    # collect_data(NicoTestBed, "NICO", mode="normal")
-    # collect_data(NicoTestBed, "NICO", mode="noise")
+    collect_data(NicoTestBed, "NICO", mode="normal")
+    collect_data(NicoTestBed, "NICO", mode="noise")
     # collect_data(NicoTestBed, "NICO", mode="hue")
     # collect_data(NicoTestBed, "NICO", mode="smear")
     # collect_data(NicoTestBed, "NICO", mode="saturation")

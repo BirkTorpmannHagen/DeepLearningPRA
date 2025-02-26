@@ -117,11 +117,11 @@ class TransformedDataset(data.Dataset):
         x = batch[0]
         rest = batch[1:]
         x = torch.clip(self.transform(x, self.transform_param), 0, 1)
-        if index==0:
-            plt.imshow(x.permute(1,2,0))
-            plt.savefig(f"test_plots/{self.transform_name}_{self.transform_param}.png")
-            plt.show()
-            plt.close()
+        # if index==0:
+        #     plt.imshow(x.permute(1,2,0))
+        #     plt.savefig(f"test_plots/{self.transform_name}_{self.transform_param}.png")
+        #     plt.show()
+        #     plt.close()
         return (x, *rest)
 
     def __str__(self):

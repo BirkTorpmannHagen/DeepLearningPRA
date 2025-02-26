@@ -20,6 +20,7 @@ class NICODataset(data.Dataset):
         self.context = image_path_list[0].split("/")[-3]
         contexts = os.listdir(context_path)
         self.context_map = dict(zip(contexts, range(len(contexts))))
+
     def __len__(self):
         # return 32 #debug
         return len(self.image_path_list)
@@ -44,28 +45,36 @@ class NICODataset(data.Dataset):
         pass
 
 
-def build_nico_dataset(use_track, root, val_ratio, train_transform, val_transform, context, seed=0):
-    if use_track == 1:
-        track_data_dir = os.path.join(root, "track_1")
-        data_dir = os.path.join(track_data_dir, "public_dg_0416", "train")
-        label_map_json = os.path.join(track_data_dir, "dg_label_id_mapping.json")
-        image_path_list = glob(f"{data_dir}/{context}/*/*.jpg")
-        shuffle(image_path_list)
+def build_nico_dataset(root, train_transform, val_transform, ind_context):
+    track_data_dir = os.path.join(root, "track_1")
+    data_dir = os.path.join(track_data_dir, "public_dg_0416", "train")
+    label_map_json = os.path.join(track_data_dir, "dg_label_id_mapping.json")
+    ind_image_path_list = glob(f"{data_dir}/{ind_context}/*/*.jpg")
 
-    else:
-        track_data_dir = os.path.join(root, "track_2")
-        data_dir = os.path.join(
-            track_data_dir, "public_ood_0412_nodomainlabel", "train"
-        )
-        label_map_json = os.path.join(track_data_dir, "ood_label_id_mapping.json")
-        image_path_list = glob(f"{data_dir}/*/*.jpg")
-        shuffle(image_path_list)
+    context_path = os.path.join(*ind_image_path_list[0].split("/")[:-3])
+    ood_contexts = os.listdir(context_path)
+    ood_contexts.remove(ind_context)
 
-    if val_ratio==0:
-        return NICODataset(image_path_list, label_map_json, train_transform), NICODataset(image_path_list, label_map_json, train_transform)
+    all_image_paths = glob(f"{data_dir}/*/*/*.jpg")
+    # Filter out the ones containing ind_context
+    ood_image_path_list = [glob(f"{data_dir}/{context}/*/*.jpg") for context in ood_contexts]
+    shuffle(ood_image_path_list)
 
-    n = round((len(image_path_list) * val_ratio) / 2) * 2
-    train_dataset = NICODataset(image_path_list[n:], label_map_json, train_transform)
-    val_dataset = NICODataset(image_path_list[:n], label_map_json, val_transform)
-    return train_dataset, val_dataset
+    shuffle(ind_image_path_list)
+    train_idx = int(len(ind_image_path_list) * 0.8)
+    val_idx = int(len(ind_image_path_list) * 0.9)
+    train = NICODataset(ind_image_path_list[:train_idx], label_map_json, train_transform)
+    val = NICODataset(ind_image_path_list[train_idx:val_idx], label_map_json, val_transform)
+    test = NICODataset(ind_image_path_list[val_idx:], label_map_json, val_transform)
+    ood_dict = dict(zip(ood_contexts, [NICODataset(paths, label_map_json, val_transform) for paths in ood_image_path_list]))
+    print(ood_dict)
+    return train, val, test, ood_dict
 
+
+if __name__ == '__main__':
+    from torchvision import transforms
+    trans = transforms.Compose([
+        transforms.Resize((512, 512)),
+        transforms.ToTensor(), ])
+
+    build_nico_dataset("../../../Datasets/NICO++",trans, trans, "dim")
