@@ -15,8 +15,7 @@ class Office31Dataset(Dataset):
 
         self.ood_contexts = os.listdir(path)
         self.ood_contexts.remove(ind_context)
-        print(self.ood_contexts)
-        self.num_classes = len(os.listdir(os.path.join(path, self.contexts[0], "images")))
+        self.num_classes = len(os.listdir(os.path.join(path, self.ind_context, "images")))
 
         # Load the full dataset without splits
         # Prepare labels for stratified split
@@ -33,17 +32,6 @@ class Office31Dataset(Dataset):
         ind_val_idx = ind_val_idx[len(ind_val_idx)//2:]
 
 
-        full_ood_dataset = ConcatDataset([ImageFolder(os.path.join(path, i, "images")) for i in self.ood_contexts])
-        ood_targets = [s[1] for s in full_ood_dataset.samples]  # Extract labels from samples
-        ood_val_idx, ood_test_idx = train_test_split(
-            range(len(full_ood_dataset)),
-            test_size=0.5,
-            stratify=ood_targets,
-            random_state=42
-        )
-
-
-
         if fold == "train":
             self.dataset = Subset(full_ind_dataset, ind_train_idx)
             self.dataset.dataset.transform = train_transform
@@ -54,11 +42,11 @@ class Office31Dataset(Dataset):
             self.dataset = Subset(full_ind_dataset, ind_test_idx)
             self.dataset.dataset.transform = val_transform
         elif fold=="ood_val":
-            self.dataset = Subset(full_ood_dataset, ood_val_idx)
-            self.dataset.dataset.transform = val_transform
+            self.dataset = ImageFolder(os.path.join(path, self.ood_contexts[0], "images"))
+            self.dataset.transform = val_transform
         elif fold=="ood_test":
-            self.dataset = Subset(full_ood_dataset, ood_test_idx)
-            self.dataset.dataset.transform = val_transform
+            self.dataset = ImageFolder(os.path.join(path, self.ood_contexts[1], "images"))
+            self.dataset.transform = val_transform
 
     def __len__(self):
         return len(self.dataset)
@@ -67,12 +55,22 @@ class Office31Dataset(Dataset):
         return self.dataset[index]
 
 
-def build_office31_dataset(root, train_transform, val_transform, context="amazon"):
-    train = Office31Dataset(root, train_transform, val_transform, context, fold="train")
-    val = Office31Dataset(root, train_transform, val_transform, context, fold="val")
-    test = Office31Dataset(root, train_transform, val_transform, context, fold="test")
-    ood_val = Office31Dataset(root, train_transform, val_transform, context, fold="ood_val")
-    ood_test = Office31Dataset(root, train_transform, val_transform, context, fold="ood_test")
-    ood_contexts = train.contexts
-    ood_contexts.remove(context)
+def build_office31_dataset(root, train_transform, val_transform, ind_context="amazon"):
+    train = Office31Dataset(root, train_transform, val_transform, ind_context, fold="train")
+    val = Office31Dataset(root, train_transform, val_transform, ind_context, fold="val")
+    test = Office31Dataset(root, train_transform, val_transform, ind_context, fold="test")
+    ood_val = Office31Dataset(root, train_transform, val_transform, ind_context, fold="ood_val")
+    ood_test = Office31Dataset(root, train_transform, val_transform, ind_context, fold="ood_test")
     return train, val, test, ood_val, ood_test
+
+
+if __name__ == '__main__':
+    from torchvision import transforms
+    trans = transforms.Compose([
+        transforms.Resize((512, 512)),
+        transforms.ToTensor(), ])
+
+    for dataset in build_office31_dataset("../../../Datasets/office31/", train_transform=trans, val_transform=trans):
+        print(dataset)
+        for x,y in dataset:
+            print(y)

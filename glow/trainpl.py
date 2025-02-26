@@ -19,7 +19,7 @@ from torch.utils.data import DataLoader
 
 def train_glow(train_set, val_set, load_from_checkpoint=None):
 
-    model =  GlowPL(3, 32,4, affine=True, conv_lu=True, optimizer="adam", batch_size=32, img_size=32, lr=1e-4).to("cuda")
+    model =  GlowPL(3, 32,4, affine=True, conv_lu=True, optimizer="adam", img_size=32, lr=1e-4).to("cuda")
 
     if load_from_checkpoint:
         model = GlowPL.load_from_checkpoint(load_from_checkpoint, in_channel=3, n_flow=32,n_block=4, affine=True, conv_lu=True, optimizer="adam", batch_size=32, img_size=32, lr=1e-4)
@@ -34,7 +34,7 @@ def train_glow(train_set, val_set, load_from_checkpoint=None):
     )
 
     # ResNetClassifier.load_from_checkpoint("Imagenette_logs/checkpoints/epoch=82-step=24568.ckpt", resnet_version=101, nj
-    trainer = Trainer(max_epochs=200, logger=tb_logger, gradient_clip_val=1.0, accelerator="gpu",callbacks=checkpoint_callback)
+    trainer = Trainer(max_epochs=500, logger=tb_logger, gradient_clip_val=1.0, accelerator="gpu",callbacks=checkpoint_callback)
     trainer.fit(model, train_dataloaders=DataLoader(train_set, shuffle=False, batch_size=16, num_workers=24),
                 val_dataloaders=DataLoader(val_set, batch_size=16, shuffle=False, num_workers=24))
 
@@ -59,7 +59,8 @@ if __name__ == '__main__':
 
     # train_set, val_set, ood_set = build_office31_dataset("../../Datasets/office31", train_transform=trans, val_transform=val_trans )
     # train_classifier(train_set, val_set, load_from_checkpoint="train_logs/Office31/checkpoints/epoch=64-step=9165.ckpt")
-    train_set, val_set, test_set, ood_val_set, ood_test_set = build_eccv_dataset("../../Datasets/ECCV", trans, val_trans)
+    #train_set, val_set, test_set, ood_val_set, ood_test_set = build_eccv_dataset("../../Datasets/ECCV", trans, val_trans)
+    train_set, val_set, test_set, ood_val_set, ood_test_set = build_office31_dataset("../../Datasets/office31", trans,val_trans)
     train_glow(train_set, val_set)
     # train_set, val_set, ood_set = build_officehome_dataset("../../Datasets/OfficeHome", train_transform=trans, val_transform=val_trans)
     # train_set, test_set,val_set, ood_set = get_pneumonia_dataset("../../Datasets/Pneumonia", trans, val_trans)

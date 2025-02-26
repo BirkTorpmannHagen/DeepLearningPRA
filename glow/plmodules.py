@@ -33,7 +33,7 @@ class GlowLoss(nn.Module):
 
 class GlowPL(pl.LightningModule):
     def __init__(self, in_channel, n_flow, n_block, affine, conv_lu,
-                 optimizer='adam',n_bins = 2.0 ** 5, lr=1e-6, batch_size=16, img_size=32):
+                 optimizer='adam',n_bins = 2.0 ** 5, lr=1e-6, img_size=32):
         super().__init__()
         
         self.__dict__.update(locals())

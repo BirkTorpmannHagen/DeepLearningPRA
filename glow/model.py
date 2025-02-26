@@ -363,9 +363,11 @@ class Glow(nn.Module):
                 log_p_sum = log_p_sum + log_p
         return log_p_sum, logdet, z_outs
 
-    def estimate_log_likelihood(self, input):
+    def estimate_log_likelihood(self, x):
+        x_rez = torchvision.transforms.Resize((32, 32))(x)
+
         with torch.no_grad():
-            return self.forward(input)[0]
+            return self.forward(x_rez)[0]
 
     def get_encoding(self, x):
         x_rez = torchvision.transforms.Resize((32, 32))(x)
