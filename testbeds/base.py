@@ -47,8 +47,8 @@ class BaseTestBed:
     def ind_test_loader(self):
         return  {"ind_test":self.dl(self.ind_test)}
 
-    def get_ood_dict(self):
-        return {"OoD Val": self.dl(self.ood_val), "Ood Test": self.dl(self.ood_test)}
+    # def get_ood_dict(self):
+    #     return {"OoD Val": self.dl(self.ood_val), "Ood Test": self.dl(self.ood_test)}
 
     def ood_loaders(self):
         if self.mode=="noise":

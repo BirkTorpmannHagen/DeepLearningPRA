@@ -14,7 +14,7 @@ class NicoTestBed(BaseTestBed):
         self.ind_train, self.ind_val, self.ind_test, self.oods = build_nico_dataset( "../../Datasets/NICO++", self.trans, self.trans, ind_context="dim")
         self.contexts.remove("dim")
         # self.ind, self.ind_test = random_split(self.ind, [0.5, 0.5])
-       
+
         self.classifier = ResNetClassifier.load_from_checkpoint(
            "train_logs/NICO/checkpoints/epoch=279-step=175000.ckpt", num_classes=num_classes,
             resnet_version=101).to("cuda").eval()
@@ -23,5 +23,5 @@ class NicoTestBed(BaseTestBed):
         self.rep_model = self.glow
         self.mode=mode
 
-        def get_ood_dict(self):
-            return self.oods
+    def get_ood_dict(self):
+        return {dataset_name: self.dl(dataset) for dataset_name, dataset in self.oods.items()}
