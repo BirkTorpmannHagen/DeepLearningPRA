@@ -475,7 +475,7 @@ def plot_tpr_tnr_sensitivity():
 
 
 if __name__ == '__main__':
-    data = load_pra_df("knn", batch_size=30, samples=1000)
+    data = load_pra_df(dataset_name="Polyp", feature_name="knn", batch_size=1, samples=1000)
     # plot_loss_distributions(data)
     plot_tpr_tnr_sensitivity()
     # plot_sample_size_effect()
