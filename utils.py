@@ -4,7 +4,6 @@ from os.path import join
 import pandas as pd
 import torch
 import torch.nn as nn
-from cffi.cffi_opcode import PRIM_SIZE
 
 ETISLARIB = "EtisLaribDB" #training set
 CVCCLINIC = "CVC-ClinicDB" #validation set
@@ -57,8 +56,13 @@ class ArgumentIterator:
 
 def load_pra_df(dataset_name, feature_name, batch_size=30, samples=1000):
 
-    df = pd.concat(
-        [pd.read_csv(join("single_data", fname)) for fname in os.listdir("single_data") if dataset_name in fname])
+    try:
+        df = pd.concat(
+        [pd.read_csv(join("single_data", fname)) for fname in os.listdir("single_data") if dataset_name in fname and feature_name in fname])
+    except:
+        print("no data found for ", dataset_name, feature_name)
+        return pd.DataFrame()
+    df["dataset"]=dataset_name
     df.drop(columns=["Unnamed: 0"], inplace=True)
     df = df[df["fold"]!="ind"]
     # df["intensity"] = df["shift"].apply(lambda x: x.split("_")[1] if "_" in x else x)
@@ -81,14 +85,13 @@ def load_pra_df(dataset_name, feature_name, batch_size=30, samples=1000):
         cols.remove("feature")
         df = df.groupby(cols).apply(sample_loss_feature, samples, batch_size).reset_index()
         df.drop(columns=["level_2"], inplace=True)
+
     if dataset_name=="Polyp":
-        df["fold"] = df["fold"].apply(lambda x: x.split("_")[0])
-        ind_99th = min(df[df["fold"] == "ind_val"]["loss"].quantile(0.95), 0.5)
-        print(ind_99th)
-        df["correct_prediction"] = df["loss"] < ind_99th  # arbitrary threshold
+        df["correct_prediction"] = df["loss"] < 0.5  # arbitrary threshold
     else:
         # print(df[df["fold"]=="ind_val"]["loss"].quantile(0.05))
         df["correct_prediction"] = df["loss"]>0.5 #arbitrary threshold; todo replace
+
     df["shift"] = df["fold"].apply(lambda x: x.split("_")[0] if "_0." in x else x)            #what kind of shift has occured?
     df["shift_intensity"] = df["fold"].apply(lambda x: x.split("_")[1] if "_" in x else x)  #what intensity?
     df["ood"] = ~df["fold"].isin(["train", "ind_val", "ind_test"])#&~df["correct_prediction"] #is the prediction correct?

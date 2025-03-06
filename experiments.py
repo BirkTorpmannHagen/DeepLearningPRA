@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from utils import *
 import seaborn as sns
 from tqdm import tqdm
+import pandas as pd
 
 from utils import load_pra_df
 
@@ -43,15 +44,15 @@ def uniform_bernoulli(data, estimator=BernoulliEstimator, load=True):
     return results
 
 def single_run(data, estimator=BernoulliEstimator):
-    sim = SystemSimulator(data, ood_test_shift="OoD Test", ood_val_shift="OoD Val", maximum_loss=0.5, estimator=estimator, dsd_tnr=1, dsd_tpr=1)
+    sim = SystemSimulator(data, ood_test_shift="dslr", ood_val_shift="webcam", maximum_loss=0.5, estimator=estimator, dsd_tnr=0.91, dsd_tpr=0.9)
     results = sim.uniform_rate_sim(1, 10000)
     sim.detector_tree.print_tree()
     print(results.groupby(["Tree"]).mean())
-    sim = SystemSimulator(data, ood_test_shift="OoD Test", ood_val_shift="OoD Val", maximum_loss=0.5, estimator=estimator, dsd_tnr=1, dsd_tpr=1)
+    sim = SystemSimulator(data, ood_test_shift="dslr", ood_val_shift="webcam", maximum_loss=0.5, estimator=estimator, dsd_tnr=0.9, dsd_tpr=0.9)
     results = sim.uniform_rate_sim(0.5, 10000)
     sim.detector_tree.print_tree()
     print(results.groupby(["Tree"]).mean())
-    sim = SystemSimulator(data, ood_test_shift="OoD Test", ood_val_shift="OoD Val", maximum_loss=0.5, estimator=estimator, dsd_tnr=1, dsd_tpr=1)
+    sim = SystemSimulator(data, ood_test_shift="dslr", ood_val_shift="webcam", maximum_loss=0.5, estimator=estimator, dsd_tnr=0.9, dsd_tpr=0.9)
     results = sim.uniform_rate_sim(0, 10000)
     sim.detector_tree.print_tree()
     print(results.groupby(["Tree"]).mean())
@@ -60,10 +61,10 @@ def single_run(data, estimator=BernoulliEstimator):
     # results = sim.uniform_rate_sim(0.5, 10000)
     # print(results.mean())
 
-def collect_tpr_tnr_sensitivity_data(data):
+def collect_tpr_tnr_sensitivity_data(data, ood_sets):
     bins = 11
-    for val_set in ["noise", "random"]:
-        for test_set in [CVCCLINIC, ETISLARIB, ENDOCV]:
+    for val_set in ["noise"]+ood_sets:
+        for test_set in ood_sets:
             dfs = []
             total_num_tpr_tnr = np.sum(
                 [i + j / 2 >= 0.5 for i in np.linspace(0, 1, bins) for j in np.linspace(0, 1, bins)])
@@ -87,12 +88,13 @@ def collect_tpr_tnr_sensitivity_data(data):
                             results["rate"] = rate
                             results["test_set"] = test_set
                             results["val_set"] = val_set
+                            results["dataset"] = data["dataset"].unique()[0]
                             # results = results.groupby(["tpr", "tnr", "rate", "test_set", "val_set", "Tree"]).mean().reset_index()
                             dfs.append(results)
                             pbar.update(1)
                 df_final = pd.concat(dfs)
                 print(df_final.head(10))
-                df_final.to_csv(f"pra_data/{val_set}_{test_set}_results.csv")
+                df_final.to_csv(f"pra_data/{data["dataset"].unique()[0]}_{val_set}_{test_set}_results.csv")
 
 def compare_risk_tree_accuracy_estimators():
     df = pd.read_csv("tpr_tnr_sensitivity.csv").groupby(["tpr", "tnr", "rate", "test_set", "val_set"]).mean().reset_index()
@@ -167,13 +169,16 @@ def fetch_dsd_accuracies(dsd):
         return ba
 
 
-def eval_rate_estimator():
+def collect_rate_estimator_data():
     data = []
-    with tqdm(total=26*26*26*9) as pbar:
+    with tqdm(total=21*21*21*9) as pbar:
         for rate in tqdm(np.linspace(0, 1, 26)):
             for tpr in np.linspace(0, 1, 26):
                 for tnr in np.linspace(0, 1, 26):
                     for tl in [10, 20, 30, 50, 60, 100, 200, 500, 1000]:
+                        ba = round((tpr + tnr) / 2,2)
+                        if ba <= 0.5:
+                            continue
                         pbar.update(1)
                         re = BernoulliEstimator(prior_rate=rate, tpr=tpr, tnr=tnr)
                         sample = re.sample(10_000, rate)
@@ -181,10 +186,24 @@ def eval_rate_estimator():
                         for i in np.array_split(dsd, int(10_000//tl)):
                             re.update(i)
                             rate_estimate = re.get_rate()
-                            data.append({"rate": rate, "tpr": tpr, "tnr": tnr, "tl": tl, "rate_estimate": rate_estimate})
+                            error = np.abs(rate-rate_estimate)
+                            data.append({"rate": rate, "ba": ba,  "tl": tl, "rate_estimate": rate_estimate, "error":error})
     df = pd.DataFrame(data)
+    df = df.groupby(["ba","tl", "rate"]).mean()
     df.to_csv("rate_estimator_eval.csv")
-    print(df)
+
+def eval_rate_estimator():
+    df = pd.read_csv("rate_estimator_eval.csv")
+    df_barate = df.groupby(["ba", "rate"]).mean().reset_index()
+    pivot_table = df_barate.pivot(index="ba", columns="rate", values="error")
+    pivot_table = pivot_table.loc[::-1]
+    sns.heatmap(pivot_table)
+    plt.show()
+
+    #rate x ba
+
+
+
 
 def plot_rate_estimates():
     df = pd.read_csv("rate_estimator_eval.csv")
@@ -208,10 +227,44 @@ def plot_rate_estimates():
 def risk_tree_cba():
     risk_tree = DetectorEventTree(0.95, 0.95, 0.95, 0.90, 0.91, 0.15)
 
+def accuracy_by_fold():
+    datasets = ["ECCV", "OfficeHome", "Office31", "NICO", "Polyp"]
+    all_data = pd.concat([load_pra_df(dataset_name=dataset_name, feature_name="knn", batch_size=1, samples=1000) for dataset_name in datasets])
+    table = all_data.groupby(["dataset", "shift"])["correct_prediction"].mean()
+    print(table)
+    fold_wise_error = table.reset_index()
+    fold_wise_error_ood = fold_wise_error[~fold_wise_error["shift"].isin(["ind_val", "ind_test", "train"])]
+    fold_wise_error_ind = fold_wise_error[fold_wise_error["shift"].isin(["ind_val", "ind_test", "train"])]
+
+    # Calculate the difference matrix
+    for label, data_group in zip(["InD", "OoD"], [fold_wise_error_ind, fold_wise_error_ood]):
+        diff_matrices = {}
+        for dataset, group in data_group.groupby('dataset'):
+            group.set_index('shift', inplace=True)
+            accuracy_values = group['correct_prediction'].to_numpy()
+            diff_matrix = pd.DataFrame(
+                data=np.subtract.outer(accuracy_values, accuracy_values),
+                index=group.index,
+                columns=group.index
+            )
+            # Store the matrix for each dataset
+            diff_matrices[dataset] = diff_matrix
+
+            # Display the difference matrices for each dataset
+
+        print(label)
+        for dataset, matrix in diff_matrices.items():
+            mat = matrix.to_numpy()
+            print(matrix)
+            print(f"{dataset} & {np.sum(np.abs(mat)) / (matrix.shape[0] * matrix.shape[1] - matrix.shape[0])}")
+
 
 
 if __name__ == '__main__':
-    data = load_pra_df(dataset_name="ECCV", feature_name="knn", batch_size=30, samples=1000)
-    # print("asdadsa")
-    single_run(data)
+    #data = load_pra_df(dataset_name="Office31", feature_name="knn", batch_size=1, samples=1000)
+   #collect_rate_estimator_data()
+    #eval_rate_estimator()
+    accuracy_by_fold()
+    #print(data)
+    #collect_tpr_tnr_sensitivity_data(data, ood_sets = ["dslr", "webcam"])
     # uniform_bernoulli(data, load = False)

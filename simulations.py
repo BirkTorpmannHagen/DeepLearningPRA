@@ -59,8 +59,7 @@ class SystemSimulator:
             frame_copy = self.df[~self.df["shift"].isin([ENDOCV, ETISLARIB, CVCCLINIC, "train", "ind_val", "ind_test"])]
         else:
             frame_copy = self.df[(self.df["shift"] == shift)]
-# print(frame_copy)
-        # input()
+
         samples = []
         for i in range(num_samples):
             sample = frame_copy.sample(replace=True).copy()
