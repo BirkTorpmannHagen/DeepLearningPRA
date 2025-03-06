@@ -55,7 +55,9 @@ class OfficeHome(Dataset):
 def build_officehome_dataset(root, train_transform, val_transform, context="Real World"):
     train = OfficeHome(root, train_transform, val_transform, context, fold="train")
     val = OfficeHome(root, train_transform, val_transform, context, fold="val")
+    test = OfficeHome(root, train_transform, val_transform, context, fold="test")
+
     ood_contexts = train.contexts
     ood_contexts.remove(context)
-    oods = ConcatDataset([OfficeHome(root, train_transform, val_transform, context, fold="val") for context in ood_contexts])
-    return train, val, oods
+    oods = dict(zip(ood_contexts, [OfficeHome(root, train_transform, val_transform, context, fold="val") for context in ood_contexts]))
+    return train, val,test, oods

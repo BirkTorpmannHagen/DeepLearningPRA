@@ -52,6 +52,7 @@ class BaseTestBed:
 
     def ood_loaders(self):
         if self.mode=="noise":
+            print("noise")
             ood_sets = [self.dl(TransformedDataset(self.ind_test, additive_noise, "noise", noise)) for noise in self.noise_range]
             loaders = dict(zip(["noise_{}".format(noise_val) for noise_val in self.noise_range], ood_sets))
         elif self.mode=="dropout":

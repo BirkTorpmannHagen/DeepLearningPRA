@@ -30,6 +30,8 @@ DEFAULT_PARAMS = {
 class PolypTestBed(BaseTestBed):
     def __init__(self,rep_model, mode="normal"):
         super().__init__()
+        self.mode = mode
+
         self.ind_train, self.ind_val, self.ind_test, self.etis, self.cvc, self.endo = build_polyp_dataset("../../Datasets/Polyps")
         self.noise_range = np.arange(0.05, 0.3, 0.05)
         self.batch_size=1
@@ -46,10 +48,10 @@ class PolypTestBed(BaseTestBed):
             "segmentation_logs/checkpoints/best.ckpt").to("cuda")
         self.classifier.eval()
 
-        #assign rep model
-        self.glow = Glow(3, 32, 4).cuda().eval()
-        self.glow.load_state_dict(torch.load("../glow_logs/Polyp_checkpoint/model_040001.pt"))
-        self.mode = mode
+        # #assign rep model
+        # self.glow = Glow(3, 32, 4).cuda().eval()
+        # self.glow.load_state_dict(torch.load("../glow_logs/Polyp_checkpoint/model_040001.pt"))
+        # self.mode = mode
 
     def get_ood_dict(self):
         return {"EtisLaribDB":self.dl(self.etis),

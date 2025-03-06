@@ -1,4 +1,6 @@
 # from yellowbrick.features import PCA
+from panel.widgets.indicators import ptqdm
+
 from testbeds import *
 
 
@@ -29,6 +31,7 @@ def collect_gradient_data(sample_range, testbed_constructor, dataset_name, grad_
                       fname=name)
 
 def collect_data(testbed_constructor, dataset_name, mode="noise"):
+    print(mode)
     bench = testbed_constructor("classifier", mode=mode)
     # features = [knn, cross_entropy, grad_magnitude, energy, typicality]
 
@@ -53,7 +56,7 @@ if __name__ == '__main__':
     torch.multiprocessing.set_start_method('spawn')
 
     # collect_data(PolypTestBed, "Polyp", mode="normal")
-    # collect_data(PolypTestBed, "Polyp", mode="noise")
+    collect_data(PolypTestBed, "Polyp", mode="noise")
     # collect_data(PolypTestBed, "Polyp", mode="hue")
     # collect_data(PolypTestBed, "Polyp", mode="smear")
     # collect_data(PolypTestBed, "Polyp", mode="saturation")
@@ -75,7 +78,7 @@ if __name__ == '__main__':
     # collect_data(ECCVTestBed, "ECCV", mode="saltpepper")
     # collect_data(ECCVTestBed, "ECCV", mode="fgsm")
 
-    #collect_data(OfficeHomeTestBed, "OfficeHome", mode="normal")
+    # collect_data(OfficeHomeTestBed, "OfficeHome", mode="normal")
     # collect_data(OfficeHomeTestBed, "OfficeHome", mode="noise")
     # collect_data(OfficeHomeTestBed, "OfficeHome", mode="hue")
     # collect_data(OfficeHomeTestBed, "OfficeHome", mode="smear")
@@ -88,7 +91,7 @@ if __name__ == '__main__':
     # collect_data(OfficeHomeTestBed, "OfficeHome", mode="fgsm")
 
     # collect_data(Office31TestBed, "Office31", mode="normal")
-    #collect_data(Office31TestBed, "Office31", mode="noise")
+    # collect_data(Office31TestBed, "Office31", mode="noise")
     # collect_data(Office31TestBed, "Office31", mode="hue")
     # collect_data(Office31TestBed, "Office31", mode="smear")
     # collect_data(Office31TestBed, "Office31", mode="saturation")
@@ -99,8 +102,8 @@ if __name__ == '__main__':
     # collect_data(Office31TestBed, "Office31", mode="saltpepper")
     # collect_data(Office31TestBed, "Office31", mode="fgsm")
 
-    collect_data(NicoTestBed, "NICO", mode="normal")
-    collect_data(NicoTestBed, "NICO", mode="noise")
+    # collect_data(NicoTestBed, "NICO", mode="normal")
+    # collect_data(NicoTestBed, "NICO", mode="noise")
     # collect_data(NicoTestBed, "NICO", mode="hue")
     # collect_data(NicoTestBed, "NICO", mode="smear")
     # collect_data(NicoTestBed, "NICO", mode="saturation")
