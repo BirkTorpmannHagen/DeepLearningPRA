@@ -1,6 +1,7 @@
 import os
 from os.path import join
 
+import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
@@ -9,23 +10,21 @@ ETISLARIB = "EtisLaribDB" #training set
 CVCCLINIC = "CVC-ClinicDB" #validation set
 ENDOCV = "EndoCV2020" #test set
 
+def get_optimal_threshold(ind, ood):
+    merged = np.concatenate([ind, ood])
+    max_acc = 0
+    threshold = 0
+    for t in np.linspace(merged.min(), merged.max(), 100):
+        ind_acc = (ind<t).mean()
+        ood_acc = (ood>t).mean()
+        bal_acc = 0.5*(ind_acc+ood_acc)
+        if bal_acc>max_acc:
+            max_acc = bal_acc
+            threshold = t
+    return threshold
 
-class WrappedResnet(nn.Module):
-    def __init__(self, model, input_size=32):
-        super().__init__()
-        self.model = model
-        self.latent_dim = self.get_encoding_size(input_size)
-        print(self.latent_dim)
 
-    def get_encoding_size(self, input_size):
-        dummy = torch.zeros((1, 3, input_size, input_size)).to("cuda")
-        return self.get_encoding(dummy).shape[-1]
 
-    def get_encoding(self, X):
-        return torch.nn.Sequential(*list(self.model.children())[:-1])(X).flatten(1)
-
-    def forward(self, x):
-        return self.model(x)
 
 
 

@@ -1,19 +1,18 @@
 import numpy as np
+import pandas as pd
 from matplotlib import pyplot as plt
 from pygam import LinearGAM
 
 from utils import *
 
 class OODDetector:
-    def __init__(self, df):
+    def __init__(self, df, ood_val_shift):
         self.df = df
-        threshold_df = df[(df["shift"] == "ind_val")]
+        self.ind_val = df[(df["shift"] == "ind_val")]
+        self.ood_val = df[(df["shift"] == ood_val_shift)]
+        self.higher_is_ood = self.ood_val["feature"].mean() >self.ind_val["feature"].mean()
+        self.threshold = get_optimal_threshold(self.ind_val["feature"], self.ood_val["feature"])
 
-        self.higher_is_ood = df[df["shift"]=="EtisLaribDB"]["feature"].mean() > df[df["shift"]=="ind_val"]["feature"].mean()
-        if self.higher_is_ood:
-            self.threshold = threshold_df["feature"].sample(len(threshold_df)//2).max() # sample half of the data to serve as thresholding
-        else:
-            self.threshold = threshold_df["feature"].sample(len(threshold_df)//2).min()
 
     def predict(self, batch):
         if self.higher_is_ood:
@@ -21,12 +20,23 @@ class OODDetector:
         else:
             return batch["feature"].mean() < self.threshold
 
-    def get_likelihood(self):
-        self.ind = self.df[self.df["shift"] == "ind_val"]
-        self.ood = self.df[self.df["shift"] == "EtisLaribDB"]
-        tpr = (self.ood["feature"] > self.threshold).mean()
-        tnr = (self.ind["feature"] < self.threshold).mean()
-        return tpr, tnr
+    def get_tpr(self, data):
+        if self.higher_is_ood:
+            return (data[data["ood"]]["feature"]>self.threshold).mean()
+        else:
+            return (data[data["ood"]]["feature"]<self.threshold).mean()
+
+    def get_tnr(self, data):
+        if self.higher_is_ood:
+            return (data[~data["ood"]]["feature"]<self.threshold).mean()
+        else:
+            return (data[~data["ood"]]["feature"]>self.threshold).mean()
+
+    def get_accuracy(self, data):
+        return 0.5*(self.get_tpr(data)+self.get_tnr(data))
+
+    def get_metrics(self, data):
+        return self.get_tpr(data), self.get_tnr(data), self.get_accuracy(data)
 
 
 class SyntheticOODDetector:
@@ -132,7 +142,3 @@ class Trace:
         self.trace.append(item)
         return self.trace
 
-if __name__ == '__main__':
-    data = load_pra_df("knn", batch_size=10, samples=1000)
-    le_s = SplitLossEstimator(data)
-    le = LossEstimator(data)

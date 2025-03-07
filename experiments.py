@@ -5,10 +5,12 @@ from utils import *
 import seaborn as sns
 from tqdm import tqdm
 import pandas as pd
-
-from utils import load_pra_df
-
-
+from components import OODDetector
+from utils import load_pra_df, get_optimal_threshold
+# pd.set_option('display.float_format', lambda x: '%.3f' % x)
+np.set_printoptions(precision=3, suppress=True)
+DATASETS = ["ECCV", "OfficeHome", "Office31", "NICO", "Polyp"]
+DSDS = ["knn", "grad_magnitude", "cross_entropy", "energy"]
 def get_dsd_verdicts_given_true_trace(trace, tpr, tnr):
     def transform(v):
         if v==1:
@@ -139,39 +141,31 @@ def plot_ba_rate_sensitivity():
     plt.savefig("ba_sensitivity.eps")
     plt.show()
 
-def fetch_dsd_accuracies(dsd):
-        df = load_pra_df(dsd, batch_size=1, samples=100)
-        ind_val = df[df["fold"]=="ind_val"]
-        ood_val = df[df["fold"]==ETISLARIB]
-        ood_test = df[df["fold"]==ENDOCV]
-        ind_test = df[df["fold"]=="ind_test"]
-        val = pd.concat([ind_val, ood_val])
-        ba = 0
-        best_tpr = 0
-        best_tnr = 0
-        for i in np.linspace(val["feature"].min(), val["feature"].max(), 100):
-            if ind_val["feature"].mean()<i<ood_val["feature"].mean():
-                tnr = (ind_val["feature"]<i).mean()
-                tpr = (ood_val["feature"]>i).mean()
-                this_ba = (tpr + tnr) / 2
-                if this_ba>ba:
-                    ba = this_ba
-                    best_tpr = tpr
-                    best_tnr = tnr
-            else:
-                tnr = (ind_val["feature"]>i).mean()
-                tpr = (ood_val["feature"]<i).mean()
-                this_ba = (tpr + tnr) / 2
-                if this_ba>ba:
-                    ba = this_ba
-                    best_tpr = tpr
-                    best_tnr = tnr
-        return ba
-
+def fetch_dsd_accuracies():
+    data = []
+    for dataset in DATASETS:
+        for feature in DSDS:
+            df = load_pra_df(dataset, feature, batch_size=1, samples=1000)
+            if df.empty:
+                continue
+            ind_val = df[df["shift"]=="ind_val"]
+            ind_test = df[df["shift"]=="ind_test"]
+            ood_folds = df[~df["fold"].isin(["ind_val", "ind_test", "train"])]["shift"].unique()
+            for ood_val_fold in ood_folds:
+                for ood_test_fold in ood_folds:
+                    ood_val = df[df["shift"]==ood_val_fold]
+                    ood_test_fold = df[df["shift"]==ood_test_fold]
+                    dsd = OODDetector(df, ood_val_fold)
+                    test = pd.concat([ind_test, ood_test_fold])
+                    tpr, tnr, ba = dsd.get_metrics(test)
+                    data.append({"dataset": dataset, "DSD":feature, "val_fold": ood_val, "test_fold":ood_test_fold, "tpr": tpr, "tnr": tnr, "ba": ba})
+    df = pd.DataFrame(data)
+    df.to_csv("dsd_accuracies.csv")
+    print(df.groupby(["dataset", "DSD"])[["tpr", "tnr"]].mean())
 
 def collect_rate_estimator_data():
     data = []
-    with tqdm(total=21*21*21*9) as pbar:
+    with tqdm(total=26*26*26*9) as pbar:
         for rate in tqdm(np.linspace(0, 1, 26)):
             for tpr in np.linspace(0, 1, 26):
                 for tnr in np.linspace(0, 1, 26):
@@ -197,12 +191,35 @@ def eval_rate_estimator():
     df_barate = df.groupby(["ba", "rate"]).mean().reset_index()
     pivot_table = df_barate.pivot(index="ba", columns="rate", values="error")
     pivot_table = pivot_table.loc[::-1]
-    sns.heatmap(pivot_table)
+    sns.heatmap(pivot_table, vmin=0, vmax=1)
+    plt.savefig("rate_sensitivity.eps")
+    plt.tight_layout()
     plt.show()
 
     #rate x ba
 
-
+def plot_rate_estimation_errors_for_dsds():
+    data = []
+    with tqdm(total=26 * 26 * 26 * 9) as pbar:
+        for rate in tqdm(np.linspace(0, 1, 26)):
+            tpr, tnr = 0,0
+            for tl in [10, 20, 30, 50, 60, 100, 200, 500, 1000]:
+                ba = round((tpr + tnr) / 2, 2)
+                if ba <= 0.5:
+                    continue
+                pbar.update(1)
+                re = BernoulliEstimator(prior_rate=rate, tpr=tpr, tnr=tnr)
+                sample = re.sample(10_000, rate)
+                dsd = get_dsd_verdicts_given_true_trace(sample, tpr, tnr)
+                for i in np.array_split(dsd, int(10_000 // tl)):
+                    re.update(i)
+                    rate_estimate = re.get_rate()
+                    error = np.abs(rate - rate_estimate)
+                    data.append(
+                        {"rate": rate, "ba": ba, "tl": tl, "rate_estimate": rate_estimate, "error": error})
+    df = pd.DataFrame(data)
+    df = df.groupby(["ba", "tl", "rate"]).mean()
+    df.to_csv("rate_estimator_eval.csv")
 
 
 def plot_rate_estimates():
@@ -255,16 +272,19 @@ def accuracy_by_fold():
         print(label)
         for dataset, matrix in diff_matrices.items():
             mat = matrix.to_numpy()
-            print(matrix)
-            print(f"{dataset} & {np.sum(np.abs(mat)) / (matrix.shape[0] * matrix.shape[1] - matrix.shape[0])}")
+            avg  = round(np.sum(np.abs(mat)) / (matrix.shape[0] * matrix.shape[1] - matrix.shape[0]),3)
+            min = round(np.min(np.abs(mat[mat>0])),3)
+            max = round(np.max(np.abs(mat)),3)
+            print(f"{dataset} & {min}  & {avg} & {max} \\\\")
 
 
 
 if __name__ == '__main__':
     #data = load_pra_df(dataset_name="Office31", feature_name="knn", batch_size=1, samples=1000)
-   #collect_rate_estimator_data()
-    #eval_rate_estimator()
-    accuracy_by_fold()
+    # collect_rate_estimator_data()
+    # eval_rate_estimator()
+    fetch_dsd_accuracies()
+    # accuracy_by_fold()
     #print(data)
     #collect_tpr_tnr_sensitivity_data(data, ood_sets = ["dslr", "webcam"])
     # uniform_bernoulli(data, load = False)
