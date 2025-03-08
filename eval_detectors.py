@@ -34,8 +34,9 @@ def collect_data(testbed_constructor, dataset_name, mode="noise"):
     print(mode)
     bench = testbed_constructor("classifier", mode=mode)
     # features = [knn, cross_entropy, grad_magnitude, energy, typicality]
+    features = [cross_entropy, grad_magnitude, energy]
 
-    features = [knn]
+    # features = [knn]
     tsd = FeatureSD(bench.classifier,features)
     tsd.register_testbed(bench)
     compute_stats(*tsd.compute_pvals_and_loss(),
@@ -55,7 +56,7 @@ if __name__ == '__main__':
     from features import *
     torch.multiprocessing.set_start_method('spawn')
 
-    # collect_data(PolypTestBed, "Polyp", mode="normal")
+    collect_data(PolypTestBed, "Polyp", mode="normal")
     collect_data(PolypTestBed, "Polyp", mode="noise")
     # collect_data(PolypTestBed, "Polyp", mode="hue")
     # collect_data(PolypTestBed, "Polyp", mode="smear")
@@ -68,7 +69,7 @@ if __name__ == '__main__':
 
 
     # collect_data(ECCVTestBed, "ECCV", mode="normal")
-    #collect_data(ECCVTestBed, "ECCV", mode="noise")
+    # collect_data(ECCVTestBed, "ECCV", mode="noise")
     # collect_data(ECCVTestBed, "ECCV", mode="hue")
     # collect_data(ECCVTestBed, "ECCV", mode="smear")
     # collect_data(ECCVTestBed, "ECCV", mode="saturation")
@@ -78,8 +79,8 @@ if __name__ == '__main__':
     # collect_data(ECCVTestBed, "ECCV", mode="saltpepper")
     # collect_data(ECCVTestBed, "ECCV", mode="fgsm")
 
-    # collect_data(OfficeHomeTestBed, "OfficeHome", mode="normal")
-    # collect_data(OfficeHomeTestBed, "OfficeHome", mode="noise")
+    collect_data(OfficeHomeTestBed, "OfficeHome", mode="normal")
+    collect_data(OfficeHomeTestBed, "OfficeHome", mode="noise")
     # collect_data(OfficeHomeTestBed, "OfficeHome", mode="hue")
     # collect_data(OfficeHomeTestBed, "OfficeHome", mode="smear")
     # collect_data(OfficeHomeTestBed, "OfficeHome", mode="saturation")

@@ -21,11 +21,11 @@ def train_segmentor():
         dirpath="segmentation_logs/checkpoints",  # Directory to save the checkpoint
         filename="best"    # Filename for the checkpoint
     )
-    trainer = Trainer(accelerator="gpu", max_epochs=200,logger=logger, callbacks=[checkpoint_callback])
+    trainer = Trainer(accelerator="gpu", max_epochs=300,logger=logger, callbacks=[checkpoint_callback])
     # trans = transforms.Compose([
     #                     transforms.Resize((512,512)),
     #                     transforms.ToTensor(), ])
-    ind, val, test, _, _, _ = build_polyp_dataset("../../Datasets/Polyps", img_size=512, ind="Kvasir")
+    ind, val, test, _, _, _ = build_polyp_dataset("../../Datasets/Polyps", img_size=512)
     train_loader = DataLoader(ind, batch_size=16, shuffle=True, num_workers=4)
     val_loader = DataLoader(val, batch_size=16, shuffle=True, num_workers=4)
     trainer.fit(model, train_dataloaders=train_loader,val_dataloaders=val_loader)
