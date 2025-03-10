@@ -1,7 +1,4 @@
-import itertools
-
 import numpy as np
-from twisted.protocols.amp import PROTOCOL_ERRORS
 
 from simulations import *
 import matplotlib.pyplot as plt
@@ -9,7 +6,6 @@ from utils import *
 import seaborn as sns
 from tqdm import tqdm
 import pandas as pd
-import itertools
 from components import OODDetector
 
 # pd.set_option('display.float_format', lambda x: '%.3f' % x)
@@ -333,29 +329,45 @@ def accuracy_by_fold():
     plt.show()
     return errors
 
-def accuracy_by_fold_and_dsd_verdict(batch_size=32):
-    df = load_all(batch_size)
-    df = df[df["shift"]!="noise"]
-    fig, ax = plt.subplots(nrows=2, ncols = len(DATASETS))
+def accuracy_by_fold_and_dsd_verdict():
     data = []
-    for i, dataset in enumerate(DATASETS):
-        for feature in DSDS:
-            for j, ood in enumerate([False, True]):
-                filtered  = df[(df["Dataset"]==dataset)&(df["feature_name"]==feature)]
-                shifts = filtered["shift"].unique()
+    for batch_size in BATCH_SIZES:
+        print("loading")
+        df = load_all(batch_size, samples=100)
+        print("loaded")
+        df = df[df["shift"]!="noise"]
+        for i, dataset in enumerate(DATASETS):
+            for feature in DSDS:
+                for j, ood in enumerate([False, True]):
+                    filtered  = df[(df["Dataset"]==dataset)&(df["feature_name"]==feature)]
+                    shifts = filtered["shift"].unique()
 
-                for ood_val_shift in shifts:
-                    if ood_val_shift in ["train", "ind_val", "ind_test"]:
-                        continue
-                    filtered_copy = filtered.copy()
-                    dsd = OODDetector(filtered, ood_val_shift)
-                    filtered_copy["D(ood)"] = filtered_copy.apply(lambda row: dsd.predict(row), axis=1)
-                    filtered_copy["ood_val_shift"]=ood_val_shift
+                    for ood_val_shift in shifts:
+                        if ood_val_shift in ["train", "ind_val", "ind_test"]:
+                            continue
+                        filtered_copy = filtered.copy()
+                        dsd = OODDetector(filtered, ood_val_shift)
+                        filtered_copy["D(ood)"] = filtered_copy.apply(lambda row: dsd.predict(row), axis=1)
+                        filtered_copy["ood_val_shift"]=ood_val_shift
+                        filtered_copy["feature_name"] = feature
+                        accuracy = filtered_copy.groupby(["Dataset", "ood_val_shift", "shift", "feature_name", "D(ood)"])["correct_prediction"].mean().reset_index()
 
-                    accuracy = filtered_copy.groupby(["Dataset", "ood_val_shift", "shift", "D(ood)"])["correct_prediction"].mean()
-                    data.append(accuracy.reset_index())
+                        accuracy["batch_size"]=batch_size
+
+                        data.append(accuracy)
+
     df = pd.concat(data)
-    print(df.groupby(["Dataset", "ood_val_shift", "shift", "D(ood)"]).mean())
+
+    data = df.groupby(["feature_name", "batch_size", "Dataset", "ood_val_shift", "shift", "D(ood)"])["correct_prediction"].mean().reset_index()
+    # print(data)
+    for dataset in DATASETS:
+        filt = data[data["Dataset"]==dataset]
+        pivoted = filt.pivot(index=["feature_name", "batch_size", "Dataset", "shift", "D(ood)"], columns="ood_val_shift", values="correct_prediction")
+        diff_matrix = np.subtract.outer(pivoted.values, pivoted.values)
+
+    # g = sns.FacetGrid(data.reset_index(), col="Dataset", row="D(ood)")
+    # g.map_dataframe(sns.lineplot, x="batch_size", y="correct_prediction", hue="feature_name")
+
 
 
 def t_check():
@@ -376,8 +388,8 @@ if __name__ == '__main__':
     # fetch_dsd_accuracies(32, plot=True)
 
     # plot_rate_estimation_errors_for_dsds()
-    accuracy_by_fold()
-    # accuracy_by_fold_and_dsd_verdict()
+    # accuracy_by_fold()
+    accuracy_by_fold_and_dsd_verdict()
     #print(data)
     #collect_tpr_tnr_sensitivity_data(data, ood_sets = ["dslr", "webcam"])
     # uniform_bernoulli(data, load = False)

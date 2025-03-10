@@ -132,5 +132,5 @@ def load_pra_df(dataset_name, feature_name, batch_size=30, samples=1000):
 DSD_PRINT_LUT = {"grad_magnitude": "GradNorm", "cross_entropy" : "Entropy", "energy":"Energy", "knn":"kNN"}
 DATASETS = ["CCT", "OfficeHome", "Office31", "NICO", "Polyp"]
 DSDS = ["knn", "grad_magnitude", "cross_entropy", "energy"]
-# BATCH_SIZES = [1, 8, 16, 32]
-BATCH_SIZES = np.arange(1, 64)
+BATCH_SIZES = [1, 8, 16, 32]
+# BATCH_SIZES = np.arange(1, 64)
