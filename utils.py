@@ -14,13 +14,29 @@ def get_optimal_threshold(ind, ood):
     merged = np.concatenate([ind, ood])
     max_acc = 0
     threshold = 0
+    if ind.mean()<ood.mean():
+        higher_is_ood = True
+    else:
+        higher_is_ood = False
+
     for t in np.linspace(merged.min(), merged.max(), 100):
-        ind_acc = (ind<t).mean()
-        ood_acc = (ood>t).mean()
+        if higher_is_ood:
+            ind_acc = (ind<t).mean()
+            ood_acc = (ood>t).mean()
+        else:
+            ind_acc = (ind>t).mean()
+            ood_acc = (ood<t).mean()
         bal_acc = 0.5*(ind_acc+ood_acc)
-        if bal_acc>max_acc:
-            max_acc = bal_acc
-            threshold = t
+        if not higher_is_ood:
+            if bal_acc>=max_acc: #ensures that the threshold is near ind data for highly seperable datasets
+                max_acc = bal_acc
+                threshold = t
+        else:
+            if bal_acc>max_acc:
+                max_acc = bal_acc
+                threshold = t
+
+
     return threshold
 
 
@@ -61,12 +77,12 @@ def load_pra_df(dataset_name, feature_name, batch_size=30, samples=1000):
     except:
         print("no data found for ", dataset_name, feature_name)
         return pd.DataFrame()
+
     df["dataset"]=dataset_name
     df.drop(columns=["Unnamed: 0"], inplace=True)
-    df = df[df["fold"]!="ind"]
-    # df["intensity"] = df["shift"].apply(lambda x: x.split("_")[1] if "_" in x else x)
-    df = df[~df["fold"].isin(["smear", "saturation", "brightness"])]
+
     if batch_size!=1:
+        print("sampling")
         def sample_loss_feature(group, n_samples, n_size):
             samples = []
             for i in range(n_samples):
@@ -79,11 +95,8 @@ def load_pra_df(dataset_name, feature_name, batch_size=30, samples=1000):
             return pd.DataFrame(samples)
             # Return a DataFrame of means with the original group keys
 
-        cols = list(df.columns)
-        cols.remove("loss")
-        cols.remove("feature")
-        df = df.groupby(cols).apply(sample_loss_feature, samples, batch_size).reset_index()
-        df.drop(columns=["level_2"], inplace=True)
+        df = df.groupby(["fold", "feature_name", "dataset"]).apply(sample_loss_feature, samples, batch_size).reset_index()
+
 
     if dataset_name=="Polyp":
         df["correct_prediction"] = df["loss"] < 0.5  # arbitrary threshold
@@ -95,3 +108,4 @@ def load_pra_df(dataset_name, feature_name, batch_size=30, samples=1000):
     df["shift_intensity"] = df["fold"].apply(lambda x: x.split("_")[1] if "_" in x else x)  #what intensity?
     df["ood"] = ~df["fold"].isin(["train", "ind_val", "ind_test"])#&~df["correct_prediction"] #is the prediction correct?
     return df
+

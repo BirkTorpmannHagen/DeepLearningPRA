@@ -141,11 +141,12 @@ def plot_ba_rate_sensitivity():
     plt.savefig("ba_sensitivity.eps")
     plt.show()
 
-def fetch_dsd_accuracies():
+def fetch_dsd_accuracies(batch_size=32):
     data = []
     for dataset in DATASETS:
         for feature in DSDS:
-            df = load_pra_df(dataset, feature, batch_size=1, samples=1000)
+            df = load_pra_df(dataset, feature, batch_size=batch_size, samples=1000)
+            df = df[df["shift"]!="noise"]
             if df.empty:
                 continue
             ind_val = df[df["shift"]=="ind_val"]
@@ -154,14 +155,26 @@ def fetch_dsd_accuracies():
             for ood_val_fold in ood_folds:
                 for ood_test_fold in ood_folds:
                     ood_val = df[df["shift"]==ood_val_fold]
-                    ood_test_fold = df[df["shift"]==ood_test_fold]
+                    ood_test = df[df["shift"]==ood_test_fold]
+
                     dsd = OODDetector(df, ood_val_fold)
-                    test = pd.concat([ind_test, ood_test_fold])
+                    test = pd.concat([ind_test, ood_test])
                     tpr, tnr, ba = dsd.get_metrics(test)
-                    data.append({"dataset": dataset, "DSD":feature, "val_fold": ood_val, "test_fold":ood_test_fold, "tpr": tpr, "tnr": tnr, "ba": ba})
+                    threshold = dsd.threshold
+
+                    if ood_test_fold == ood_folds[0]:
+                        plt.hist(ind_val["feature"], bins=100, alpha=0.5, label="ind_val", density=True)
+                        plt.hist(ood_val["feature"], bins=100, alpha=0.5, label=ood_val_fold, density=True)
+                        plt.hist(ood_test["feature"], bins=100, alpha=0.5, label=ood_test_fold, density=True)
+                        plt.axvline(threshold, color="red", label="Threshold")
+                        plt.title(f"{dataset} {feature} {ood_val_fold} {ood_test_fold}")
+                        plt.legend()
+                        plt.show()
+                    data.append({"dataset": dataset, "DSD":feature, "val_fold": ood_val_fold, "test_fold":ood_test_fold, "tpr": tpr, "tnr": tnr, "ba": ba, "t":threshold})
     df = pd.DataFrame(data)
     df.to_csv("dsd_accuracies.csv")
-    print(df.groupby(["dataset", "DSD"])[["tpr", "tnr"]].mean())
+    print(df.groupby(["dataset", "DSD"])[["tpr", "tnr", "ba"]].mean())
+    return df
 
 def collect_rate_estimator_data():
     data = []
@@ -198,27 +211,36 @@ def eval_rate_estimator():
 
     #rate x ba
 
-def plot_rate_estimation_errors_for_dsds():
+def plot_rate_estimation_errors_for_dsds(batch_size=32):
     data = []
-    with tqdm(total=26 * 26 * 26 * 9) as pbar:
-        for rate in tqdm(np.linspace(0, 1, 26)):
-            tpr, tnr = 0,0
-            for tl in [10, 20, 30, 50, 60, 100, 200, 500, 1000]:
-                ba = round((tpr + tnr) / 2, 2)
-                if ba <= 0.5:
-                    continue
-                pbar.update(1)
-                re = BernoulliEstimator(prior_rate=rate, tpr=tpr, tnr=tnr)
-                sample = re.sample(10_000, rate)
-                dsd = get_dsd_verdicts_given_true_trace(sample, tpr, tnr)
-                for i in np.array_split(dsd, int(10_000 // tl)):
-                    re.update(i)
-                    rate_estimate = re.get_rate()
-                    error = np.abs(rate - rate_estimate)
-                    data.append(
-                        {"rate": rate, "ba": ba, "tl": tl, "rate_estimate": rate_estimate, "error": error})
+    dsd_data = fetch_dsd_accuracies(batch_size)
+    with tqdm(total=len(DATASETS)*len(DSDS)*26) as pbar:
+        for dataset in DATASETS:
+            for feature in DSDS:
+                for rate in tqdm(np.linspace(0, 1, 26)):
+                    subdata = dsd_data[(dsd_data["dataset"]==dataset)&(dsd_data["DSD"]==feature)]
+                    tpr, tnr, ba = subdata["tpr"].mean(), subdata["tnr"].mean(), subdata["ba"].mean()
+                    for tl in [10, 20, 30, 50, 60, 100, 200, 500, 1000]:
+                        re = BernoulliEstimator(prior_rate=rate, tpr=tpr, tnr=tnr)
+                        sample = re.sample(10_000, rate)
+                        dsd = get_dsd_verdicts_given_true_trace(sample, tpr, tnr)
+                        for i in np.array_split(dsd, int(10_000 // tl)):
+                            re.update(i)
+                            rate_estimate = re.get_rate()
+                            error = np.abs(rate - rate_estimate)
+                            data.append(
+                                {"Dataset": dataset, "DSD":feature, "rate": rate, "ba": ba, "tl": tl, "rate_estimate": rate_estimate, "error": error})
+                        pbar.update(1)
+
     df = pd.DataFrame(data)
-    df = df.groupby(["ba", "tl", "rate"]).mean()
+    df = df.groupby(["Dataset", "DSD", "tl", "rate"]).mean().reset_index()
+    # df = df[df["tl"]==100]
+    print(df)
+    df = df
+    g = sns.FacetGrid(df, col="Dataset")
+    g.map_dataframe(sns.lineplot, x="rate", y="error", hue="DSD")
+    plt.show()
+    g.add_legend()
     df.to_csv("rate_estimator_eval.csv")
 
 
@@ -277,13 +299,18 @@ def accuracy_by_fold():
             max = round(np.max(np.abs(mat)),3)
             print(f"{dataset} & {min}  & {avg} & {max} \\\\")
 
-
+def sanity_check():
+    test = load_pra_df("Polyp", "energy", batch_size=64, samples=1000)
+    plt.hist(test[test["shift"]=="ind_val"]["feature"], bins=100, alpha=0.5, label="ind_val", density=True)
+    plt.show()
 
 if __name__ == '__main__':
     #data = load_pra_df(dataset_name="Office31", feature_name="knn", batch_size=1, samples=1000)
     # collect_rate_estimator_data()
     # eval_rate_estimator()
-    fetch_dsd_accuracies()
+    fetch_dsd_accuracies(1)
+    # sanity_check()
+    # plot_rate_estimation_errors_for_dsds()
     # accuracy_by_fold()
     #print(data)
     #collect_tpr_tnr_sensitivity_data(data, ood_sets = ["dslr", "webcam"])
