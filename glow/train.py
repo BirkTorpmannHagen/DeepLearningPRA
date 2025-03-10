@@ -1,5 +1,5 @@
 from tqdm import tqdm
-from datasets.eccv import *
+from datasets.cct import *
 from datasets.office31 import *
 import torch
 from torch import optim
@@ -135,7 +135,7 @@ if __name__ == "__main__":
     # dataset, _,_ = build_office31_dataset("../../Datasets/office31", train_transform=trans, val_transform=trans)
     # train_new(dataset, img_size=32)
 
-    dataset, ind_val,_, _, _ = build_eccv_dataset("../../Datasets/ECCV", train_transform=trans, val_transform=trans)
+    dataset, ind_val,_, _, _ = build_cct_dataset("../../Datasets/CCT", train_transform=trans, val_transform=trans)
     train_new(dataset, img_size=32)
 
     # trans = transforms.Compose([transforms.Resize((32,32)), transforms.RandomHorizontalFlip(), transforms.ToTensor()])

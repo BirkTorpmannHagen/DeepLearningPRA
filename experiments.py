@@ -1,3 +1,6 @@
+import numpy as np
+from xarray.util.generate_ops import inplace
+
 from plots import plot_tpr_tnr_sensitivity
 from simulations import *
 import matplotlib.pyplot as plt
@@ -9,7 +12,8 @@ from components import OODDetector
 from utils import load_pra_df, get_optimal_threshold
 # pd.set_option('display.float_format', lambda x: '%.3f' % x)
 np.set_printoptions(precision=3, suppress=True)
-DATASETS = ["ECCV", "OfficeHome", "Office31", "NICO", "Polyp"]
+DSD_PRINT_LUT = {"grad_magnitude": "GradNorm", "cross_entropy" : "Entropy", "energy":"Energy", "knn":"kNN"}
+DATASETS = ["CCT", "OfficeHome", "Office31", "NICO", "Polyp"]
 DSDS = ["knn", "grad_magnitude", "cross_entropy", "energy"]
 def get_dsd_verdicts_given_true_trace(trace, tpr, tnr):
     def transform(v):
@@ -96,7 +100,7 @@ def collect_tpr_tnr_sensitivity_data(data, ood_sets):
                             pbar.update(1)
                 df_final = pd.concat(dfs)
                 print(df_final.head(10))
-                df_final.to_csv(f"pra_data/{data["dataset"].unique()[0]}_{val_set}_{test_set}_results.csv")
+                df_final.to_csv(f"pra_data/{data['dataset'].unique()[0]}_{val_set}_{test_set}_results.csv")
 
 def compare_risk_tree_accuracy_estimators():
     df = pd.read_csv("tpr_tnr_sensitivity.csv").groupby(["tpr", "tnr", "rate", "test_set", "val_set"]).mean().reset_index()
@@ -141,7 +145,7 @@ def plot_ba_rate_sensitivity():
     plt.savefig("ba_sensitivity.eps")
     plt.show()
 
-def fetch_dsd_accuracies(batch_size=32):
+def fetch_dsd_accuracies(batch_size=32, plot=False):
     data = []
     for dataset in DATASETS:
         for feature in DSDS:
@@ -154,6 +158,8 @@ def fetch_dsd_accuracies(batch_size=32):
             ood_folds = df[~df["fold"].isin(["ind_val", "ind_test", "train"])]["shift"].unique()
             for ood_val_fold in ood_folds:
                 for ood_test_fold in ood_folds:
+                    if ood_val_fold != ood_test_fold:
+                        continue
                     ood_val = df[df["shift"]==ood_val_fold]
                     ood_test = df[df["shift"]==ood_test_fold]
 
@@ -162,18 +168,20 @@ def fetch_dsd_accuracies(batch_size=32):
                     tpr, tnr, ba = dsd.get_metrics(test)
                     threshold = dsd.threshold
 
-                    if ood_test_fold == ood_folds[0]:
+                    if ood_test_fold == ood_folds[0] and plot:
                         plt.hist(ind_val["feature"], bins=100, alpha=0.5, label="ind_val", density=True)
+                        plt.hist(ind_test["feature"], bins=100, alpha=0.5, label="ind_test", density=True )
                         plt.hist(ood_val["feature"], bins=100, alpha=0.5, label=ood_val_fold, density=True)
                         plt.hist(ood_test["feature"], bins=100, alpha=0.5, label=ood_test_fold, density=True)
+
                         plt.axvline(threshold, color="red", label="Threshold")
                         plt.title(f"{dataset} {feature} {ood_val_fold} {ood_test_fold}")
                         plt.legend()
                         plt.show()
-                    data.append({"dataset": dataset, "DSD":feature, "val_fold": ood_val_fold, "test_fold":ood_test_fold, "tpr": tpr, "tnr": tnr, "ba": ba, "t":threshold})
+                    data.append({"Dataset": dataset, "DSD":feature, "val_fold": ood_val_fold, "test_fold":ood_test_fold, "tpr": tpr, "tnr": tnr, "ba": ba, "t":threshold})
     df = pd.DataFrame(data)
     df.to_csv("dsd_accuracies.csv")
-    print(df.groupby(["dataset", "DSD"])[["tpr", "tnr", "ba"]].mean())
+    print(df.groupby(["Dataset", "DSD", "val_fold", "test_fold"])[["tpr", "tnr", "ba"]].mean())
     return df
 
 def collect_rate_estimator_data():
@@ -211,14 +219,18 @@ def eval_rate_estimator():
 
     #rate x ba
 
-def plot_rate_estimation_errors_for_dsds(batch_size=32):
+def plot_rate_estimation_errors_for_dsds(batch_size=16, cross_validate=False):
     data = []
     dsd_data = fetch_dsd_accuracies(batch_size)
+    if not cross_validate:
+        dsd_data = dsd_data[dsd_data["val_fold"]==dsd_data["test_fold"]]
+    # print(dsd_data.groupby(["Dataset", "DSD", "val_fold", "test_fold"])[["tpr", "tnr", "ba"]].mean())
+    # input()
     with tqdm(total=len(DATASETS)*len(DSDS)*26) as pbar:
         for dataset in DATASETS:
             for feature in DSDS:
                 for rate in tqdm(np.linspace(0, 1, 26)):
-                    subdata = dsd_data[(dsd_data["dataset"]==dataset)&(dsd_data["DSD"]==feature)]
+                    subdata = dsd_data[(dsd_data["Dataset"]==dataset)&(dsd_data["DSD"]==feature)]
                     tpr, tnr, ba = subdata["tpr"].mean(), subdata["tnr"].mean(), subdata["ba"].mean()
                     for tl in [10, 20, 30, 50, 60, 100, 200, 500, 1000]:
                         re = BernoulliEstimator(prior_rate=rate, tpr=tpr, tnr=tnr)
@@ -233,14 +245,21 @@ def plot_rate_estimation_errors_for_dsds(batch_size=32):
                         pbar.update(1)
 
     df = pd.DataFrame(data)
+    df.replace(DSD_PRINT_LUT, inplace=True)
+
     df = df.groupby(["Dataset", "DSD", "tl", "rate"]).mean().reset_index()
     # df = df[df["tl"]==100]
     print(df)
     df = df
     g = sns.FacetGrid(df, col="Dataset")
     g.map_dataframe(sns.lineplot, x="rate", y="error", hue="DSD")
+    # g.add_legend()
+    g.tight_layout()
+    plt.legend(frameon=True, ncol=len(np.unique(df["DSD"])), loc="upper center", bbox_to_anchor = (-2, -0.15))
+    # plt.tight_layout(w_pad=0.5)Note that these error estimates are computed based
+    plt.subplots_adjust(bottom=0.3)
+    plt.savefig("dsd_rate_error.pdf")
     plt.show()
-    g.add_legend()
     df.to_csv("rate_estimator_eval.csv")
 
 
@@ -267,8 +286,7 @@ def risk_tree_cba():
     risk_tree = DetectorEventTree(0.95, 0.95, 0.95, 0.90, 0.91, 0.15)
 
 def accuracy_by_fold():
-    datasets = ["ECCV", "OfficeHome", "Office31", "NICO", "Polyp"]
-    all_data = pd.concat([load_pra_df(dataset_name=dataset_name, feature_name="knn", batch_size=1, samples=1000) for dataset_name in datasets])
+    all_data = pd.concat([load_pra_df(dataset_name=dataset_name, feature_name="knn", batch_size=1, samples=1000) for dataset_name in DATASETS])
     table = all_data.groupby(["dataset", "shift"])["correct_prediction"].mean()
     print(table)
     fold_wise_error = table.reset_index()
@@ -299,19 +317,72 @@ def accuracy_by_fold():
             max = round(np.max(np.abs(mat)),3)
             print(f"{dataset} & {min}  & {avg} & {max} \\\\")
 
-def sanity_check():
-    test = load_pra_df("Polyp", "energy", batch_size=64, samples=1000)
-    plt.hist(test[test["shift"]=="ind_val"]["feature"], bins=100, alpha=0.5, label="ind_val", density=True)
+def accuracy_by_fold_and_dsd_verdict():
+    df = pd.concat([load_pra_df(dataset_name=dataset_name, feature_name="knn", batch_size=1, samples=1000) for dataset_name in DATASETS])
+
+    fig, ax = plt.subplots(nrows=2, ncols = len(DATASETS))
+    data = []
+    for i, dataset in enumerate(DATASETS):
+        for j, ood in enumerate([False, True]):
+            filtered  = df[(df["ood"]==ood)&(df["Dataset"]==dataset)]
+
+            for detection_rate in np.linspace(0,1, 10):
+                filtered_copy = filtered.copy()
+                dsd = SyntheticOODDetector(tpr=detection_rate, tnr=1)
+                filtered_copy["tpr"]=detection_rate
+                filtered_copy["tnr"]=detection_rate
+                filtered_copy["D(ood)"] = filtered_copy.apply(lambda row: dsd.predict(row), axis=1)
+                accuracy = filtered_copy.groupby(["Dataset", "shift", "tpr", "tnr", "D(ood)"])["correct_prediction"].mean()
+                print(accuracy)
+                input()
+
+
+
+
+    # Calculate the difference matrix
+    # for label, data_group in zip(["InD", "OoD"], [fold_wise_error_ind, fold_wise_error_ood]):
+    #     diff_matrices = {}
+    #     for dataset, group in data_group.groupby('dataset'):
+    #         group.set_index('shift', inplace=True)
+    #         accuracy_values = group['correct_prediction'].to_numpy()
+    #         diff_matrix = pd.DataFrame(
+    #             data=np.subtract.outer(accuracy_values, accuracy_values),
+    #             index=group.index,
+    #             columns=group.index
+    #         )
+    #         # Store the matrix for each dataset
+    #         diff_matrices[dataset] = diff_matrix
+    #
+    #         # Display the difference matrices for each dataset
+    #
+    #     print(label)
+    #     for dataset, matrix in diff_matrices.items():
+    #         mat = matrix.to_numpy()
+    #         avg  = round(np.sum(np.abs(mat)) / (matrix.shape[0] * matrix.shape[1] - matrix.shape[0]),3)
+    #         min = round(np.min(np.abs(mat[mat>0])),3)
+    #         max = round(np.max(np.abs(mat)),3)
+    #         print(f"{dataset} & {min}  & {avg} & {max} \\\\")
+
+def t_check():
+    df = load_pra_df("Polyp", "knn",batch_size=32)
+    df = df[df["shift"]!="noise"]
+    for shift in df["shift"].unique():
+        print(f"plotting : {shift}")
+
+        plt.hist(df[df["shift"]==shift]["feature"], bins=100, alpha=0.5, density=True, label=shift)
+        plt.legend()
     plt.show()
 
 if __name__ == '__main__':
     #data = load_pra_df(dataset_name="Office31", feature_name="knn", batch_size=1, samples=1000)
     # collect_rate_estimator_data()
     # eval_rate_estimator()
-    fetch_dsd_accuracies(1)
-    # sanity_check()
+    # t_check()
+    # fetch_dsd_accuracies(32, plot=True)
+
     # plot_rate_estimation_errors_for_dsds()
     # accuracy_by_fold()
+    accuracy_by_fold_and_dsd_verdict()
     #print(data)
     #collect_tpr_tnr_sensitivity_data(data, ood_sets = ["dslr", "webcam"])
     # uniform_bernoulli(data, load = False)

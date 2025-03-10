@@ -19,6 +19,12 @@ def get_optimal_threshold(ind, ood):
     else:
         higher_is_ood = False
 
+    #if linearly seperable, set the threshold to the middle
+    if ind.max()<ood.min() and higher_is_ood:
+        return (ind.max()+ood.min())/2
+    if ood.max()<ind.min() and not higher_is_ood:
+        return (ind.max() + ood.min()) / 2
+
     for t in np.linspace(merged.min(), merged.max(), 100):
         if higher_is_ood:
             ind_acc = (ind<t).mean()
@@ -78,7 +84,7 @@ def load_pra_df(dataset_name, feature_name, batch_size=30, samples=1000):
         print("no data found for ", dataset_name, feature_name)
         return pd.DataFrame()
 
-    df["dataset"]=dataset_name
+    df["Dataset"]=dataset_name
     df.drop(columns=["Unnamed: 0"], inplace=True)
 
     if batch_size!=1:
@@ -95,7 +101,7 @@ def load_pra_df(dataset_name, feature_name, batch_size=30, samples=1000):
             return pd.DataFrame(samples)
             # Return a DataFrame of means with the original group keys
 
-        df = df.groupby(["fold", "feature_name", "dataset"]).apply(sample_loss_feature, samples, batch_size).reset_index()
+        df = df.groupby(["fold", "feature_name", "Dataset"]).apply(sample_loss_feature, samples, batch_size).reset_index()
 
 
     if dataset_name=="Polyp":

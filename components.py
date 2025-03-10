@@ -4,6 +4,8 @@ from matplotlib import pyplot as plt
 from pygam import LinearGAM
 
 from utils import *
+from vae.utils.general import check_python
+
 
 class OODDetector:
     def __init__(self, df, ood_val_shift):
@@ -29,9 +31,10 @@ class OODDetector:
 
     def get_tnr(self, data):
         if self.higher_is_ood:
-            return (data[~data["ood"]]["feature"]<self.threshold).mean()
+            correct = (data[~data["ood"]]["feature"]<=self.threshold).mean()
         else:
-            return (data[~data["ood"]]["feature"]>self.threshold).mean()
+            correct = (data[~data["ood"]]["feature"]>=self.threshold).mean()
+        return correct
 
     def get_accuracy(self, data):
         return 0.5*(self.get_tpr(data)+self.get_tnr(data))
@@ -47,8 +50,15 @@ class SyntheticOODDetector:
 
 
     def predict(self, batch):
+
         # print(batch.columns)
         # input()
+        if type(batch["ood"])==bool:
+            if batch["ood"]:
+                return 1 if np.random.rand() < self.tpr else 0
+            else:
+                return 0 if np.random.rand() < self.tnr else 1
+
         assert batch["ood"].nunique()==1
         if batch["ood"].all(): #if the sample is ood
             #return true with likelihood = tpr, else false (1-tpr)

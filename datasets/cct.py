@@ -13,7 +13,7 @@ from torch.utils.data import Dataset, Subset
 import sklearn
 
 
-class ECCV(Dataset):
+class CCT(Dataset):
     def __init__(self, path, train_transform, val_transform, fold="train"):
         self.data = []
         self.labels = []
@@ -87,7 +87,7 @@ class ECCV(Dataset):
             with open(path_to_json) as json_file:
                 data = json.load(json_file)
 
-            # image_paths = np.array([os.path.join(self.data_dir,'small_images/eccv_18_all_images_sm',str(item['image_id'])+'.jpg') for item in data['annotations']])
+            # image_paths = np.array([os.path.join(self.data_dir,'small_images/cct_18_all_images_sm',str(item['image_id'])+'.jpg') for item in data['annotations']])
             image_paths = np.array(
                 [os.path.join(self.data_dir, 'standard_images/', str(item['image_id']) + '.jpg') for
                  item in data['annotations']])
@@ -116,16 +116,16 @@ class ECCV(Dataset):
         self.train_image_paths, self.train_labels, self.train_locations, self.train_category_labels, self.train_category_names = extract_metadata(
             os.path.join(self.data_dir, 'annotations/train_annotations.json'))
 
-def build_eccv_dataset(path, train_transform, val_transform):
-    train = ECCV(path, train_transform, val_transform, fold="train")
-    val = ECCV(path, train_transform, val_transform, fold="val")
-    test = ECCV(path, train_transform, val_transform, fold="test")
-    ood_val = ECCV(path, train_transform, val_transform, fold="ood_val")
-    ood_test = ECCV(path, train_transform, val_transform, fold="ood_test")
+def build_cct_dataset(path, train_transform, val_transform):
+    train = CCT(path, train_transform, val_transform, fold="train")
+    val = CCT(path, train_transform, val_transform, fold="val")
+    test = CCT(path, train_transform, val_transform, fold="test")
+    ood_val = CCT(path, train_transform, val_transform, fold="ood_val")
+    ood_test = CCT(path, train_transform, val_transform, fold="ood_test")
     return train, val, test, ood_val, ood_test
 
 
 
 
 if __name__ == '__main__':
-    ind_train, ind_val, ind_test, ood_val, ood_test = build_eccv_dataset("../../Datasets/ECCV", )
+    ind_train, ind_val, ind_test, ood_val, ood_test = build_cct_dataset("../../Datasets/CCT", )
