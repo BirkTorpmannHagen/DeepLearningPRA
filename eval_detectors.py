@@ -56,8 +56,8 @@ if __name__ == '__main__':
     from features import *
     torch.multiprocessing.set_start_method('spawn')
 
-    collect_data(PolypTestBed, "Polyp", mode="normal")
-    collect_data(PolypTestBed, "Polyp", mode="noise")
+    # collect_data(PolypTestBed, "Polyp", mode="normal")
+    # collect_data(PolypTestBed, "Polyp", mode="noise")
     # collect_data(PolypTestBed, "Polyp", mode="hue")
     # collect_data(PolypTestBed, "Polyp", mode="smear")
     # collect_data(PolypTestBed, "Polyp", mode="saturation")
@@ -79,14 +79,13 @@ if __name__ == '__main__':
     # collect_data(CCTTestBed, "CCT", mode="saltpepper")
     # collect_data(CCTTestBed, "CCT", mode="fgsm")
 
-    collect_data(OfficeHomeTestBed, "OfficeHome", mode="normal")
-    collect_data(OfficeHomeTestBed, "OfficeHome", mode="noise")
+    # collect_data(OfficeHomeTestBed, "OfficeHome", mode="normal")
+    # collect_data(OfficeHomeTestBed, "OfficeHome", mode="noise")
     # collect_data(OfficeHomeTestBed, "OfficeHome", mode="hue")
     # collect_data(OfficeHomeTestBed, "OfficeHome", mode="smear")
     # collect_data(OfficeHomeTestBed, "OfficeHome", mode="saturation")
     # collect_data(OfficeHomeTestBed, "OfficeHome", mode="brightness")
     # collect_data(OfficeHomeTestBed, "OfficeHome", mode="contrast")
-
     # collect_data(OfficeHomeTestBed, "OfficeHome", mode="multnoise")
     # collect_data(OfficeHomeTestBed, "OfficeHome", mode="saltpepper")
     # collect_data(OfficeHomeTestBed, "OfficeHome", mode="fgsm")
@@ -98,13 +97,12 @@ if __name__ == '__main__':
     # collect_data(Office31TestBed, "Office31", mode="saturation")
     # collect_data(Office31TestBed, "Office31", mode="brightness")
     # collect_data(Office31TestBed, "Office31", mode="contrast")
-
     # collect_data(Office31TestBed, "Office31", mode="multnoise")
     # collect_data(Office31TestBed, "Office31", mode="saltpepper")
     # collect_data(Office31TestBed, "Office31", mode="fgsm")
 
-    # collect_data(NicoTestBed, "NICO", mode="normal")
-    # collect_data(NicoTestBed, "NICO", mode="noise")
+    collect_data(NicoTestBed, "NICO", mode="normal")
+    collect_data(NicoTestBed, "NICO", mode="noise")
     # collect_data(NicoTestBed, "NICO", mode="hue")
     # collect_data(NicoTestBed, "NICO", mode="smear")
     # collect_data(NicoTestBed, "NICO", mode="saturation")

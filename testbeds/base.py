@@ -98,7 +98,8 @@ class BaseTestBed:
     def compute_losses(self, loader):
         losses = np.zeros((len(loader), self.batch_size))
         #criterion = nn.CrossEntropyLoss(reduction="none")  # still computing loss for each sample, just batched
-        # criterion = Accuracy(task="multiclass", num_classes=self.num_classes).cuda()
+        criterion = Accuracy(task="multiclass", num_classes=self.num_classes, top_k=5).cuda()
+
         for i, data in tqdm(enumerate(loader), total=len(loader)):
             with (torch.no_grad()):
                 x = data[0].to("cuda")

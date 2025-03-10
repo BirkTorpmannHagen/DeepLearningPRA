@@ -1,5 +1,8 @@
 import itertools
 
+import numpy as np
+from twisted.protocols.amp import PROTOCOL_ERRORS
+
 from simulations import *
 import matplotlib.pyplot as plt
 from utils import *
@@ -90,13 +93,13 @@ def collect_tpr_tnr_sensitivity_data(data, ood_sets):
                             results["rate"] = rate
                             results["test_set"] = test_set
                             results["val_set"] = val_set
-                            results["dataset"] = data["dataset"].unique()[0]
+                            results["Dataset"] = data["Dataset"].unique()[0]
                             # results = results.groupby(["tpr", "tnr", "rate", "test_set", "val_set", "Tree"]).mean().reset_index()
                             dfs.append(results)
                             pbar.update(1)
                 df_final = pd.concat(dfs)
                 print(df_final.head(10))
-                df_final.to_csv(f"pra_data/{data['dataset'].unique()[0]}_{val_set}_{test_set}_results.csv")
+                df_final.to_csv(f"pra_data/{data['Dataset'].unique()[0]}_{val_set}_{test_set}_results.csv")
 
 def compare_risk_tree_accuracy_estimators():
     df = pd.read_csv("tpr_tnr_sensitivity.csv").groupby(["tpr", "tnr", "rate", "test_set", "val_set"]).mean().reset_index()
@@ -282,18 +285,28 @@ def risk_tree_cba():
     risk_tree = DetectorEventTree(0.95, 0.95, 0.95, 0.90, 0.91, 0.15)
 
 def accuracy_by_fold():
-    all_data = pd.concat([load_pra_df(dataset_name=dataset_name, feature_name="knn", batch_size=1, samples=1000) for dataset_name in
-                          DATASETS])
-    table = all_data.groupby(["dataset", "shift"])["correct_prediction"].mean()
-    print(table)
-    fold_wise_error = table.reset_index()
-    fold_wise_error_ood = fold_wise_error[~fold_wise_error["shift"].isin(["ind_val", "ind_test", "train"])]
-    fold_wise_error_ind = fold_wise_error[fold_wise_error["shift"].isin(["ind_val", "ind_test", "train"])]
+    errors = []
 
-    # Calculate the difference matrix
-    for label, data_group in zip(["InD", "OoD"], [fold_wise_error_ind, fold_wise_error_ood]):
+    for batch_size in BATCH_SIZES:
+        print(batch_size)
+        all_data = pd.concat([load_pra_df(dataset_name=dataset_name, feature_name="knn", batch_size=batch_size, samples=100) for dataset_name in
+                              DATASETS])
+        table = all_data.groupby(["Dataset", "shift"])["correct_prediction"].mean()
+
+        fold_wise_error = table.reset_index()
+
+        fold_wise_error_ood = fold_wise_error[~fold_wise_error["shift"].isin(["ind_val", "ind_test", "train"])]
+        fold_wise_error_ind = fold_wise_error[fold_wise_error["shift"].isin(["ind_val", "ind_test", "train"])]
+
+        # Calculate the difference matrix
+
+        for dataset_name in DATASETS:
+            filt = fold_wise_error_ind[fold_wise_error_ind["Dataset"]==dataset_name]
+            error = np.abs(filt[filt["shift"]=="ind_val"]["correct_prediction"].mean()-filt[filt["shift"]=="ind_test"]["correct_prediction"].mean())
+            errors.append({"ood":False, "Dataset": dataset_name, "batch_size":batch_size, "Error":error})
+
         diff_matrices = {}
-        for dataset, group in data_group.groupby('dataset'):
+        for dataset, group in fold_wise_error_ood.groupby('Dataset'):
             group.set_index('shift', inplace=True)
             accuracy_values = group['correct_prediction'].to_numpy()
             diff_matrix = pd.DataFrame(
@@ -302,19 +315,25 @@ def accuracy_by_fold():
                 columns=group.index
             )
             # Store the matrix for each dataset
+
             diff_matrices[dataset] = diff_matrix
+            try:
+                [errors.append({"ood": True, "Dataset":dataset, "Error":np.abs(error), "batch_size":batch_size}) for error in np.unique(diff_matrix[diff_matrix!=0])]
+            except:
+                print("no non-zero values in OoD matrix; setting zero error...")
+                errors.append({"ood": True, "Dataset":dataset, "Error":0, "batch_size":batch_size})
 
             # Display the difference matrices for each dataset
+    errors = pd.DataFrame(errors)
+    g = sns.FacetGrid(errors, col="Dataset")
+    g.map_dataframe(sns.lineplot, x="batch_size", y="Error", hue="ood",  errorbar=("pi", 100) )
+    for ax in g.axes.flat:
+        ax.set_yscale("log")
+    plt.savefig("tree1_errors.pdf")
+    plt.show()
+    return errors
 
-        print(label)
-        for dataset, matrix in diff_matrices.items():
-            mat = matrix.to_numpy()
-            avg  = round(np.sum(np.abs(mat)) / (matrix.shape[0] * matrix.shape[1] - matrix.shape[0]),3)
-            min = round(np.min(np.abs(mat[mat>0])),3)
-            max = round(np.max(np.abs(mat)),3)
-            print(f"{dataset} & {min}  & {avg} & {max} \\\\")
-
-def accuracy_by_fold_and_dsd_verdict(batch_size=16):
+def accuracy_by_fold_and_dsd_verdict(batch_size=32):
     df = load_all(batch_size)
     df = df[df["shift"]!="noise"]
     fig, ax = plt.subplots(nrows=2, ncols = len(DATASETS))
@@ -326,11 +345,13 @@ def accuracy_by_fold_and_dsd_verdict(batch_size=16):
                 shifts = filtered["shift"].unique()
 
                 for ood_val_shift in shifts:
-                    filtered_copy = filtered
+                    if ood_val_shift in ["train", "ind_val", "ind_test"]:
+                        continue
+                    filtered_copy = filtered.copy()
                     dsd = OODDetector(filtered, ood_val_shift)
                     filtered_copy["D(ood)"] = filtered_copy.apply(lambda row: dsd.predict(row), axis=1)
                     filtered_copy["ood_val_shift"]=ood_val_shift
-                    
+
                     accuracy = filtered_copy.groupby(["Dataset", "ood_val_shift", "shift", "D(ood)"])["correct_prediction"].mean()
                     data.append(accuracy.reset_index())
     df = pd.concat(data)
@@ -355,8 +376,8 @@ if __name__ == '__main__':
     # fetch_dsd_accuracies(32, plot=True)
 
     # plot_rate_estimation_errors_for_dsds()
-    # accuracy_by_fold()
-    accuracy_by_fold_and_dsd_verdict()
+    accuracy_by_fold()
+    # accuracy_by_fold_and_dsd_verdict()
     #print(data)
     #collect_tpr_tnr_sensitivity_data(data, ood_sets = ["dslr", "webcam"])
     # uniform_bernoulli(data, load = False)

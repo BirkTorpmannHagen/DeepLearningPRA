@@ -112,10 +112,16 @@ def load_pra_df(dataset_name, feature_name, batch_size=30, samples=1000):
 
 
     if dataset_name=="Polyp":
-        df["correct_prediction"] = df["loss"] < 0.5  # arbitrary threshold
+        if batch_size==1:
+            df["correct_prediction"] = df["loss"] < 0.5  # arbitrary threshold
+        else:
+            df["correct_prediction"] = df["loss"] < df[df["fold"]=="ind_val"]["loss"].max()  #maximum observed val mean jaccard
     else:
         # print(df[df["fold"]=="ind_val"]["loss"].quantile(0.05))
-        df["correct_prediction"] = df["loss"]>0.5 #arbitrary threshold; todo replace
+        if batch_size==1:
+            df["correct_prediction"] = df["loss"]>0.5 #arbitrary threshold;
+        else:
+            df["correct_prediction"] = df["loss"] > df[df["fold"] == "ind_val"]["loss"].min()
 
     df["shift"] = df["fold"].apply(lambda x: x.split("_")[0] if "_0." in x else x)            #what kind of shift has occured?
     df["shift_intensity"] = df["fold"].apply(lambda x: x.split("_")[1] if "_" in x else x)  #what intensity?
@@ -126,3 +132,5 @@ def load_pra_df(dataset_name, feature_name, batch_size=30, samples=1000):
 DSD_PRINT_LUT = {"grad_magnitude": "GradNorm", "cross_entropy" : "Entropy", "energy":"Energy", "knn":"kNN"}
 DATASETS = ["CCT", "OfficeHome", "Office31", "NICO", "Polyp"]
 DSDS = ["knn", "grad_magnitude", "cross_entropy", "energy"]
+# BATCH_SIZES = [1, 8, 16, 32]
+BATCH_SIZES = np.arange(1, 64)
