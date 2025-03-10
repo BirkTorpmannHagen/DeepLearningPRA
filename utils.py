@@ -3,12 +3,8 @@ from os.path import join
 
 import numpy as np
 import pandas as pd
-import torch
-import torch.nn as nn
 
-ETISLARIB = "EtisLaribDB" #training set
-CVCCLINIC = "CVC-ClinicDB" #validation set
-ENDOCV = "EndoCV2020" #test set
+
 
 def get_optimal_threshold(ind, ood):
     merged = np.concatenate([ind, ood])
@@ -74,6 +70,13 @@ class ArgumentIterator:
     def __len__(self):
         return len(self.iterable)
 
+def load_all(batch_size=30, samples=1000):
+    dfs = []
+    for dataset in DATASETS:
+        for dsd in DSDS:
+           dfs.append(load_pra_df(dataset, dsd, batch_size, samples))
+    return pd.concat(dfs)
+
 
 def load_pra_df(dataset_name, feature_name, batch_size=30, samples=1000):
 
@@ -94,7 +97,11 @@ def load_pra_df(dataset_name, feature_name, batch_size=30, samples=1000):
             for i in range(n_samples):
                 sample = group.sample(n=n_size, replace=True)  # Sampling with replacement
                 # input()
-                mean_loss = sample['loss'].mean()
+                if sample["Dataset"].all()=="Polyp":
+                    mean_loss = sample['loss'].median()
+                else:
+                    mean_loss = sample['loss'].mean()
+
                 mean_feature = sample['feature'].mean()
                 samples.append({'loss': mean_loss, 'feature': mean_feature})
                 # samples.append({'loss': mean_loss, 'feature': brunnermunzel(df[df["fold"]=="train"]["feature"], sample['feature'])[0], "reduction":"bm"})
@@ -115,3 +122,7 @@ def load_pra_df(dataset_name, feature_name, batch_size=30, samples=1000):
     df["ood"] = ~df["fold"].isin(["train", "ind_val", "ind_test"])#&~df["correct_prediction"] #is the prediction correct?
     return df
 
+
+DSD_PRINT_LUT = {"grad_magnitude": "GradNorm", "cross_entropy" : "Entropy", "energy":"Energy", "knn":"kNN"}
+DATASETS = ["CCT", "OfficeHome", "Office31", "NICO", "Polyp"]
+DSDS = ["knn", "grad_magnitude", "cross_entropy", "energy"]

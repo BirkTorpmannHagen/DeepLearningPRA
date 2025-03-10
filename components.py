@@ -17,11 +17,15 @@ class OODDetector:
 
 
     def predict(self, batch):
-        feature = batch["feature"].mean()
+        if isinstance(batch["feature"], pd.Series):
+            feature = batch["feature"].mean()
+        else:
+            feature = batch["feature"]
+
         if self.higher_is_ood:
             return  feature > self.threshold or feature<self.ind_val["feature"].min()
         else:
-            return batch["feature"].mean() < self.threshold or feature>self.ind_val["feature"].max()
+            return feature < self.threshold or feature>self.ind_val["feature"].max()
 
     def get_tpr(self, data):
         if self.higher_is_ood:

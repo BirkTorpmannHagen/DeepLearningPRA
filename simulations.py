@@ -21,7 +21,7 @@ class SystemSimulator:
     """
     permits conditional data collection simulating model + ood detector
     """
-    def __init__(self, df, trace_length=100, estimator=BernoulliEstimator, ood_test_shift=ENDOCV, ood_val_shift=CVCCLINIC, **kwargs):
+    def __init__(self, df, ood_test_shift, ood_val_shift,  estimator=BernoulliEstimator, trace_length=100, **kwargs):
         self.df = df
 
         self.ood_test_shift = ood_test_shift

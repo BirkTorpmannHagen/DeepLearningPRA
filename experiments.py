@@ -1,20 +1,18 @@
-import numpy as np
-from xarray.util.generate_ops import inplace
+import itertools
 
-from plots import plot_tpr_tnr_sensitivity
 from simulations import *
 import matplotlib.pyplot as plt
 from utils import *
 import seaborn as sns
 from tqdm import tqdm
 import pandas as pd
+import itertools
 from components import OODDetector
-from utils import load_pra_df, get_optimal_threshold
+
 # pd.set_option('display.float_format', lambda x: '%.3f' % x)
 np.set_printoptions(precision=3, suppress=True)
-DSD_PRINT_LUT = {"grad_magnitude": "GradNorm", "cross_entropy" : "Entropy", "energy":"Energy", "knn":"kNN"}
-DATASETS = ["CCT", "OfficeHome", "Office31", "NICO", "Polyp"]
-DSDS = ["knn", "grad_magnitude", "cross_entropy", "energy"]
+
+
 def get_dsd_verdicts_given_true_trace(trace, tpr, tnr):
     def transform(v):
         if v==1:
@@ -74,8 +72,6 @@ def collect_tpr_tnr_sensitivity_data(data, ood_sets):
             dfs = []
             total_num_tpr_tnr = np.sum(
                 [i + j / 2 >= 0.5 for i in np.linspace(0, 1, bins) for j in np.linspace(0, 1, bins)])
-            if test_set == CVCCLINIC and val_set == CVCCLINIC:
-                continue
             with tqdm(total=bins * total_num_tpr_tnr) as pbar:
 
                 # if test_set == val_set:
@@ -226,7 +222,7 @@ def plot_rate_estimation_errors_for_dsds(batch_size=16, cross_validate=False):
         dsd_data = dsd_data[dsd_data["val_fold"]==dsd_data["test_fold"]]
     # print(dsd_data.groupby(["Dataset", "DSD", "val_fold", "test_fold"])[["tpr", "tnr", "ba"]].mean())
     # input()
-    with tqdm(total=len(DATASETS)*len(DSDS)*26) as pbar:
+    with tqdm(total=len(DATASETS) * len(DSDS) * 26) as pbar:
         for dataset in DATASETS:
             for feature in DSDS:
                 for rate in tqdm(np.linspace(0, 1, 26)):
@@ -286,7 +282,8 @@ def risk_tree_cba():
     risk_tree = DetectorEventTree(0.95, 0.95, 0.95, 0.90, 0.91, 0.15)
 
 def accuracy_by_fold():
-    all_data = pd.concat([load_pra_df(dataset_name=dataset_name, feature_name="knn", batch_size=1, samples=1000) for dataset_name in DATASETS])
+    all_data = pd.concat([load_pra_df(dataset_name=dataset_name, feature_name="knn", batch_size=1, samples=1000) for dataset_name in
+                          DATASETS])
     table = all_data.groupby(["dataset", "shift"])["correct_prediction"].mean()
     print(table)
     fold_wise_error = table.reset_index()
@@ -317,51 +314,28 @@ def accuracy_by_fold():
             max = round(np.max(np.abs(mat)),3)
             print(f"{dataset} & {min}  & {avg} & {max} \\\\")
 
-def accuracy_by_fold_and_dsd_verdict():
-    df = pd.concat([load_pra_df(dataset_name=dataset_name, feature_name="knn", batch_size=1, samples=1000) for dataset_name in DATASETS])
-
+def accuracy_by_fold_and_dsd_verdict(batch_size=16):
+    df = load_all(batch_size)
+    df = df[df["shift"]!="noise"]
     fig, ax = plt.subplots(nrows=2, ncols = len(DATASETS))
     data = []
     for i, dataset in enumerate(DATASETS):
-        for j, ood in enumerate([False, True]):
-            filtered  = df[(df["ood"]==ood)&(df["Dataset"]==dataset)]
+        for feature in DSDS:
+            for j, ood in enumerate([False, True]):
+                filtered  = df[(df["Dataset"]==dataset)&(df["feature_name"]==feature)]
+                shifts = filtered["shift"].unique()
 
-            for detection_rate in np.linspace(0,1, 10):
-                filtered_copy = filtered.copy()
-                dsd = SyntheticOODDetector(tpr=detection_rate, tnr=1)
-                filtered_copy["tpr"]=detection_rate
-                filtered_copy["tnr"]=detection_rate
-                filtered_copy["D(ood)"] = filtered_copy.apply(lambda row: dsd.predict(row), axis=1)
-                accuracy = filtered_copy.groupby(["Dataset", "shift", "tpr", "tnr", "D(ood)"])["correct_prediction"].mean()
-                print(accuracy)
-                input()
+                for ood_val_shift in shifts:
+                    filtered_copy = filtered
+                    dsd = OODDetector(filtered, ood_val_shift)
+                    filtered_copy["D(ood)"] = filtered_copy.apply(lambda row: dsd.predict(row), axis=1)
+                    filtered_copy["ood_val_shift"]=ood_val_shift
+                    
+                    accuracy = filtered_copy.groupby(["Dataset", "ood_val_shift", "shift", "D(ood)"])["correct_prediction"].mean()
+                    data.append(accuracy.reset_index())
+    df = pd.concat(data)
+    print(df.groupby(["Dataset", "ood_val_shift", "shift", "D(ood)"]).mean())
 
-
-
-
-    # Calculate the difference matrix
-    # for label, data_group in zip(["InD", "OoD"], [fold_wise_error_ind, fold_wise_error_ood]):
-    #     diff_matrices = {}
-    #     for dataset, group in data_group.groupby('dataset'):
-    #         group.set_index('shift', inplace=True)
-    #         accuracy_values = group['correct_prediction'].to_numpy()
-    #         diff_matrix = pd.DataFrame(
-    #             data=np.subtract.outer(accuracy_values, accuracy_values),
-    #             index=group.index,
-    #             columns=group.index
-    #         )
-    #         # Store the matrix for each dataset
-    #         diff_matrices[dataset] = diff_matrix
-    #
-    #         # Display the difference matrices for each dataset
-    #
-    #     print(label)
-    #     for dataset, matrix in diff_matrices.items():
-    #         mat = matrix.to_numpy()
-    #         avg  = round(np.sum(np.abs(mat)) / (matrix.shape[0] * matrix.shape[1] - matrix.shape[0]),3)
-    #         min = round(np.min(np.abs(mat[mat>0])),3)
-    #         max = round(np.max(np.abs(mat)),3)
-    #         print(f"{dataset} & {min}  & {avg} & {max} \\\\")
 
 def t_check():
     df = load_pra_df("Polyp", "knn",batch_size=32)
