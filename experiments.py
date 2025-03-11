@@ -1,4 +1,6 @@
 import numpy as np
+from click import style
+from seaborn import FacetGrid
 
 from simulations import *
 import matplotlib.pyplot as plt
@@ -7,6 +9,10 @@ import seaborn as sns
 from tqdm import tqdm
 import pandas as pd
 from components import OODDetector
+
+def xval_errors(values):
+    return np.mean([np.sum(np.abs(np.subtract.outer(valwise_accuracies, valwise_accuracies))) / np.sum(
+        np.ones_like(valwise_accuracies) - np.eye(valwise_accuracies.shape[0])) for valwise_accuracies in values])
 
 # pd.set_option('display.float_format', lambda x: '%.3f' % x)
 np.set_printoptions(precision=3, suppress=True)
@@ -140,11 +146,11 @@ def plot_ba_rate_sensitivity():
     plt.savefig("ba_sensitivity.eps")
     plt.show()
 
-def fetch_dsd_accuracies(batch_size=32, plot=False):
+def fetch_dsd_accuracies(batch_size=32, plot=False, samples=1000):
     data = []
     for dataset in DATASETS:
         for feature in DSDS:
-            df = load_pra_df(dataset, feature, batch_size=batch_size, samples=1000)
+            df = load_pra_df(dataset, feature, batch_size=batch_size, samples=samples)
             df = df[df["shift"]!="noise"]
             if df.empty:
                 continue
@@ -153,8 +159,6 @@ def fetch_dsd_accuracies(batch_size=32, plot=False):
             ood_folds = df[~df["fold"].isin(["ind_val", "ind_test", "train"])]["shift"].unique()
             for ood_val_fold in ood_folds:
                 for ood_test_fold in ood_folds:
-                    if ood_val_fold != ood_test_fold:
-                        continue
                     ood_val = df[df["shift"]==ood_val_fold]
                     ood_test = df[df["shift"]==ood_test_fold]
 
@@ -176,8 +180,48 @@ def fetch_dsd_accuracies(batch_size=32, plot=False):
                     data.append({"Dataset": dataset, "DSD":feature, "val_fold": ood_val_fold, "test_fold":ood_test_fold, "tpr": tpr, "tnr": tnr, "ba": ba, "t":threshold})
     df = pd.DataFrame(data)
     df.to_csv("dsd_accuracies.csv")
-    print(df.groupby(["Dataset", "DSD", "val_fold", "test_fold"])[["tpr", "tnr", "ba"]].mean())
+    # print(df.groupby(["Dataset", "DSD", "val_fold", "test_fold"])[["tpr", "tnr", "ba"]].mean())
     return df
+
+def plot_dsd_accuracies(samples=1000):
+    data = []
+    for batch_size in BATCH_SIZES:
+        batch_size_df = fetch_dsd_accuracies(batch_size, samples=100)
+        # batch_size_df = batch_size_df.groupby(["Dataset", "DSD", "val_fold", "test_fold"])[["ba"]].mean().reset_index()
+        batch_size_df["batch_size"]=batch_size
+        for dataset in DATASETS:
+            for dsd in DSDS:
+                filt = batch_size_df[(batch_size_df["Dataset"]==dataset)&(batch_size_df["DSD"]==dsd)]
+                print(filt)
+                pivoted = filt.pivot(index=["DSD", "batch_size", "Dataset", "val_fold"],
+                                     columns="test_fold", values="ba")
+                error = xval_errors(pivoted.values)
+                data.append({
+                    "DSD":dsd, "Dataset":dataset, "batch_size":batch_size,
+                    "error":error, "ba":filt["ba"].mean(),
+                })
+
+                # print(pivoted)
+    df = pd.DataFrame(data)
+    g = FacetGrid(df, col="Dataset")
+
+    def plot_with_error(data, **kwargs):
+        """Helper function to plot line and error bands with proper colors"""
+        palette = sns.color_palette(n_colors=data["DSD"].nunique())  # Get a color palette
+        dsd_unique = data["DSD"].unique()
+        color_dict = {dsd: palette[i] for i, dsd in enumerate(dsd_unique)}  # Assign colors per DSD
+
+        for dsd, group in data.groupby("DSD"):
+            color = color_dict[dsd]
+            plt.plot(group["batch_size"], group["ba"], label=dsd, color=color)
+            plt.fill_between(group["batch_size"], group["ba"] - group["error"], group["ba"] + group["error"],
+                             alpha=0.2, color=color)
+
+    g.map_dataframe(plot_with_error)
+    g.add_legend()
+    plt.savefig("dsd_accuracy.pdf")
+    plt.show()
+
 
 def collect_rate_estimator_data():
     data = []
@@ -334,36 +378,65 @@ def accuracy_by_fold_and_dsd_verdict():
     for batch_size in BATCH_SIZES:
         print("loading")
         df = load_all(batch_size, samples=100)
-        print("loaded")
+        #filter unneded data
+        df = df[df["shift"]!="train"]
         df = df[df["shift"]!="noise"]
+
         for i, dataset in enumerate(DATASETS):
             for feature in DSDS:
-                for j, ood in enumerate([False, True]):
-                    filtered  = df[(df["Dataset"]==dataset)&(df["feature_name"]==feature)]
-                    shifts = filtered["shift"].unique()
+                filtered  = df[(df["Dataset"]==dataset)&(df["feature_name"]==feature)]
+                shifts = filtered["shift"].unique()
 
-                    for ood_val_shift in shifts:
-                        if ood_val_shift in ["train", "ind_val", "ind_test"]:
-                            continue
-                        filtered_copy = filtered.copy()
-                        dsd = OODDetector(filtered, ood_val_shift)
-                        filtered_copy["D(ood)"] = filtered_copy.apply(lambda row: dsd.predict(row), axis=1)
-                        filtered_copy["ood_val_shift"]=ood_val_shift
-                        filtered_copy["feature_name"] = feature
-                        accuracy = filtered_copy.groupby(["Dataset", "ood_val_shift", "shift", "feature_name", "D(ood)"])["correct_prediction"].mean().reset_index()
+                for ood_val_shift in shifts:
+                    if ood_val_shift in ["train", "ind_val", "ind_test"]:
+                        continue
+                    filtered_copy = filtered.copy()
+                    dsd = OODDetector(filtered, ood_val_shift) #train a dsd for ood_val_shift
+                    filtered_copy["D(ood)"] = filtered_copy.apply(lambda row: dsd.predict(row), axis=1)
+                    filtered_copy["ood_val_shift"]=ood_val_shift
+                    filtered_copy["feature_name"] = feature
+                    accuracy = filtered_copy.groupby(["Dataset", "ood_val_shift", "shift", "feature_name", "D(ood)", "ood"])["correct_prediction"].mean().reset_index()
+                    accuracy["batch_size"]=batch_size
 
-                        accuracy["batch_size"]=batch_size
+                    data.append(accuracy)
 
-                        data.append(accuracy)
+    data = pd.concat(data)
 
-    df = pd.concat(data)
-
-    data = df.groupby(["feature_name", "batch_size", "Dataset", "ood_val_shift", "shift", "D(ood)"])["correct_prediction"].mean().reset_index()
     # print(data)
+    errors = []
+
     for dataset in DATASETS:
-        filt = data[data["Dataset"]==dataset]
-        pivoted = filt.pivot(index=["feature_name", "batch_size", "Dataset", "shift", "D(ood)"], columns="ood_val_shift", values="correct_prediction")
-        diff_matrix = np.subtract.outer(pivoted.values, pivoted.values)
+        for ood in data["ood"].unique():
+            for dood in data["D(ood)"].unique():
+                for batch_size in BATCH_SIZES:
+                    for feature_name in DSDS:
+                        filt = data[(data["Dataset"]==dataset)&(data["ood"]==ood)&(data["batch_size"]==batch_size)&(data["feature_name"]==feature_name)&(data["D(ood)"]==dood)]
+                        if filt.empty:
+                            print(f"No data for combination {dataset} OOD={ood}, batch_size={batch_size}, feature={feature_name}")
+                            continue
+                        pivoted = filt.pivot(index=["feature_name", "batch_size", "Dataset", "D(ood)","ood_val_shift"], columns="shift", values="correct_prediction")
+                        pivoted.fillna(0,inplace=True)
+                        values = pivoted.values
+                        cross_validated_error = xval_errors(values)
+                        if np.isnan(cross_validated_error):
+                            cross_validated_error=0
+                        errors.append({
+                            "Dataset": dataset, "feature_name":feature_name, "ood":ood, "D(ood)":dood,
+                            "batch_size": batch_size, "Error": cross_validated_error
+                        })
+
+    results = pd.DataFrame(errors)
+    results.to_csv("conditional_accuracy_errors")
+    # results = results.groupby(["Dataset", "feature_name", "ood", "D(ood)"]).mean().reset_index()
+    g = sns.FacetGrid(results, col="Dataset", row="ood")
+    g.map_dataframe(sns.boxplot, x="batch_size", y="Error", hue="D(ood)")
+    g.add_legend()
+    for ax in g.axes.flat:
+        ax.set_ylim(0,1)
+    plt.savefig("conditional_accuracy_errors.pdf")
+    plt.show()
+
+
 
     # g = sns.FacetGrid(data.reset_index(), col="Dataset", row="D(ood)")
     # g.map_dataframe(sns.lineplot, x="batch_size", y="correct_prediction", hue="feature_name")
@@ -386,10 +459,10 @@ if __name__ == '__main__':
     # eval_rate_estimator()
     # t_check()
     # fetch_dsd_accuracies(32, plot=True)
-
+    plot_dsd_accuracies(1000)
     # plot_rate_estimation_errors_for_dsds()
     # accuracy_by_fold()
-    accuracy_by_fold_and_dsd_verdict()
+    # accuracy_by_fold_and_dsd_verdict()
     #print(data)
     #collect_tpr_tnr_sensitivity_data(data, ood_sets = ["dslr", "webcam"])
     # uniform_bernoulli(data, load = False)
