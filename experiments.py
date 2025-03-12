@@ -72,44 +72,42 @@ def single_run(data, estimator=BernoulliEstimator):
     # print(results.mean())
 
 def collect_tpr_tnr_sensitivity_data():
-    bins = 5
-    dfs = []
+    bins = 10
     total_num_tpr_tnr = np.sum(
     [i + j / 2 >= 0.5 for i in np.linspace(0, 1, bins) for j in np.linspace(0, 1, bins)])
     for dataset in DATASETS:
+        dfs = []
+
         data = load_pra_df(dataset_name=dataset, feature_name="knn", batch_size=1,
                            samples=1000)  # we are just interested in the loss and oodness values, knn is arbitray
         ood_sets = data[~data["shift"].isin(["ind_val", "ind_test", "train"])]["shift"].unique()
 
-        with tqdm(total=bins * total_num_tpr_tnr*(len(ood_sets)-1)*len(ood_sets)) as pbar:
+        with tqdm(total=bins**2*(len(ood_sets)-1)*len(ood_sets)) as pbar:
             for val_set in ood_sets:
                 for test_set in ood_sets:
                     if test_set=="noise":
                         continue #used only to estimate accuracies
                     for rate in np.linspace(0, 1, bins):
-                        for tpr in np.linspace(0, 1, bins):
-                            for tnr in np.linspace(0, 1, bins):
-                                if (tnr+tpr)/2 < 0.5:
-                                    continue
-                                sim = SystemSimulator(data, ood_test_shift=test_set, ood_val_shift=val_set, estimator=BernoulliEstimator, dsd_tpr=tpr, dsd_tnr=tnr)
-                                results = sim.uniform_rate_sim(rate, 600)
-                                results = results.groupby(["Tree"]).mean().reset_index()
+                        for ba in np.linspace(0.5, 1, bins):
+                            sim = SystemSimulator(data, ood_test_shift=test_set, ood_val_shift=val_set, estimator=BernoulliEstimator, dsd_tpr=ba, dsd_tnr=ba)
+                            results = sim.uniform_rate_sim(rate, 600)
+                            results = results.groupby(["Tree"]).mean().reset_index()
 
-                                # results = results.mean()
-                                results["tpr"] = tpr
-                                results["tnr"] = tnr
-                                results["ba"] = (tpr + tnr) / 2
-                                results["rate"] = rate
-                                results["test_set"] = test_set
-                                results["val_set"] = val_set
-                                results["Dataset"] = dataset
-                                # results = results.groupby(["tpr", "tnr", "rate", "test_set", "val_set", "Tree"]).mean().reset_index()
+                            # results = results.mean()
+                            results["tpr"] = ba
+                            results["tnr"] = ba
+                            results["ba"] = ba
+                            results["rate"] = rate
+                            results["test_set"] = test_set
+                            results["val_set"] = val_set
+                            results["Dataset"] = dataset
+                            # results = results.groupby(["tpr", "tnr", "rate", "test_set", "val_set", "Tree"]).mean().reset_index()
 
-                                dfs.append(results)
-                                pbar.update(1)
-    df_final = pd.concat(dfs)
-    print(df_final.head(10))
-    df_final.to_csv(f"pra_data/sensitivity_results.csv")
+                            dfs.append(results)
+                            pbar.update(1)
+        df_final = pd.concat(dfs)
+        print(df_final.head(10))
+        df_final.to_csv(f"pra_data/{dataset}_sensitivity_results.csv")
 
 def collect_dsd_accuracy_estimation_data():
 
@@ -511,6 +509,6 @@ if __name__ == '__main__':
     # accuracy_by_fold_and_dsd_verdict()
     #print(data)
 
-    # collect_tpr_tnr_sensitivity_data()
-    collect_dsd_accuracy_estimation_data()
+    collect_tpr_tnr_sensitivity_data()
+    # collect_dsd_accuracy_estimation_data()
     # uniform_bernoulli(data, load = False)
