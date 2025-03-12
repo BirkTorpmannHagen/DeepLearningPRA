@@ -70,11 +70,14 @@ class ArgumentIterator:
     def __len__(self):
         return len(self.iterable)
 
-def load_all(batch_size=30, samples=1000):
+def load_all(batch_size=30, samples=1000, feature="all"):
     dfs = []
     for dataset in DATASETS:
-        for dsd in DSDS:
-           dfs.append(load_pra_df(dataset, dsd, batch_size, samples))
+        if feature!="all":
+            dfs.append(load_pra_df(dataset, feature, batch_size, samples))
+        else:
+            for dsd in DSDS:
+               dfs.append(load_pra_df(dataset, dsd, batch_size, samples))
     return pd.concat(dfs)
 
 

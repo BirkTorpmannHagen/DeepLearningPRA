@@ -55,11 +55,7 @@ class SystemSimulator:
 
 
     def get_conditional_prediction_likelihood_estimates(self, shift, monitor_verdict, num_samples=1000):
-        if shift=="random":
-            frame_copy = self.df[~self.df["shift"].isin([ENDOCV, ETISLARIB, CVCCLINIC, "train", "ind_val", "ind_test"])]
-        else:
-            frame_copy = self.df[(self.df["shift"] == shift)]
-
+        frame_copy = self.df[(self.df["shift"] == shift)]
         samples = []
         for i in range(num_samples):
             sample = frame_copy.sample(replace=True).copy()
@@ -74,10 +70,6 @@ class SystemSimulator:
         return likelihood
 
     def get_predictor_accuracy(self, fold, num_samples=1000):
-        if fold=="random":
-            filtered = self.df[~self.df["shift"].isin([ENDOCV, ETISLARIB, CVCCLINIC, "train", "ind_val", "ind_test"])]
-            return filtered["correct_prediction"].mean()
-
         return self.df[self.df["shift"]==fold]["correct_prediction"].mean()
 
 
@@ -105,7 +97,7 @@ class SystemSimulator:
             true_base_risk = self.base_tree.get_true_risk_for_sample(batch)
             accuracy = batch["correct_prediction"].mean()
             # accuracy = self.ind_test_acc
-            data = pd.DataFrame( {"Tree": ["Detector Tree", "Base Tree"], "Risk Estimate": [current_risk, current_base_risk],
+            data = pd.DataFrame( {"t":[index, index], "Tree": ["Detector Tree", "Base Tree"], "Risk Estimate": [current_risk, current_base_risk],
                                            "True Risk": [true_dsd_risk, true_base_risk], "E[f(x)=y]":[current_expected_accuracy, current_base_expected_accuracy],
                                            "Accuracy": [accuracy, accuracy], "ood_pred": [ood_pred, ood_pred], "is_ood": [shifted, shifted],
                                            "Estimated Rate":[self.detector_tree.rate, self.base_tree.rate],
@@ -132,12 +124,6 @@ class SystemSimulator:
         results_df = pd.concat(results_trace)
         results_df["Rate Error"] = np.abs(results_df["Estimated Rate"] - rate_groundtruth)
         results_df["Accuracy Error"] = np.abs(results_df["E[f(x)=y]"] - results_df["Accuracy"])
-
-        # print(results_df)
-        # input()
-        # results_df = pd.DataFrame(results)
-        # results_df = results_df.groupby(["Tree", len(results_df)//self.dsd_trace.trace_length]).mean()
-        # print(results_df)
         return results_df
 
 

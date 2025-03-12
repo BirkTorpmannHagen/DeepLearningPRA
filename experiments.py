@@ -1,6 +1,7 @@
 import numpy as np
 from click import style
 from seaborn import FacetGrid
+from watchdog.observers.inotify_c import inotify_init
 
 from simulations import *
 import matplotlib.pyplot as plt
@@ -70,38 +71,83 @@ def single_run(data, estimator=BernoulliEstimator):
     # results = sim.uniform_rate_sim(0.5, 10000)
     # print(results.mean())
 
-def collect_tpr_tnr_sensitivity_data(data, ood_sets):
-    bins = 11
-    for val_set in ["noise"]+ood_sets:
-        for test_set in ood_sets:
-            dfs = []
-            total_num_tpr_tnr = np.sum(
-                [i + j / 2 >= 0.5 for i in np.linspace(0, 1, bins) for j in np.linspace(0, 1, bins)])
-            with tqdm(total=bins * total_num_tpr_tnr) as pbar:
+def collect_tpr_tnr_sensitivity_data():
+    bins = 5
+    dfs = []
+    total_num_tpr_tnr = np.sum(
+    [i + j / 2 >= 0.5 for i in np.linspace(0, 1, bins) for j in np.linspace(0, 1, bins)])
+    for dataset in DATASETS:
+        data = load_pra_df(dataset_name=dataset, feature_name="knn", batch_size=1,
+                           samples=1000)  # we are just interested in the loss and oodness values, knn is arbitray
+        ood_sets = data[~data["shift"].isin(["ind_val", "ind_test", "train"])]["shift"].unique()
 
-                # if test_set == val_set:
-                #     continue
-                for rate in np.linspace(0, 1, bins):
-                    for tpr in np.linspace(0, 1, bins):
-                        for tnr in np.linspace(0, 1, bins):
-                            if tnr+tpr/2 < 0.5:
-                                continue
-                            sim = SystemSimulator(data, ood_test_shift=test_set, ood_val_shift=val_set, estimator=BernoulliEstimator, dsd_tpr=tpr, dsd_tnr=tnr)
-                            results = sim.uniform_rate_sim(rate, 600)
-                            # results = results.mean()
-                            results["tpr"] = tpr
-                            results["tnr"] = tnr
-                            results["ba"] = (tpr + tnr) / 2
-                            results["rate"] = rate
-                            results["test_set"] = test_set
-                            results["val_set"] = val_set
-                            results["Dataset"] = data["Dataset"].unique()[0]
-                            # results = results.groupby(["tpr", "tnr", "rate", "test_set", "val_set", "Tree"]).mean().reset_index()
-                            dfs.append(results)
-                            pbar.update(1)
-                df_final = pd.concat(dfs)
-                print(df_final.head(10))
-                df_final.to_csv(f"pra_data/{data['Dataset'].unique()[0]}_{val_set}_{test_set}_results.csv")
+        with tqdm(total=bins * total_num_tpr_tnr*(len(ood_sets)-1)*len(ood_sets)) as pbar:
+            for val_set in ood_sets:
+                for test_set in ood_sets:
+                    if test_set=="noise":
+                        continue #used only to estimate accuracies
+                    for rate in np.linspace(0, 1, bins):
+                        for tpr in np.linspace(0, 1, bins):
+                            for tnr in np.linspace(0, 1, bins):
+                                if (tnr+tpr)/2 < 0.5:
+                                    continue
+                                sim = SystemSimulator(data, ood_test_shift=test_set, ood_val_shift=val_set, estimator=BernoulliEstimator, dsd_tpr=tpr, dsd_tnr=tnr)
+                                results = sim.uniform_rate_sim(rate, 600)
+                                results = results.groupby(["Tree"]).mean().reset_index()
+
+                                # results = results.mean()
+                                results["tpr"] = tpr
+                                results["tnr"] = tnr
+                                results["ba"] = (tpr + tnr) / 2
+                                results["rate"] = rate
+                                results["test_set"] = test_set
+                                results["val_set"] = val_set
+                                results["Dataset"] = dataset
+                                # results = results.groupby(["tpr", "tnr", "rate", "test_set", "val_set", "Tree"]).mean().reset_index()
+
+                                dfs.append(results)
+                                pbar.update(1)
+    df_final = pd.concat(dfs)
+    print(df_final.head(10))
+    df_final.to_csv(f"pra_data/sensitivity_results.csv")
+
+def collect_dsd_accuracy_estimation_data():
+
+    dfs = []
+    bins=5
+    with tqdm(total=len(DSDS)*len(BATCH_SIZES)) as pbar:
+        for batch_sizes in BATCH_SIZES:
+            dsd_accuracies = fetch_dsd_accuracies(batch_size=batch_sizes, plot=False, samples=1000)
+            best_dsds = dsd_accuracies[dsd_accuracies.groupby(["Dataset", "DSD"])[["ba"]].idxmax()].reset_index()
+
+            for dataset in DATASETS:
+                dsd = best_dsds[(best_dsds["Dataset"]==dataset)]["DSD"].values[0]
+                tpr, tnr, ba = dsd_accuracies[(dsd_accuracies["Dataset"]==dataset)&(dsd_accuracies["DSD"]==dsd)][["tpr", "tnr", "ba"]].mean()
+
+                data = load_pra_df(dataset, dsd, batch_size=batch_sizes, samples=1000)
+                ood_sets = data[~data["shift"].isin(["ind_val", "ind_test", "train"])]["shift"].unique()
+                for val_set in ood_sets:
+                    for test_set in ood_sets:
+                        if test_set=="noise":
+                            continue #used only to estimate accuracies
+                        for rate in np.linspace(0, 1, bins):
+                            for dsd in DSDS:
+                                sim = SystemSimulator(data, ood_test_shift=test_set, ood_val_shift=val_set, estimator=BernoulliEstimator, dsd_tpr=tpr, dsd_tnr=tnr)
+                                results = sim.uniform_rate_sim(rate, 600)
+                                results = results.groupby(["Tree"]).mean().reset_index()
+                                # results = results.mean()
+                                results["dsd"] = dsd
+                                results["rate"] = rate
+                                results["test_set"] = test_set
+                                results["val_set"] = val_set
+                                # results = results.groupby(["tpr", "tnr", "rate", "test_set", "val_set", "Tree"]).mean().reset_index()
+
+                                dfs.append(results)
+                                pbar.update(1)
+    df_final = pd.concat(dfs)
+    print(df_final.head(10))
+    df_final.to_csv(f"pra_data/dsd_results.csv")
+
 
 def compare_risk_tree_accuracy_estimators():
     df = pd.read_csv("tpr_tnr_sensitivity.csv").groupby(["tpr", "tnr", "rate", "test_set", "val_set"]).mean().reset_index()
@@ -459,10 +505,12 @@ if __name__ == '__main__':
     # eval_rate_estimator()
     # t_check()
     # fetch_dsd_accuracies(32, plot=True)
-    plot_dsd_accuracies(1000)
+    # plot_dsd_accuracies(1000)
     # plot_rate_estimation_errors_for_dsds()
     # accuracy_by_fold()
     # accuracy_by_fold_and_dsd_verdict()
     #print(data)
-    #collect_tpr_tnr_sensitivity_data(data, ood_sets = ["dslr", "webcam"])
+
+    # collect_tpr_tnr_sensitivity_data()
+    collect_dsd_accuracy_estimation_data()
     # uniform_bernoulli(data, load = False)
