@@ -23,7 +23,7 @@ import matplotlib.patches as patches
 
 from scipy.stats import spearmanr, pearsonr, kendalltau
 
-from utils import load_pra_df, ETISLARIB, ENDOCV, CVCCLINIC
+from utils import load_pra_df, DATASETS, BATCH_SIZES, DSD_PRINT_LUT
 
 pd.set_option("display.precision", 3)
 pd.set_option('display.float_format', lambda x: '%.3f' % x)
@@ -473,11 +473,78 @@ def plot_tpr_tnr_sensitivity():
     plt.savefig("tpr_tnr_sensitivity.eps")
     plt.show()
 
+def plot_dsd_acc_errors():
+    dfs = []
+    for dataset in DATASETS:
+        for batch_size in BATCH_SIZES:
+            try:
+                df = pd.read_csv(f"pra_data/dsd_results_{dataset}_{batch_size}.csv")
+                best_guess = (df["ind_acc"].mean() + df["ood_val_acc"].mean()) / 2
+                df["Dataset"]=dataset
+                df["batch_size"]=batch_size
+                df["best_guess_error"] = np.abs(df["Accuracy Error"] - best_guess)
+                dfs.append(df)
+            except:
+                print(f"No data found for {dataset} with batch size {batch_size}")
+    df = pd.concat(dfs)
+    df.replace(DSD_PRINT_LUT, inplace=True)
+    df = df[df["Tree"]=="Base Tree"]
+    g = sns.FacetGrid(df, col="Dataset")
+    g.map_dataframe(sns.boxplot, x="rate", y="Accuracy Error", hue="test_set")
+    plt.show()
+
+    g = sns.FacetGrid(df, col="Dataset", height=3, aspect=1.5, col_wrap=3)
+
+    df = df[df["val_set"]!=df["test_set"]]
+    g.map_dataframe(sns.boxplot, x="batch_size", y="Accuracy Error", hue="test_set", showfliers=False, palette=sns.color_palette())
+    # g.map_dataframe(sns.lineplot, x="batch_size", y="Accuracy Error", hue="test_set")
+    sorted_datasets = sorted(df["Dataset"].unique())
+
+    for dataset in sorted_datasets:
+        ax = g.axes_dict[dataset]  # Access the correct axis using the sorted dataset name
+        subset = df[df["Dataset"] == dataset].groupby(["batch_size"])["best_guess_error"].mean().reset_index()
+        print(df.columns)
+        ax.set_title(f"{dataset}:{df[df["Dataset"]==dataset]["dsd"].unique()[0]}")
+
+        # Convert batch_size values to match categorical positions
+        subset["x_pos"] = range(len(subset))  # Automatically assign 0, 1, 2, 3, 4, etc.
+
+        # Ensure valid points before plotting
+        valid_points = subset.dropna(subset=["x_pos", "best_guess_error"])
+        ax.set_yscale("log")
+        # Plot red lines only if valid points exist
+        if not valid_points.empty:
+            ax.plot(valid_points["x_pos"], valid_points["best_guess_error"], color="red", linestyle="--", marker="o", label="Baseline")
+        ax.legend(loc="lower center", title="Test Sets", frameon=True, ncol=2, fontsize=8)
+
+    num_plots = len(g.axes.flat)
+    num_cols = 3  # Top row columns
+    last_row_plots = num_plots % num_cols
+
+    if last_row_plots > 0:
+        # Get figure width
+        fig_width = g.fig.get_size_inches()[0]
+
+        # Compute total space occupied by the last row's plots
+        last_row_width = (fig_width / num_cols) * last_row_plots
+
+        # Compute left padding to center the row
+        left_padding = (fig_width - last_row_width) / 2
+
+        # Adjust position of the last row's plots
+        for ax in g.axes[-last_row_plots:]:
+            pos = ax.get_position()
+            ax.set_position([pos.x0 + left_padding / fig_width, pos.y0, pos.width, pos.height])
+    plt.savefig("dsd_acc_errors.pdf")
+    plt.show()
+
+
 
 if __name__ == '__main__':
-    data = load_pra_df(dataset_name="Polyp", feature_name="knn", batch_size=1, samples=1000)
+    # data = load_pra_df(dataset_name="Polyp", feature_name="knn", batch_size=1, samples=1000)
+    plot_dsd_acc_errors()
     # plot_loss_distributions(data)
-    plot_tpr_tnr_sensitivity()
+    # plot_tpr_tnr_sensitivity()
     # plot_sample_size_effect()
     # show_thresholding_problems()
     # test = pd.read_csv("gam_results.csv")

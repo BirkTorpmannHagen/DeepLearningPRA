@@ -1,7 +1,6 @@
 import numpy as np
-from click import style
+
 from seaborn import FacetGrid
-from watchdog.observers.inotify_c import inotify_init
 
 from simulations import *
 import matplotlib.pyplot as plt
@@ -10,6 +9,22 @@ import seaborn as sns
 from tqdm import tqdm
 import pandas as pd
 from components import OODDetector
+from multiprocessing import Pool
+
+def simulate_dsd_accuracy_estimation(data, rate, val_set, test_set, tpr, tnr, ba, dsd):
+    sim = SystemSimulator(data, ood_test_shift=test_set, ood_val_shift=val_set, estimator=BernoulliEstimator,
+                          dsd_tpr=tpr, dsd_tnr=tnr)
+    results = sim.uniform_rate_sim(rate, 600)
+    results = results.groupby(["Tree"]).mean().reset_index()
+    # results = results.mean()
+    results["dsd"] = dsd
+    results["ba"] = ba
+    results["tpr"] = tpr
+    results["tnr"] = tnr
+    results["rate"] = rate
+    results["test_set"] = test_set
+    results["val_set"] = val_set
+    return results
 
 def xval_errors(values):
     return np.mean([np.sum(np.abs(np.subtract.outer(valwise_accuracies, valwise_accuracies))) / np.sum(
@@ -113,40 +128,37 @@ def collect_tpr_tnr_sensitivity_data():
 
 def collect_dsd_accuracy_estimation_data():
 
-    dfs = []
-    bins=5
-    with tqdm(total=len(DSDS)*len(BATCH_SIZES)) as pbar:
-        for batch_sizes in BATCH_SIZES:
-            dsd_accuracies = fetch_dsd_accuracies(batch_size=batch_sizes, plot=False, samples=1000)
-            best_dsds = dsd_accuracies[dsd_accuracies.groupby(["Dataset", "DSD"])[["ba"]].idxmax()].reset_index()
+    bins=11
+    for batch_sizes in BATCH_SIZES:
+        dsd_accuracies = fetch_dsd_accuracies(batch_size=batch_sizes, plot=False, samples=1000)
+        dsd_accuracies = dsd_accuracies.groupby(["Dataset", "DSD"])[["tpr", "tnr", "ba"]].mean().reset_index()
+        best_dsds = dsd_accuracies.loc[dsd_accuracies.groupby("Dataset")["ba"].idxmax()].reset_index(drop=True)
+        print(best_dsds)
+        for dataset in DATASETS:
+            dfs = []
+            dsd = best_dsds[(best_dsds["Dataset"]==dataset)]["DSD"].values[0]
+            filt = dsd_accuracies[(dsd_accuracies["Dataset"]==dataset)&(dsd_accuracies["DSD"]==dsd)]
+            tpr, tnr, ba = filt["tpr"].mean(), filt["tnr"].mean(), filt["ba"].mean()
+            print(f"Dataset: {dataset}, dsd:{dsd}, ba: {ba}")
 
-            for dataset in DATASETS:
-                dsd = best_dsds[(best_dsds["Dataset"]==dataset)]["DSD"].values[0]
-                tpr, tnr, ba = dsd_accuracies[(dsd_accuracies["Dataset"]==dataset)&(dsd_accuracies["DSD"]==dsd)][["tpr", "tnr", "ba"]].mean()
-
-                data = load_pra_df(dataset, dsd, batch_size=batch_sizes, samples=1000)
-                ood_sets = data[~data["shift"].isin(["ind_val", "ind_test", "train"])]["shift"].unique()
+            data = load_pra_df(dataset, dsd, batch_size=batch_sizes, samples=1000)
+            ood_sets = data[~data["shift"].isin(["ind_val", "ind_test", "train"])]["shift"].unique()
+            with tqdm(total=bins*len(ood_sets)*(len(ood_sets)-1)) as pbar:
                 for val_set in ood_sets:
                     for test_set in ood_sets:
                         if test_set=="noise":
-                            continue #used only to estimate accuracies
-                        for rate in np.linspace(0, 1, bins):
-                            for dsd in DSDS:
-                                sim = SystemSimulator(data, ood_test_shift=test_set, ood_val_shift=val_set, estimator=BernoulliEstimator, dsd_tpr=tpr, dsd_tnr=tnr)
-                                results = sim.uniform_rate_sim(rate, 600)
-                                results = results.groupby(["Tree"]).mean().reset_index()
-                                # results = results.mean()
-                                results["dsd"] = dsd
-                                results["rate"] = rate
-                                results["test_set"] = test_set
-                                results["val_set"] = val_set
-                                # results = results.groupby(["tpr", "tnr", "rate", "test_set", "val_set", "Tree"]).mean().reset_index()
-
-                                dfs.append(results)
-                                pbar.update(1)
-    df_final = pd.concat(dfs)
-    print(df_final.head(10))
-    df_final.to_csv(f"pra_data/dsd_results.csv")
+                            continue
+                        pool = Pool(bins)
+                        print("multiprocessing...")
+                        results = pool.starmap(simulate_dsd_accuracy_estimation, [(data, rate, val_set, test_set, tpr, tnr, ba, dsd) for rate in np.linspace(0, 1, bins)])
+                        pool.close()
+                            # results = results.groupby(["tpr", "tnr", "rate", "test_set", "val_set", "Tree"]).mean().reset_index()
+                        for result in results:
+                            dfs.append(result)
+                            pbar.update(1)
+            df_final = pd.concat(dfs)
+            print(df_final.head(10))
+            df_final.to_csv(f"pra_data/dsd_results_{dataset}_{batch_sizes}.csv")
 
 
 def compare_risk_tree_accuracy_estimators():
@@ -197,6 +209,7 @@ def fetch_dsd_accuracies(batch_size=32, plot=False, samples=1000):
     for dataset in DATASETS:
         for feature in DSDS:
             df = load_pra_df(dataset, feature, batch_size=batch_size, samples=samples)
+
             df = df[df["shift"]!="noise"]
             if df.empty:
                 continue
