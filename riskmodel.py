@@ -5,7 +5,7 @@ from rateestimators import BernoulliEstimator
 
 MISDIAGNOSIS = 635+6100
 UNNECESSARY_INTERVENTION = 635+0.2*MISDIAGNOSIS
-NECESSARY_INTERVENTION = 100+0.2*MISDIAGNOSIS #arbitrary, but lower than unnecessary intervention
+NECESSARY_INTERVENTION = 635+0.2*MISDIAGNOSIS - 50#arbitrary, but lower than unnecessary intervention
 CORRECT_DIAGNOSIS = 635 # cost of correct diagnosis during AI screening
 
 

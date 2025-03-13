@@ -46,6 +46,9 @@ class OODDetector:
     def get_metrics(self, data):
         return self.get_tpr(data), self.get_tnr(data), self.get_accuracy(data)
 
+    def get_likelihood(self):
+        return self.get_tpr(self.df), self.get_tpr(self.df)
+
 
 class SyntheticOODDetector:
     def __init__(self, tpr, tnr):

@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from decimal import getcontext
 
-from components import LossEstimator, Trace, SyntheticOODDetector, SplitLossEstimator
+from components import LossEstimator, Trace, SyntheticOODDetector, SplitLossEstimator, OODDetector
 from rateestimators import BernoulliEstimator
 from riskmodel import DetectorEventTree, BaseEventTree
 
@@ -21,13 +21,16 @@ class SystemSimulator:
     """
     permits conditional data collection simulating model + ood detector
     """
-    def __init__(self, df, ood_test_shift, ood_val_shift,  estimator=BernoulliEstimator, trace_length=100, **kwargs):
+    def __init__(self, df, ood_test_shift, ood_val_shift,  estimator=BernoulliEstimator, trace_length=100, use_synth=True, **kwargs):
         self.df = df
 
         self.ood_test_shift = ood_test_shift
         self.ood_val_shift = ood_val_shift
         # self.ood_detector = OODDetector(df)
-        self.ood_detector = SyntheticOODDetector(kwargs["dsd_tpr"], kwargs["dsd_tnr"])
+        if use_synth:
+            self.ood_detector = SyntheticOODDetector(kwargs["dsd_tpr"], kwargs["dsd_tnr"])
+        else:
+            self.ood_detector = OODDetector(df, ood_val_shift)
         self.ood_val_acc = self.get_predictor_accuracy(self.ood_val_shift)
         self.ood_test_acc = self.get_predictor_accuracy(self.ood_test_shift)
         self.ind_val_acc = self.get_predictor_accuracy("ind_val")

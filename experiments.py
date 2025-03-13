@@ -1,7 +1,10 @@
+import itertools
+
 import numpy as np
 
 from seaborn import FacetGrid
 
+from riskmodel import UNNECESSARY_INTERVENTION
 from simulations import *
 import matplotlib.pyplot as plt
 from utils import *
@@ -378,8 +381,6 @@ def plot_rate_estimates():
     plt.savefig("rate_sensitivity.eps")
     plt.show()
 
-def risk_tree_cba():
-    risk_tree = DetectorEventTree(0.95, 0.95, 0.95, 0.90, 0.91, 0.15)
 
 def accuracy_by_fold():
     errors = []
@@ -429,6 +430,8 @@ def accuracy_by_fold():
     plt.savefig("tree1_errors.pdf")
     plt.show()
     return errors
+
+
 
 def accuracy_by_fold_and_dsd_verdict():
     data = []
@@ -498,6 +501,12 @@ def accuracy_by_fold_and_dsd_verdict():
     # g = sns.FacetGrid(data.reset_index(), col="Dataset", row="D(ood)")
     # g.map_dataframe(sns.lineplot, x="batch_size", y="correct_prediction", hue="feature_name")
 
+def accuracy_table():
+    df = load_all(1, samples=1000)
+    df = df[df["shift"]!="noise"]
+    accs = df.groupby(["Dataset", "shift"])["correct_prediction"].mean().reset_index()
+    return accs
+
 
 
 def t_check():
@@ -510,7 +519,83 @@ def t_check():
         plt.legend()
     plt.show()
 
+def show_rate_risk():
+    data = load_pra_df("Polyp", "knn", batch_size=1, samples=1000)
+    oods = data[~data["shift"].isin(["ind_val", "ind_test", "train", "noise"])]["shift"].unique()
+    rates = np.linspace(0, 1, 11)
+    dfs = []
+    with tqdm(total=len(oods)*(len(oods)-1)*len(rates)) as pbar:
+        for ood_val_set, ood_test_set, rate in itertools.product(oods, oods, rates):
+            if ood_val_set == ood_test_set:
+                continue
+            sim = SystemSimulator(data, ood_test_shift=ood_test_set, ood_val_shift=ood_val_set, maximum_loss=0.5, estimator=BernoulliEstimator, use_synth=False, dsd_tpr=0.9, dsd_tnr=0.9)
+            results = sim.uniform_rate_sim(rate, 600)
+            results["Rate"] = rate
+            results["Risk Error"]=results["Risk Estimate"]-results["True Risk"]
+            dfs.append(results)
+            pbar.update()
+
+    df = pd.concat(dfs)
+    df = df.groupby(["Tree", "Rate"]).mean().reset_index()
+    print(df)
+    ax = sns.lineplot(df, x="Rate", y="Risk Estimate", hue="Tree")
+    for tree in df["Tree"].unique():
+        df_tree = df[df["Tree"]==tree]
+        ax.fill_between(df_tree["Rate"],
+                        df_tree["Risk Estimate"],
+                        df_tree["True Risk"],
+                        alpha=0.2)
+        # plt.plot(df_tree["Rate"], df_tree["True Risk"], label=f"{tree} True Risk", linestyle="dashed")
+    ax.axhline(UNNECESSARY_INTERVENTION, color="red", label="Manual Intervention")
+    plt.legend()
+    plt.savefig("rate_risk.pdf")
+    plt.show()
+
+def cost_benefit_analysis():
+
+    data = load_pra_df("Polyp", "knn", batch_size=1, samples=1000)
+    oods = data[~data["shift"].isin(["ind_val", "ind_test", "train", "noise"])]["shift"].unique()
+    dfs = []
+    with tqdm(total=len(oods)*(len(oods)-1)*11*2) as pbar:
+        for ood_val_set, ood_test_set in itertools.product(oods, oods):
+            if ood_val_set == ood_test_set:
+                continue
+            current_ood_val_acc = data[data["shift"]==ood_val_set]["correct_prediction"].mean()
+            for acc in np.linspace(current_ood_val_acc, 1, 11):
+                sim = SystemSimulator(data, ood_test_shift=ood_test_set, ood_val_shift=ood_val_set, maximum_loss=0.5, estimator=BernoulliEstimator, dsd_tnr=0.9, dsd_tpr=0.9)
+                sim.ood_val_acc = 1
+                sim.ood_test_acc = 1
+
+                sim.ind_ndsd_acc = 1
+                sim.ind_dsd_acc = 1
+                sim.ood_ndsd_acc = acc
+                sim.ood_dsd_acc = acc
+                results = sim.uniform_rate_sim(0.5, 600)
+                results["ba"]=0.9
+                dfs.append(results)
+                pbar.update(1)
+
+
+            for acc in np.linspace(0.9, 1, 11):
+                sim = SystemSimulator(data, ood_test_shift=ood_test_set, ood_val_shift=ood_val_set, maximum_loss=0.5,
+                                      estimator=BernoulliEstimator, dsd_tnr=acc, dsd_tpr=acc)
+                results = sim.uniform_rate_sim(0.5, 600)
+                results["ba"]=acc
+                dfs.append(results)
+                pbar.update(1)
+
+    df = pd.concat(dfs)
+    df = df.groupby(["Tree", "ood_val_acc", "ba"]).mean().reset_index()
+    print(df)
+    sns.lineplot(df, x="ood_val_acc", y="Risk Estimate", hue="Tree")
+    sns.lineplot(df, x="ba", y="Risk Estimate", hue="Tree")
+
+    plt.show()
+
+
+
 if __name__ == '__main__':
+    # accuracy_table()
     #data = load_pra_df(dataset_name="Office31", feature_name="knn", batch_size=1, samples=1000)
     # collect_rate_estimator_data()
     # eval_rate_estimator()
@@ -518,10 +603,12 @@ if __name__ == '__main__':
     # fetch_dsd_accuracies(32, plot=True)
     # plot_dsd_accuracies(1000)
     # plot_rate_estimation_errors_for_dsds()
-    # accuracy_by_fold()
+
     # accuracy_by_fold_and_dsd_verdict()
     #print(data)
 
-    collect_tpr_tnr_sensitivity_data()
+    # collect_tpr_tnr_sensitivity_data()
     # collect_dsd_accuracy_estimation_data()
     # uniform_bernoulli(data, load = False)
+    # show_rate_risk()
+    cost_benefit_analysis()

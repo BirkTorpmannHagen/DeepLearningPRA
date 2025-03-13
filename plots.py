@@ -32,6 +32,8 @@ pd.set_option('display.max_rows', None)
 pd.set_option('display.expand_frame_repr', False)
 np.set_printoptions(precision=3)
 np.set_printoptions(suppress=True)
+plt.rcParams['text.usetex'] = True  # Enable LaTeX rendering
+
 # def get_all_data(sample_size):
 #     return pd.concat([load_old_dfs(sample_size), load_dfs(sample_size=sample_size)])
 
@@ -504,7 +506,7 @@ def plot_dsd_acc_errors():
         ax = g.axes_dict[dataset]  # Access the correct axis using the sorted dataset name
         subset = df[df["Dataset"] == dataset].groupby(["batch_size"])["best_guess_error"].mean().reset_index()
         print(df.columns)
-        ax.set_title(f"{dataset}:{df[df["Dataset"]==dataset]["dsd"].unique()[0]}")
+        ax.set_title(f"{dataset}:{df[df['Dataset']==dataset]['dsd'].unique()[0]}")
 
         # Convert batch_size values to match categorical positions
         subset["x_pos"] = range(len(subset))  # Automatically assign 0, 1, 2, 3, 4, etc.
@@ -538,11 +540,58 @@ def plot_dsd_acc_errors():
     plt.savefig("dsd_acc_errors.pdf")
     plt.show()
 
+def plot_sensitivity_errors():
+    dfs = []
+    for dataset in DATASETS:
+        try:
+            df = pd.read_csv(f"pra_data/{dataset}_sensitivity_results.csv")
+            best_guess = (df["ind_acc"].mean() + df["ood_val_acc"].mean()) / 2
+            df["Dataset"]=dataset
+            df["best_guess_error"] = np.abs(df["Accuracy Error"] - best_guess)
+            dfs.append(df)
+        except:
+            print(f"No data found for {dataset}")
+    df = pd.concat(dfs)
+    df = df[df["Tree"]=="Base Tree"]
+    df = df[df["val_set"]!=df["test_set"]]
+    df["rate"]=round(df["rate"], 2)
+    df["ba"]=round(df["ba"], 2)
+    df.replace(DSD_PRINT_LUT, inplace=True)
+    print(df.columns)
+    df = df.groupby(["Dataset", "rate", "ba"])[["Accuracy Error", "ind_acc", "ood_val_acc"]].mean().reset_index()
+    df.rename(columns={"rate":"$P(E)$", "ba":"$p(D_{e}(x)=E)$"}, inplace=True)
+    g = sns.FacetGrid(df, col="Dataset", col_wrap=3)
+    #sort by ba increasing order
+    def plot_heatmap(data, **kws):
+        heatmap_data = data.pivot(index="$p(D_{e}(x)=E)$", columns="$P(E)$", values="Accuracy Error")
+        heatmap_data = heatmap_data.loc[::-1] #higher ba is up
+        sns.heatmap(heatmap_data, **kws, cmap="mako", vmin=0, vmax=(df["ind_acc"]-df["ood_val_acc"]).mean())
+    g.map_dataframe(plot_heatmap)
+
+
+    num_plots = len(g.axes.flat)
+    num_cols = 3  # Top row columns
+    last_row_plots = num_plots % num_cols
+
+    if last_row_plots > 0:
+        fig_width = g.fig.get_size_inches()[0]
+        last_row_width = (fig_width / num_cols) * last_row_plots
+        left_padding = (fig_width - last_row_width) / 2
+
+        for ax in g.axes[-last_row_plots:]:
+            pos = ax.get_position()
+            ax.set_position([pos.x0 + left_padding / fig_width, pos.y0, pos.width, pos.height])
+            cbar = ax.collections[0].colorbar
+            cbar.ax.set_position([cbar.ax.get_position().x0 + left_padding / fig_width, cbar.ax.get_position().y0, cbar.ax.get_position().width, cbar.ax.get_position().height])
+    plt.savefig("sensitivity_errors.pdf")
+    plt.show()
+
 
 
 if __name__ == '__main__':
     # data = load_pra_df(dataset_name="Polyp", feature_name="knn", batch_size=1, samples=1000)
-    plot_dsd_acc_errors()
+    # plot_dsd_acc_errors()
+    plot_sensitivity_errors()
     # plot_loss_distributions(data)
     # plot_tpr_tnr_sensitivity()
     # plot_sample_size_effect()
