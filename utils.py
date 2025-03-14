@@ -95,7 +95,6 @@ def load_pra_df(dataset_name, feature_name, batch_size=30, samples=1000):
     df.drop(columns=["Unnamed: 0"], inplace=True)
 
     if batch_size!=1:
-        print("sampling")
         def sample_loss_feature(group, n_samples, n_size):
             samples = []
             for i in range(n_samples):

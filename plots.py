@@ -349,89 +349,6 @@ def compare_gam_errors():
     plt.tight_layout()
     plt.show()
 
-def gam_fits(metric="monotonic mae", KS=True):
-    df = load_dfs(100, simulate=True)
-    gam_results = get_gam_data()
-    gam_results = gam_results[gam_results["KS"]==KS]
-    gam_results = gam_results[gam_results["sample_size"]==100]
-    gam_results_grouped = gam_results.groupby(["Dataset", "feature_name", "train_shift"])[["monotonic mae", "monotonic mape", "regular mae", "regular mape"]].mean().reset_index()
-    idx = gam_results_grouped.groupby(["Dataset", "feature_name"])[[metric]].apply(lambda x: x.idxmin())
-    min_mae_df = gam_results_grouped.iloc[idx[metric].values].reset_index(drop=True)
-    print(min_mae_df)
-    shift_colors = dict(zip(df["Shift"].unique(), sns.color_palette("pastel", len(df["Shift"].unique()))))
-    print(shift_colors)
-    min_mape_df = gam_results_grouped.iloc[idx[metric].values].reset_index(drop=True)
-    df = df[df["KS"]==KS]
-    df_preds = pd.read_csv("gam_preds.csv")
-    df_preds = df_preds[df_preds["sample_size"]==100]
-    df_preds = df_preds[df_preds["KS"]==KS]
-    fig, ax = plt.subplots(len(df["Dataset"].unique()),len(df["feature_name"].unique()), figsize=(20, 10))
-    for i, dataset in enumerate(df["Dataset"].unique()):
-        for j, feature_name in enumerate(df["feature_name"].unique()):
-            train_shift = min_mae_df[(min_mae_df["Dataset"]==dataset) & (min_mae_df["feature_name"]==feature_name)]["train_shift"].values[0]
-
-            subdf = df[(df["Dataset"]==dataset) & (df["feature_name"]==feature_name) & (df["Shift"]!=train_shift)]
-            subdf_train = df[(df["Dataset"]==dataset) & (df["feature_name"]==feature_name) & (df["Shift"]==train_shift)]
-
-            subdf_preds = df_preds[(df_preds["Dataset"]==dataset) & (df_preds["feature_name"]==feature_name) & (df_preds["train_shift"]==train_shift)]
-            # print(subdf.columns)
-            for shift in subdf["Shift"].unique():
-                subdf_shift = subdf[subdf["Shift"]==shift]
-                ax[i,j].scatter(subdf_shift["feature"], subdf_shift["loss"], alpha=0.5, color=shift_colors[shift])
-            # ax[i,j].scatter(subdf["feature"], subdf["loss"], alpha=0.5)
-            ax[i,j].plot(subdf_preds["feature"], subdf_preds["monotonic_pred_loss"], color="red")
-            ax[i,j].fill_between(subdf_preds["feature"], subdf_preds["monotonic_pred_loss_lower"], subdf_preds["monotonic_pred_loss_upper"], color="red", alpha=0.3)
-            ax[i,j].set_title(f"{dataset}|{feature_name}: MAPE={min_mape_df[(min_mape_df['Dataset']==dataset) & (min_mape_df['feature_name']==feature_name)]['monotonic mape'].values[0]:.2f}")
-            ax[i,j].scatter(subdf_train["feature"], subdf_train["loss"], alpha=0.5, label="train")
-    plt.tight_layout()
-    plt.show()
-
-def plot_loss_distributions(data):
-    data.replace({"ind_test": "InD Test"}, inplace=True)
-    # print(data["fold"].unique())
-    # print(data["fold"].unique())
-    # print(data[data["fold"]=="ind_val"]["loss"].mean()+ data[data["fold"] == "ind_val"]["loss"].std() * 2)
-    data= data[["fold", "feature", "loss"]]
-    data = data[(data["fold"]==ETISLARIB)|(data["fold"]==ENDOCV)|(data["fold"]==CVCCLINIC)|(data["fold"]=="InD Test")]
-    equalized_df = data.groupby("fold").apply(lambda x: x.sample(1000, replace=True)).reset_index(drop=True)
-    unique_folds = equalized_df["fold"].unique()
-    cmap = sns.color_palette(n_colors=len(unique_folds))
-    color_map = {
-        ETISLARIB: cmap[0],
-        ENDOCV: cmap[1],
-        CVCCLINIC: cmap[2],
-        "InD Test": cmap[3]
-    }
-    print(unique_folds)
-    fig, ax = plt.subplots(1, 1, figsize=(7, 4))
-    plot = so.Plot(data=equalized_df, x="loss", color="fold").add(so.Bar(), so.Hist(), so.Stack()).on(ax).scale(color=color_map).plot()
-    handles = [plt.Line2D([0], [0], marker='s', color='w', markerfacecolor=color_map[fold], markersize=10) for fold in unique_folds]
-    labels = unique_folds
-    ax.legend(
-        handles, labels,
-        loc="lower center",  # Anchor point for the legend
-        bbox_to_anchor=(0.5, 1.02),  # Position the legend above the plot
-        ncol=len(unique_folds),  # Number of columns in the legend
-        frameon=False  # Remove the legend frame (optional)
-    )
-
-    for i, fold in enumerate(unique_folds):
-        mean_val = equalized_df[equalized_df["fold"]==fold]["loss"].mean()
-        ax.axvline(mean_val, color=color_map[fold], linestyle="--")
-        y_offset = ax.get_ylim()[1] * (0.85 - i * 0.05)  # Move text up/down
-        x_offset = 0.03 * (ax.get_xlim()[1] - ax.get_xlim()[0])  # 2% of x-axis range
-
-        ax.text(mean_val+x_offset,y_offset, rf"$\mu=${mean_val:.2f}", color=color_map[fold],
-                ha='left')
-
-    ax.set_yticks([])
-    ax.set_ylabel("Density")
-    plot.show()
-    plt.savefig("loss_distributions.eps")
-     # plt.yticks([])
-    # plt.show()
-    # sns.kdeplot(data=data, x="feature", hue="fold", fill=True)
-    # plt.show()
 
 def plot_tpr_tnr_sensitivity():
     # Load and preprocess data
@@ -481,43 +398,71 @@ def plot_dsd_acc_errors():
         for batch_size in BATCH_SIZES:
             try:
                 df = pd.read_csv(f"pra_data/dsd_results_{dataset}_{batch_size}.csv")
-                best_guess = (df["ind_acc"].mean() + df["ood_val_acc"].mean()) / 2
+                # best_guess = (df["ind_acc"].mean() + df["ood_val_acc"].mean()) / 2
+                best_guess = df["ind_acc"].mean()
                 df["Dataset"]=dataset
                 df["batch_size"]=batch_size
-                df["best_guess_error"] = np.abs(df["Accuracy Error"] - best_guess)
+                df["lineplot_idx"]=BATCH_SIZES.index(batch_size)
+                df["lineplot_rate_idx"] = pd.factorize(df['rate'])[0]
+                print(dataset, " : ", best_guess)
+                df["best_guess_error"] = np.abs(df["Accuracy"] - best_guess)
                 dfs.append(df)
             except:
                 print(f"No data found for {dataset} with batch size {batch_size}")
     df = pd.concat(dfs)
     df.replace(DSD_PRINT_LUT, inplace=True)
     df = df[df["Tree"]=="Base Tree"]
-    g = sns.FacetGrid(df, col="Dataset")
-    g.map_dataframe(sns.boxplot, x="rate", y="Accuracy Error", hue="test_set")
+    # df = df[df["batch_size"]==1]
+    g = sns.FacetGrid(df, col="Dataset", sharey=False, col_wrap=3)
+    g.map_dataframe(sns.boxplot, x="rate", y="Accuracy Error", hue="test_set", showfliers=False, palette=sns.color_palette())
+    g.map_dataframe(sns.lineplot, x="lineplot_rate_idx", y="best_guess_error", hue="test_set", linestyle="--", marker="o", palette=sns.color_palette(), legend=False)
+    sorted_datasets = sorted(df["Dataset"].unique())
+
+    for ax, dataset in zip(g.axes.flat, sorted_datasets):
+        ax.set_title(dataset)
+        ax.set_xlabel("P(E)")
+        ax.set_ylabel("Accuracy Error")
+        ax.set_xticklabels(df["rate"].unique())
+        ax.set_xticks(range(len(df["rate"].unique())))
+        ax.legend(title="Test Set", ncols=3, fontsize=8)
+        ax.set_yscale("log")
+
+    num_plots = len(g.axes.flat)
+    num_cols = 3  # Top row columns
+    last_row_plots = num_plots % num_cols
+
+    if last_row_plots > 0:
+        # Get figure width
+        fig_width = g.fig.get_size_inches()[0]
+
+        # Compute total space occupied by the last row's plots
+        last_row_width = (fig_width / num_cols) * last_row_plots
+
+        # Compute left padding to center the row
+        left_padding = (fig_width - last_row_width) / 2
+
+        # Adjust position of the last row's plots
+        for ax in g.axes[-last_row_plots:]:
+            pos = ax.get_position()
+            ax.set_position([pos.x0 + left_padding / fig_width, pos.y0, pos.width, pos.height])
+    plt.savefig("dsd_acc_erorrs_by_rate.pdf")
     plt.show()
 
-    g = sns.FacetGrid(df, col="Dataset", height=3, aspect=1.5, col_wrap=3)
+
+    g = sns.FacetGrid(df, col="Dataset", height=3, aspect=1.5, col_wrap=3, sharey=False)
 
     df = df[df["val_set"]!=df["test_set"]]
     g.map_dataframe(sns.boxplot, x="batch_size", y="Accuracy Error", hue="test_set", showfliers=False, palette=sns.color_palette())
+    g.map_dataframe(sns.lineplot, x="lineplot_idx", y="best_guess_error", hue="test_set", linestyle="--", marker="o", palette=sns.color_palette(), legend=False)
     # g.map_dataframe(sns.lineplot, x="batch_size", y="Accuracy Error", hue="test_set")
-    sorted_datasets = sorted(df["Dataset"].unique())
-
-    for dataset in sorted_datasets:
-        ax = g.axes_dict[dataset]  # Access the correct axis using the sorted dataset name
-        subset = df[df["Dataset"] == dataset].groupby(["batch_size"])["best_guess_error"].mean().reset_index()
-        print(df.columns)
-        ax.set_title(f"{dataset}:{df[df['Dataset']==dataset]['dsd'].unique()[0]}")
-
-        # Convert batch_size values to match categorical positions
-        subset["x_pos"] = range(len(subset))  # Automatically assign 0, 1, 2, 3, 4, etc.
-
-        # Ensure valid points before plotting
-        valid_points = subset.dropna(subset=["x_pos", "best_guess_error"])
+    for ax, dataset in zip(g.axes.flat, sorted_datasets):
+        ax.set_title(dataset)
+        ax.set_xlabel("Batch Size")
+        ax.set_ylabel("Accuracy Error")
+        ax.set_xticklabels(BATCH_SIZES)
+        ax.set_xticks(range(len(BATCH_SIZES)))
+        ax.legend(title="Test Set", ncols=3, fontsize=8)
         ax.set_yscale("log")
-        # Plot red lines only if valid points exist
-        if not valid_points.empty:
-            ax.plot(valid_points["x_pos"], valid_points["best_guess_error"], color="red", linestyle="--", marker="o", label="Baseline")
-        ax.legend(loc="lower center", title="Test Sets", frameon=True, ncol=2, fontsize=8)
 
     num_plots = len(g.axes.flat)
     num_cols = 3  # Top row columns
@@ -546,8 +491,9 @@ def plot_sensitivity_errors():
         try:
             df = pd.read_csv(f"pra_data/{dataset}_sensitivity_results.csv")
             best_guess = (df["ind_acc"].mean() + df["ood_val_acc"].mean()) / 2
+            print(dataset, " : ", best_guess)
             df["Dataset"]=dataset
-            df["best_guess_error"] = np.abs(df["Accuracy Error"] - best_guess)
+            df["best_guess_error"] = np.abs(df["Accuracy"] - best_guess)
             dfs.append(df)
         except:
             print(f"No data found for {dataset}")

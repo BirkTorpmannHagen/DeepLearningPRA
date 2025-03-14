@@ -4,6 +4,7 @@ import numpy as np
 
 from seaborn import FacetGrid
 
+from datasets.polyps import CVC_ClinicDB, EndoCV2020
 from riskmodel import UNNECESSARY_INTERVENTION
 from simulations import *
 import matplotlib.pyplot as plt
@@ -15,9 +16,9 @@ from components import OODDetector
 from multiprocessing import Pool
 
 def simulate_dsd_accuracy_estimation(data, rate, val_set, test_set, ba, tpr, tnr, dsd):
-    sim = SystemSimulator(data, ood_test_shift=test_set, ood_val_shift=val_set, estimator=BernoulliEstimator,
-                          use_synth=False)
-    results = sim.uniform_batch_sim(rate, 600)
+    sim = UniformBatchSimulator(data, ood_test_shift=test_set, ood_val_shift=val_set, estimator=BernoulliEstimator,
+                                use_synth=False)
+    results = sim.sim(rate, 600)
     results = results.groupby(["Tree"]).mean().reset_index()
     # results = results.mean()
     results["dsd"] = dsd
@@ -51,43 +52,6 @@ def get_dsd_verdicts_given_true_trace(trace, tpr, tnr):
                 return 1
     return [transform(i) for i in trace]
 
-def uniform_bernoulli(data, estimator=BernoulliEstimator, load=True):
-    if load:
-        results = pd.read_csv("risk_uniform_bernoulli.csv")
-    else:
-        x = np.linspace(0,1,11)
-        result_list = []
-        for i in x:
-            sim = SystemSimulator(data, ood_test_shift=ENDOCV, ood_val_shift=ETISLARIB, maximum_loss=0.5, estimator=estimator, dsd_tpr=1, dsd_tnr=1)
-            results = sim.uniform_batch_sim(i, 10000)
-            print(results.mean())
-            results["p"] = i
-            result_list.append(results)
-        results = pd.concat(result_list)
-        results.to_csv("risk_uniform_bernoulli.csv")
-
-    # sns.lineplot(results, x="p", y="error")
-    # plt.savefig("risk_uniform_bernoulli.eps")
-    # plt.show()
-    return results
-
-def single_run(data, estimator=BernoulliEstimator):
-    sim = SystemSimulator(data, ood_test_shift="dslr", ood_val_shift="webcam", maximum_loss=0.5, estimator=estimator, dsd_tnr=0.91, dsd_tpr=0.9)
-    results = sim.uniform_batch_sim(1, 10000)
-    sim.detector_tree.print_tree()
-    print(results.groupby(["Tree"]).mean())
-    sim = SystemSimulator(data, ood_test_shift="dslr", ood_val_shift="webcam", maximum_loss=0.5, estimator=estimator, dsd_tnr=0.9, dsd_tpr=0.9)
-    results = sim.uniform_batch_sim(0.5, 10000)
-    sim.detector_tree.print_tree()
-    print(results.groupby(["Tree"]).mean())
-    sim = SystemSimulator(data, ood_test_shift="dslr", ood_val_shift="webcam", maximum_loss=0.5, estimator=estimator, dsd_tnr=0.9, dsd_tpr=0.9)
-    results = sim.uniform_batch_sim(0, 10000)
-    sim.detector_tree.print_tree()
-    print(results.groupby(["Tree"]).mean())
-
-    # sim = SystemSimulator(data, ood_test_shift=CVCCLINIC, maximum_loss=0.5, estimator=estimator)
-    # results = sim.uniform_rate_sim(0.5, 10000)
-    # print(results.mean())
 
 def collect_tpr_tnr_sensitivity_data():
     bins = 10
@@ -107,8 +71,8 @@ def collect_tpr_tnr_sensitivity_data():
                         continue #used only to estimate accuracies
                     for rate in np.linspace(0, 1, bins):
                         for ba in np.linspace(0.5, 1, bins):
-                            sim = SystemSimulator(data, ood_test_shift=test_set, ood_val_shift=val_set, estimator=BernoulliEstimator, dsd_tpr=ba, dsd_tnr=ba)
-                            results = sim.uniform_batch_sim(rate, 600)
+                            sim = UniformBatchSimulator(data, ood_test_shift=test_set, ood_val_shift=val_set, estimator=BernoulliEstimator, dsd_tpr=ba, dsd_tnr=ba)
+                            results = sim.sim(rate, 600)
                             results = results.groupby(["Tree"]).mean().reset_index()
 
                             # results = results.mean()
@@ -127,12 +91,10 @@ def collect_tpr_tnr_sensitivity_data():
         print(df_final.head(10))
         df_final.to_csv(f"pra_data/{dataset}_sensitivity_results.csv")
 
-def collect_dsd_accuracy_estimation_data(uniform_batches=True):
+def collect_dsd_accuracy_estimation_data():
 
     bins=11
     for batch_sizes in BATCH_SIZES:
-        if batch_sizes==1:
-            continue
         dsd_accuracies = fetch_dsd_accuracies(batch_size=batch_sizes, plot=False, samples=1000)
         dsd_accuracies = dsd_accuracies.groupby(["Dataset", "DSD"])[["tpr", "tnr", "ba"]].mean().reset_index()
         best_dsds = dsd_accuracies.loc[dsd_accuracies.groupby("Dataset")["ba"].idxmax()].reset_index(drop=True)
@@ -153,7 +115,7 @@ def collect_dsd_accuracy_estimation_data(uniform_batches=True):
                             continue
                         pool = Pool(bins)
                         print("multiprocessing...")
-                        results = pool.starmap(simulate_dsd_accuracy_estimation, [(data, rate, val_set, test_set, tpr, tnr, ba, dsd, uniform_batches) for rate in np.linspace(0, 1, bins)])
+                        results = pool.starmap(simulate_dsd_accuracy_estimation, [(data, rate, val_set, test_set, tpr, tnr, ba, dsd) for rate in np.linspace(0, 1, bins)])
                         pool.close()
                             # results = results.groupby(["tpr", "tnr", "rate", "test_set", "val_set", "Tree"]).mean().reset_index()
                         for result in results:
@@ -162,25 +124,6 @@ def collect_dsd_accuracy_estimation_data(uniform_batches=True):
             df_final = pd.concat(dfs)
             print(df_final.head(10))
             df_final.to_csv(f"pra_data/dsd_results_{dataset}_{batch_sizes}.csv")
-
-
-def compare_risk_tree_accuracy_estimators():
-    df = pd.read_csv("tpr_tnr_sensitivity.csv").groupby(["tpr", "tnr", "rate", "test_set", "val_set"]).mean().reset_index()
-    df["tpr"] = df["tpr"].round(2)
-    df["tnr"] = df["tnr"].round(2)
-    df["rate"] = df["rate"].round(2)
-    df["ba"] = round((df["tpr"] + df["tnr"]) / 2, 2)
-    df = df[df["ba"] >= 0.5]
-    df["RV Tree Error"] = np.abs(df['E[f(x)=y]'] - df['correct_prediction'])
-    df["Base Event Tree Accuracy"] = df["Estimated Rate"] * df["ood_val_acc"] + (1 - df["Estimated Rate"]) * df["ind_acc"]
-    df["Base Event Tree Error"] = np.abs(df["baseline_acc"] - df["correct_prediction"])
-
-
-
-    sns.barplot(df, x="ba", y="RV Tree Error")
-    # baseline error is just the small risk tree
-
-    sns.barplot(df, x="ba", )
 
 
 def plot_ba_rate_sensitivity():
@@ -530,8 +473,8 @@ def show_rate_risk():
         for ood_val_set, ood_test_set, rate in itertools.product(oods, oods, rates):
             if ood_val_set == ood_test_set:
                 continue
-            sim = SystemSimulator(data, ood_test_shift=ood_test_set, ood_val_shift=ood_val_set, maximum_loss=0.5, estimator=BernoulliEstimator, use_synth=False, dsd_tpr=0.9, dsd_tnr=0.9)
-            results = sim.uniform_batch_sim(rate, 600)
+            sim = UniformBatchSimulator(data, ood_test_shift=ood_test_set, ood_val_shift=ood_val_set, maximum_loss=0.5, estimator=BernoulliEstimator, use_synth=False, dsd_tpr=0.9, dsd_tnr=0.9)
+            results = sim.sim(rate, 600)
             results["Rate"] = rate
             results["Risk Error"]=results["Risk Estimate"]-results["True Risk"]
             dfs.append(results)
@@ -557,41 +500,40 @@ def cost_benefit_analysis():
 
     data = load_pra_df("Polyp", "knn", batch_size=1, samples=1000)
     oods = data[~data["shift"].isin(["ind_val", "ind_test", "train", "noise"])]["shift"].unique()
-    dfs = []
-    with tqdm(total=len(oods)*(len(oods)-1)*11*2) as pbar:
-        for ood_val_set, ood_test_set in itertools.product(oods, oods):
-            if ood_val_set == ood_test_set:
-                continue
-            current_ood_val_acc = data[data["shift"]==ood_val_set]["correct_prediction"].mean()
-            for acc in np.linspace(current_ood_val_acc, 1, 11):
-                sim = SystemSimulator(data, ood_test_shift=ood_test_set, ood_val_shift=ood_val_set, maximum_loss=0.5, estimator=BernoulliEstimator, dsd_tnr=0.9, dsd_tpr=0.9)
-                sim.ood_val_acc = 1
-                sim.ood_test_acc = 1
+    dfs_constant_ba = []
+    dfs_constant_dsd = []
+    print(oods)
+    ood_val_set = "CVC-ClinicDB"
+    ood_test_set = "EndoCV2020"
+    with tqdm(total=11*2) as pbar:
 
-                sim.ind_ndsd_acc = 1
-                sim.ind_dsd_acc = 1
-                sim.ood_ndsd_acc = acc
-                sim.ood_dsd_acc = acc
-                results = sim.uniform_batch_sim(0.5, 600)
-                results["ba"]=0.9
-                dfs.append(results)
-                pbar.update(1)
+        current_ood_val_acc = data[data["shift"]==ood_val_set]["correct_prediction"].mean()
+        print(current_ood_val_acc)
+        sim = UniformBatchSimulator(data, ood_test_shift=ood_test_set, ood_val_shift=ood_val_set, maximum_loss=0.5, estimator=BernoulliEstimator, dsd_tnr=0.9, dsd_tpr=0.9)
+        results = sim.sim(0.5, 600)
+        for acc in np.linspace(0, 1, 11):
+            risk = sim.detector_tree.get_risk_estimate()
+            results["ba"]=0.9
+            dfs_constant_ba.append(results)
+            pbar.update(1)
 
 
-            for acc in np.linspace(0.9, 1, 11):
-                sim = SystemSimulator(data, ood_test_shift=ood_test_set, ood_val_shift=ood_val_set, maximum_loss=0.5,
-                                      estimator=BernoulliEstimator, dsd_tnr=acc, dsd_tpr=acc)
-                results = sim.uniform_batch_sim(0.5, 600)
-                results["ba"]=acc
-                dfs.append(results)
-                pbar.update(1)
+        for acc in np.linspace(0, 1, 11):
+            sim = UniformBatchSimulator(data, ood_test_shift=ood_test_set, ood_val_shift=ood_val_set, maximum_loss=0.5,
+                                        estimator=BernoulliEstimator, dsd_tnr=acc, dsd_tpr=acc)
+            results = sim.sim(0.5, 1000)
+            results["ba"]=acc
+            dfs_constant_dsd.append(results)
+            pbar.update(1)
 
-    df = pd.concat(dfs)
-    df = df.groupby(["Tree", "ood_val_acc", "ba"]).mean().reset_index()
-    print(df)
-    sns.lineplot(df, x="ood_val_acc", y="Risk Estimate", hue="Tree")
-    sns.lineplot(df, x="ba", y="Risk Estimate", hue="Tree")
+    df_constant_ba = pd.concat(dfs_constant_ba).groupby(["Tree", "ood_val_acc"]).mean().reset_index()
+    df_constant_dsd = pd.concat(dfs_constant_dsd).groupby(["Tree", "ba"]).mean().reset_index()
 
+
+
+    sns.lineplot(df_constant_ba, x="ood_val_acc", y="Risk Estimate", hue="Tree")
+    plt.show()
+    sns.lineplot(df_constant_dsd, x="ba", y="Risk Estimate", hue="Tree")
     plt.show()
 
 
@@ -610,7 +552,7 @@ if __name__ == '__main__':
     #print(data)
 
     # collect_tpr_tnr_sensitivity_data()
-    collect_dsd_accuracy_estimation_data(uniform_batches=False)
+    # collect_dsd_accuracy_estimation_data()
     # uniform_bernoulli(data, load = False)
     # show_rate_risk()
-    # cost_benefit_analysis()
+    cost_benefit_analysis()
