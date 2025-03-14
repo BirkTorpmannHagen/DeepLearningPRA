@@ -14,10 +14,10 @@ import pandas as pd
 from components import OODDetector
 from multiprocessing import Pool
 
-def simulate_dsd_accuracy_estimation(data, rate, val_set, test_set, tpr, tnr, ba, dsd):
+def simulate_dsd_accuracy_estimation(data, rate, val_set, test_set, ba, tpr, tnr, dsd):
     sim = SystemSimulator(data, ood_test_shift=test_set, ood_val_shift=val_set, estimator=BernoulliEstimator,
-                          dsd_tpr=tpr, dsd_tnr=tnr)
-    results = sim.uniform_rate_sim(rate, 600)
+                          use_synth=False)
+    results = sim.uniform_batch_sim(rate, 600)
     results = results.groupby(["Tree"]).mean().reset_index()
     # results = results.mean()
     results["dsd"] = dsd
@@ -59,7 +59,7 @@ def uniform_bernoulli(data, estimator=BernoulliEstimator, load=True):
         result_list = []
         for i in x:
             sim = SystemSimulator(data, ood_test_shift=ENDOCV, ood_val_shift=ETISLARIB, maximum_loss=0.5, estimator=estimator, dsd_tpr=1, dsd_tnr=1)
-            results = sim.uniform_rate_sim(i, 10000)
+            results = sim.uniform_batch_sim(i, 10000)
             print(results.mean())
             results["p"] = i
             result_list.append(results)
@@ -73,15 +73,15 @@ def uniform_bernoulli(data, estimator=BernoulliEstimator, load=True):
 
 def single_run(data, estimator=BernoulliEstimator):
     sim = SystemSimulator(data, ood_test_shift="dslr", ood_val_shift="webcam", maximum_loss=0.5, estimator=estimator, dsd_tnr=0.91, dsd_tpr=0.9)
-    results = sim.uniform_rate_sim(1, 10000)
+    results = sim.uniform_batch_sim(1, 10000)
     sim.detector_tree.print_tree()
     print(results.groupby(["Tree"]).mean())
     sim = SystemSimulator(data, ood_test_shift="dslr", ood_val_shift="webcam", maximum_loss=0.5, estimator=estimator, dsd_tnr=0.9, dsd_tpr=0.9)
-    results = sim.uniform_rate_sim(0.5, 10000)
+    results = sim.uniform_batch_sim(0.5, 10000)
     sim.detector_tree.print_tree()
     print(results.groupby(["Tree"]).mean())
     sim = SystemSimulator(data, ood_test_shift="dslr", ood_val_shift="webcam", maximum_loss=0.5, estimator=estimator, dsd_tnr=0.9, dsd_tpr=0.9)
-    results = sim.uniform_rate_sim(0, 10000)
+    results = sim.uniform_batch_sim(0, 10000)
     sim.detector_tree.print_tree()
     print(results.groupby(["Tree"]).mean())
 
@@ -108,7 +108,7 @@ def collect_tpr_tnr_sensitivity_data():
                     for rate in np.linspace(0, 1, bins):
                         for ba in np.linspace(0.5, 1, bins):
                             sim = SystemSimulator(data, ood_test_shift=test_set, ood_val_shift=val_set, estimator=BernoulliEstimator, dsd_tpr=ba, dsd_tnr=ba)
-                            results = sim.uniform_rate_sim(rate, 600)
+                            results = sim.uniform_batch_sim(rate, 600)
                             results = results.groupby(["Tree"]).mean().reset_index()
 
                             # results = results.mean()
@@ -127,10 +127,12 @@ def collect_tpr_tnr_sensitivity_data():
         print(df_final.head(10))
         df_final.to_csv(f"pra_data/{dataset}_sensitivity_results.csv")
 
-def collect_dsd_accuracy_estimation_data():
+def collect_dsd_accuracy_estimation_data(uniform_batches=True):
 
     bins=11
     for batch_sizes in BATCH_SIZES:
+        if batch_sizes==1:
+            continue
         dsd_accuracies = fetch_dsd_accuracies(batch_size=batch_sizes, plot=False, samples=1000)
         dsd_accuracies = dsd_accuracies.groupby(["Dataset", "DSD"])[["tpr", "tnr", "ba"]].mean().reset_index()
         best_dsds = dsd_accuracies.loc[dsd_accuracies.groupby("Dataset")["ba"].idxmax()].reset_index(drop=True)
@@ -151,7 +153,7 @@ def collect_dsd_accuracy_estimation_data():
                             continue
                         pool = Pool(bins)
                         print("multiprocessing...")
-                        results = pool.starmap(simulate_dsd_accuracy_estimation, [(data, rate, val_set, test_set, tpr, tnr, ba, dsd) for rate in np.linspace(0, 1, bins)])
+                        results = pool.starmap(simulate_dsd_accuracy_estimation, [(data, rate, val_set, test_set, tpr, tnr, ba, dsd, uniform_batches) for rate in np.linspace(0, 1, bins)])
                         pool.close()
                             # results = results.groupby(["tpr", "tnr", "rate", "test_set", "val_set", "Tree"]).mean().reset_index()
                         for result in results:
@@ -529,7 +531,7 @@ def show_rate_risk():
             if ood_val_set == ood_test_set:
                 continue
             sim = SystemSimulator(data, ood_test_shift=ood_test_set, ood_val_shift=ood_val_set, maximum_loss=0.5, estimator=BernoulliEstimator, use_synth=False, dsd_tpr=0.9, dsd_tnr=0.9)
-            results = sim.uniform_rate_sim(rate, 600)
+            results = sim.uniform_batch_sim(rate, 600)
             results["Rate"] = rate
             results["Risk Error"]=results["Risk Estimate"]-results["True Risk"]
             dfs.append(results)
@@ -570,7 +572,7 @@ def cost_benefit_analysis():
                 sim.ind_dsd_acc = 1
                 sim.ood_ndsd_acc = acc
                 sim.ood_dsd_acc = acc
-                results = sim.uniform_rate_sim(0.5, 600)
+                results = sim.uniform_batch_sim(0.5, 600)
                 results["ba"]=0.9
                 dfs.append(results)
                 pbar.update(1)
@@ -579,7 +581,7 @@ def cost_benefit_analysis():
             for acc in np.linspace(0.9, 1, 11):
                 sim = SystemSimulator(data, ood_test_shift=ood_test_set, ood_val_shift=ood_val_set, maximum_loss=0.5,
                                       estimator=BernoulliEstimator, dsd_tnr=acc, dsd_tpr=acc)
-                results = sim.uniform_rate_sim(0.5, 600)
+                results = sim.uniform_batch_sim(0.5, 600)
                 results["ba"]=acc
                 dfs.append(results)
                 pbar.update(1)
@@ -608,7 +610,7 @@ if __name__ == '__main__':
     #print(data)
 
     # collect_tpr_tnr_sensitivity_data()
-    # collect_dsd_accuracy_estimation_data()
+    collect_dsd_accuracy_estimation_data(uniform_batches=False)
     # uniform_bernoulli(data, load = False)
     # show_rate_risk()
-    cost_benefit_analysis()
+    # cost_benefit_analysis()

@@ -91,6 +91,7 @@ def load_pra_df(dataset_name, feature_name, batch_size=30, samples=1000):
         return pd.DataFrame()
 
     df["Dataset"]=dataset_name
+    df["batch_size"]=batch_size
     df.drop(columns=["Unnamed: 0"], inplace=True)
 
     if batch_size!=1:

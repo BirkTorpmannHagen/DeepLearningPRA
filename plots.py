@@ -590,8 +590,8 @@ def plot_sensitivity_errors():
 
 if __name__ == '__main__':
     # data = load_pra_df(dataset_name="Polyp", feature_name="knn", batch_size=1, samples=1000)
-    # plot_dsd_acc_errors()
-    plot_sensitivity_errors()
+    plot_dsd_acc_errors()
+    # plot_sensitivity_errors()
     # plot_loss_distributions(data)
     # plot_tpr_tnr_sensitivity()
     # plot_sample_size_effect()

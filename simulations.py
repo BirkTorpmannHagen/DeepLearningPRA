@@ -47,14 +47,13 @@ class SystemSimulator:
         self.shifts = self.df[self.df["ood"]]["shift"].unique()
 
 
-    def sample_a_uniform_batch(self, shift="random"):
-        if shift in ["ind_val", "ind_test", "ind_train"]:
-            return self.df[(self.df["shift"] == shift)].sample()
-        else:
-            if shift == "random":
-                shift = np.random.choice(self.shifts)
-                # print(shift)
-            return self.df[self.df["shift"] == shift].sample()
+    def sample_a_uniform_batch(self, shift):
+        return self.df[self.df["shift"] == shift].sample()
+
+
+    def sample_a_batch(self, rate):
+
+        return self.df.sample()
 
 
     def get_conditional_prediction_likelihood_estimates(self, shift, monitor_verdict, num_samples=1000):
@@ -76,7 +75,7 @@ class SystemSimulator:
         return self.df[self.df["shift"]==fold]["correct_prediction"].mean()
 
 
-    def process(self, has_shifted, index):
+    def process_uniform(self, has_shifted, index):
         shifted = has_shifted[index]
         if shifted:
             batch = self.sample_a_uniform_batch(self.ood_test_shift)
@@ -108,21 +107,64 @@ class SystemSimulator:
 
             return data
 
+    def process_nonuniform(self, index):
+        batch = self.sample_a_batch()
+        ood_pred = self.ood_detector.predict(batch)
+        batch["ood_pred"] = ood_pred #todo, this is a hack
+        # self.loss_trace_for_eval.update(batch["loss"])
+        self.dsd_trace.update(int(ood_pred))
 
-    def uniform_rate_sim(self, rate_groundtruth, num_batch_iters):
+        if index>self.dsd_trace.trace_length: #update lambda after trace length
+            self.detector_tree.update_rate(self.dsd_trace.trace)
+            self.base_tree.update_rate(self.dsd_trace.trace)
+
+            current_risk = self.detector_tree.calculate_risk(self.detector_tree.root)
+            current_expected_accuracy = self.detector_tree.calculate_expected_accuracy(self.detector_tree.root)
+            true_dsd_risk = self.detector_tree.get_true_risk_for_sample(batch)
+
+            current_base_risk = self.base_tree.calculate_risk(self.base_tree.root)
+            current_base_expected_accuracy = self.base_tree.calculate_expected_accuracy(self.base_tree.root)
+            true_base_risk = self.base_tree.get_true_risk_for_sample(batch)
+            accuracy = batch["correct_prediction"].mean()
+            # accuracy = self.ind_test_acc
+            data = pd.DataFrame( {"t":[index, index], "Tree": ["Detector Tree", "Base Tree"], "Risk Estimate": [current_risk, current_base_risk],
+                                           "True Risk": [true_dsd_risk, true_base_risk], "E[f(x)=y]":[current_expected_accuracy, current_base_expected_accuracy],
+                                           "Accuracy": [accuracy, accuracy], "ood_pred": [ood_pred, ood_pred], "is_ood": [shifted, shifted],
+                                           "Estimated Rate":[self.detector_tree.rate, self.base_tree.rate],
+                 "ind_acc": [self.ind_val_acc, self.ind_val_acc], "ood_val_acc": [self.ood_val_acc, self.ood_val_acc], "ood_test_acc": [self.ood_test_acc, self.ood_test_acc]})
+
+            return data
+
+
+    def uniform_batch_sim(self, rate_groundtruth, num_batch_iters):
         self.detector_tree.rate = rate_groundtruth
         self.detector_tree.update_tree()
         has_shifted = self.detector_tree.rate_estimator.sample(num_batch_iters, rate_groundtruth)
         results = []
         results_trace = []
         for i in range(num_batch_iters):
-            current_horizon_results = self.process(has_shifted, index=i)
+            current_horizon_results = self.process_uniform(has_shifted, index=i)
             if current_horizon_results is not None:
                 results.append(current_horizon_results)
                 if len(results)>self.dsd_trace.trace_length:
 
                     df = pd.concat(results[-self.dsd_trace.trace_length:]) #get the data corresponding to the last trace length
                     results_trace.append(df.groupby(["Tree"]).mean().reset_index())
+
+        def nonuniform_batch_sim(self, rate_groundtruth, num_batch_iters):
+            self.detector_tree.rate = rate_groundtruth
+            self.detector_tree.update_tree()
+            has_shifted = self.detector_tree.rate_estimator.sample(num_batch_iters, rate_groundtruth)
+            results = []
+            results_trace = []
+            for i in range(num_batch_iters):
+                current_horizon_results = self.process_uniform(has_shifted, index=i)
+                if current_horizon_results is not None:
+                    results.append(current_horizon_results)
+                    if len(results) > self.dsd_trace.trace_length:
+                        df = pd.concat(results[
+                                       -self.dsd_trace.trace_length:])  # get the data corresponding to the last trace length
+                        results_trace.append(df.groupby(["Tree"]).mean().reset_index())
 
         results_df = pd.concat(results_trace)
         results_df["Rate Error"] = np.abs(results_df["Estimated Rate"] - rate_groundtruth)
