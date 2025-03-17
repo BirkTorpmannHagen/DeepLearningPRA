@@ -42,6 +42,9 @@ class RiskModel:
         self.rate = self.rate_estimator.update(trace)
         self.update_tree()
 
+    def get_risk_estimate(self):
+        return self.calculate_risk(self.root)
+
     def calculate_risk(self, node, accumulated_prob=1.0):
         if node is None:
             return 0
@@ -147,7 +150,7 @@ class DetectorEventTree(RiskModel):
 
         #note that no further branching is needed here, since the outcome is deterministic if dsd predicts ood
 
-        self.root.left.right.left.consquence = UNNECESSARY_INTERVENTION #data is ind, dsd predicts ood, prediction is correct
+        self.root.left.right.left.consequence = UNNECESSARY_INTERVENTION #data is ind, dsd predicts ood, prediction is correct
         self.root.left.right.right.consequence = NECESSARY_INTERVENTION #data is ind, dsd predicts ood, prediction is incorrect
         self.root.right.right.left.consequence = UNNECESSARY_INTERVENTION #data is ood, dsd predicts ood, prediction is correct
         self.root.right.right.right.consequence = NECESSARY_INTERVENTION #data is ood, dsd predicts ood, prediction is incorrect
@@ -165,18 +168,21 @@ class DetectorEventTree(RiskModel):
         self.root.left.left.right.consequence = MISDIAGNOSIS  # data is ind, dsd predicts ind, prediction is incorrect (loss)
 
     def print_tree(self):
+        np.set_printoptions(precision=2)
         print("\t\t\t\tRoot\t\t\t\t")
-        print(f"\t\t{self.root.left.probability} \t\t\t {self.root.right.probability}")
-        print(f"\t{self.root.left.left.probability}\t\t\t {self.root.left.right.probability}\t\t\t{self.root.right.left.probability}\t\t\t{self.root.right.right.probability}")
-        print(f"{self.root.left.left.left.probability}\t\t\t {self.root.left.left.right.probability}\t\t\t {self.root.left.right.left.probability}, \t\t\t {self.root.left.right.right.probability},"
-              f"\t\t\t {self.root.right.left.left.probability}, \t\t\t {self.root.right.left.right.probability}, \t\t\t {self.root.right.right.left.probability}, \t\t\t {self.root.right.right.right.probability}")
-
+        print(f"\t\t{self.root.left.probability:.2f} \t\t\t {self.root.right.probability:.2f}")
+        print(f"\t{self.root.left.left.probability:.2f}\t\t\t {self.root.left.right.probability:.2f}\t\t\t{self.root.right.left.probability:.2f}\t\t\t{self.root.right.right.probability:.2f}")
+        print(f"{self.root.left.left.left.probability:.2f}\t\t\t {self.root.left.left.right.probability:.2f}\t\t\t {self.root.left.right.left.probability:.2f}, \t\t\t {self.root.left.right.right.probability:.2f},"
+              f"\t\t\t {self.root.right.left.left.probability:.2f}, \t\t\t {self.root.right.left.right.probability:.2f}, \t\t\t {self.root.right.right.left.probability:.2f}, \t\t\t {self.root.right.right.right.probability:.2f}")
+        print(f"{self.root.left.left.left.consequence:.2f}\t\t\t {self.root.left.left.right.consequence:.2f}\t\t\t {self.root.left.right.left.consequence:.2f}, \t\t\t {self.root.left.right.right.consequence:.2f},"
+              f"\t\t\t {self.root.right.left.left.consequence:.2f}, \t\t\t {self.root.right.left.right.consequence:.2f}, \t\t\t {self.root.right.right.left.consequence:.2f}, \t\t\t {self.root.right.right.right.consequence:.2f}")
 
 class BaseEventTree(RiskModel):
     def __init__(self, dsd_tpr, dsd_tnr, ood_acc, ind_acc, estimator=BernoulliEstimator):
         super().__init__(estimator=estimator)
         self.ood_acc = ood_acc
         self.ind_acc = ind_acc
+        self.dsd_tpr, self.dsd_tnr = dsd_tpr, dsd_tnr
         self.rate_estimator.update_tpr_tnr(dsd_tpr, dsd_tnr) #todo, dumb shortcut
 
         self.root = RiskNode(1)
@@ -204,3 +210,9 @@ class BaseEventTree(RiskModel):
         self.root.left.right.consequence = MISDIAGNOSIS
         self.root.right.left.consequence = CORRECT_DIAGNOSIS
         self.root.right.right.consequence = MISDIAGNOSIS
+
+    def print_tree(self):
+        print("\t\t\t\tRoot\t\t\t\t")
+        print(f"\t\t{self.root.left.probability} \t\t\t {self.root.right.probability}")
+        print(f"\t{self.root.left.left.probability}\t\t\t {self.root.left.right.probability}\t\t\t{self.root.right.left.probability}\t\t\t{self.root.right.right.probability}")
+

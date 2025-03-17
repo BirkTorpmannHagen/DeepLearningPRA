@@ -500,8 +500,7 @@ def cost_benefit_analysis():
 
     data = load_pra_df("Polyp", "knn", batch_size=1, samples=1000)
     oods = data[~data["shift"].isin(["ind_val", "ind_test", "train", "noise"])]["shift"].unique()
-    dfs_constant_ba = []
-    dfs_constant_dsd = []
+    cba_data = []
     print(oods)
     ood_val_set = "CVC-ClinicDB"
     ood_test_set = "EndoCV2020"
@@ -510,31 +509,35 @@ def cost_benefit_analysis():
         current_ood_val_acc = data[data["shift"]==ood_val_set]["correct_prediction"].mean()
         print(current_ood_val_acc)
         sim = UniformBatchSimulator(data, ood_test_shift=ood_test_set, ood_val_shift=ood_val_set, maximum_loss=0.5, estimator=BernoulliEstimator, dsd_tnr=0.9, dsd_tpr=0.9)
-        results = sim.sim(0.5, 600)
-        for acc in np.linspace(0, 1, 11):
-            risk = sim.detector_tree.get_risk_estimate()
-            results["ba"]=0.9
-            dfs_constant_ba.append(results)
-            pbar.update(1)
-
+        results = sim.sim(0.5, 600) #just to get the right parameters
 
         for acc in np.linspace(0, 1, 11):
-            sim = UniformBatchSimulator(data, ood_test_shift=ood_test_set, ood_val_shift=ood_val_set, maximum_loss=0.5,
-                                        estimator=BernoulliEstimator, dsd_tnr=acc, dsd_tpr=acc)
-            results = sim.sim(0.5, 1000)
-            results["ba"]=acc
-            dfs_constant_dsd.append(results)
+            sim.detector_tree.ood_dsd_acc = acc
+            sim.detector_tree.ood_ndsd_acc = acc
+            sim.base_tree.update_tree()
+            sim.detector_tree.update_tree()
+            d_risk = sim.detector_tree.get_risk_estimate()
+            ba = (sim.base_tree.dsd_tpr + sim.base_tree.dsd_tnr)/2
+            cba_data.append({"Component":"Classifier", "Accuracy":acc, "Risk Estimate":d_risk})
             pbar.update(1)
 
-    df_constant_ba = pd.concat(dfs_constant_ba).groupby(["Tree", "ood_val_acc"]).mean().reset_index()
-    df_constant_dsd = pd.concat(dfs_constant_dsd).groupby(["Tree", "ba"]).mean().reset_index()
+        sim = UniformBatchSimulator(data, ood_test_shift=ood_test_set, ood_val_shift=ood_val_set, maximum_loss=0.5,
+                                    estimator=BernoulliEstimator, dsd_tnr=0.9, dsd_tpr=0.9)
+        results = sim.sim(0.5, 600)  # just to get the right parameters
+        for acc in np.linspace(0, 1, 11):
+            sim.detector_tree.dsd_tnr = acc
+            sim.detector_tree.dsd_tpr = acc
+            sim.detector_tree.update_tree()
+            d_risk = sim.detector_tree.get_risk_estimate()
+            cba_data.append({"Component":"Event Detector", "Accuracy":acc, "Risk Estimate":d_risk})
+            pbar.update(1)
 
+    df = pd.DataFrame(cba_data).groupby(["Component", "Accuracy"]).mean().reset_index()
 
-
-    sns.lineplot(df_constant_ba, x="ood_val_acc", y="Risk Estimate", hue="Tree")
+    sns.lineplot(df, x="Accuracy", y="Risk Estimate", hue="Component")
+    plt.savefig("cba.pdf")
     plt.show()
-    sns.lineplot(df_constant_dsd, x="ba", y="Risk Estimate", hue="Tree")
-    plt.show()
+
 
 
 
