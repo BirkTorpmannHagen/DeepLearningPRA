@@ -1,5 +1,5 @@
 
-from segmentation_models_pytorch import DeepLabV3Plus
+from segmentation_models_pytorch import DeepLabV3Plus, UnetPlusPlus, Segformer
 from segmentation_models_pytorch.losses import JaccardLoss
 from segmentation_models_pytorch.metrics import get_stats, iou_score
 import warnings
@@ -22,7 +22,7 @@ import pytorch_lightning as pl
 
 class SegmentationModel(pl.LightningModule):
     def __init__(self, transfer=True,
-                 optimizer='adam', lr=1e-3, batch_size=16):
+                 optimizer='adam', lr=1e-3, batch_size=16, model_name="deeplabv3plus"):
         super().__init__()
 
         self.__dict__.update(locals())
@@ -34,7 +34,14 @@ class SegmentationModel(pl.LightningModule):
         self.optimizer = optimizers[optimizer]
         # instantiate loss criterion
         # Using a pretrained ResNet backbone
-        self.segmentor = DeepLabV3Plus()
+        if model_name=="deeplabv3plus":
+            self.segmentor = DeepLabV3Plus()
+        elif model_name=="unet":
+            self.segmentor = UnetPlusPlus()
+        elif model_name=="segformer":
+            self.segmentor = Segformer()
+
+
         self.encoder = self.segmentor.encoder
         # replace final layer for fine tuning
         self.decoder = self.segmentor.decoder

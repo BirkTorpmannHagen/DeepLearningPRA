@@ -60,6 +60,47 @@ def softmax(model, img, num_features=1):
     return feat
 
 
+def mahalanobis(model, image, featlist):
+    model.eval()
+    all_features = torch.Tensor(featlist).cuda()
+    with torch.no_grad():
+        # Get feature vector for input image: [1, C]
+        feat = model.get_encoding(image.cuda()).squeeze(0)  # [C]
+
+        # Compute mean and covariance from training features
+        all_features = all_features
+
+        feature_mean = torch.mean(all_features, dim=0)  # [C]
+        centered = all_features - feature_mean  # [N, C]
+
+        # Covariance and regularization
+        cov = centered.T @ centered / (centered.shape[0] - 1)  # [C, C]
+        cov += 1e-5 * torch.eye(cov.shape[0], device=feat.device)  # Regularization
+
+        # Precision matrix
+        precision = torch.inverse(cov)  # [C, C]
+
+        # Mahalanobis distance
+        delta = feat - feature_mean  # [C]
+        m_dist = delta @ precision @ delta  # scalar
+
+        return m_dist  # Return as float
+
+# def odin(model, img, temperature=1000, epsilon=0.001):
+#     img.requires_grad = True
+#     outputs = model(img)
+#     scaled_output = outputs / temperature
+#     probs = F.softmax(scaled_output, dim=1)
+#     max_score, pred = torch.max(probs, dim=1)
+#     loss = F.cross_entropy(scaled_output, pred)
+#     loss.backward()
+#     gradient = torch.sign(img.grad.data)
+#     perturbed = img - epsilon * gradient
+#     outputs_perturbed = model(perturbed) / temperature
+#     softmax_perturbed = F.softmax(outputs_perturbed, dim=1)
+#     return torch.max(softmax_perturbed, dim=1)[0]
+
+
 if __name__ == '__main__':
     from classifier.resnetclassifier import ResNetClassifier
 

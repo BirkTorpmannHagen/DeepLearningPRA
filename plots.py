@@ -533,10 +533,21 @@ def plot_sensitivity_errors():
     plt.show()
 
 
+def get_risk_tables():
+    df = pd.read_csv("datasetwise_risk.csv")
+    df.replace(DSD_PRINT_LUT, inplace=True)
+    df.replace({"ind_test": "Kvasir"}, inplace=True)
+    df_base = df[df["Tree"]=="Base Tree"]
+    df_dsd = df[df["Tree"]!="Base Tree"]
+
+    print(df_base.groupby(["Model", "Dataset"])["True Risk"].mean())
+    print(df_dsd.groupby(["Model", "DSD", "Dataset"])["True Risk"].mean())
+
 
 if __name__ == '__main__':
+    get_risk_tables()
     # data = load_pra_df(dataset_name="Polyp", feature_name="knn", batch_size=1, samples=1000)
-    plot_dsd_acc_errors()
+    # plot_dsd_acc_errors()
     # plot_sensitivity_errors()
     # plot_loss_distributions(data)
     # plot_tpr_tnr_sensitivity()

@@ -81,17 +81,18 @@ def load_all(batch_size=30, samples=1000, feature="all"):
     return pd.concat(dfs)
 
 
-def load_pra_df(dataset_name, feature_name, batch_size=30, samples=1000):
+def load_pra_df(dataset_name, feature_name, model, batch_size=30, samples=1000):
 
     try:
         df = pd.concat(
-        [pd.read_csv(join("single_data", fname)) for fname in os.listdir("single_data") if dataset_name in fname and feature_name in fname])
+        [pd.read_csv(join("polyp_data", fname)) for fname in os.listdir("polyp_data") if dataset_name in fname and feature_name in fname and model in fname])
     except:
         print("no data found for ", dataset_name, feature_name)
         return pd.DataFrame()
 
     df["Dataset"]=dataset_name
     df["batch_size"]=batch_size
+    df["Model"]=model
     df.drop(columns=["Unnamed: 0"], inplace=True)
 
     if batch_size!=1:
@@ -132,9 +133,9 @@ def load_pra_df(dataset_name, feature_name, batch_size=30, samples=1000):
     return df
 
 
-DSD_PRINT_LUT = {"grad_magnitude": "GradNorm", "cross_entropy" : "Entropy", "energy":"Energy", "knn":"kNN"}
+DSD_PRINT_LUT = {"grad_magnitude": "GradNorm", "cross_entropy" : "Entropy", "energy":"Energy", "knn":"kNN", "mahalanobis":"Mahalanobis", "softmax":"Softmax", "typicality":"Typicality"}
 DATASETS = ["CCT", "OfficeHome", "Office31", "NICO", "Polyp"]
-DSDS = ["knn", "grad_magnitude", "cross_entropy", "energy"]
+DSDS = ["knn", "grad_magnitude", "cross_entropy", "energy", "mahalanobis"]
 # BATCH_SIZES = [32]
 BATCH_SIZES = [1, 8, 16, 32, 64]
 # BATCH_SIZES = np.arange(1, 64)

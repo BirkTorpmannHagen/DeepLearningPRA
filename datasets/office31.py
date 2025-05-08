@@ -1,7 +1,6 @@
 import os
 
 from numpy.lib.index_tricks import index_exp
-from progressbar.terminal.colors import indian_red
 from sklearn.model_selection import train_test_split
 from torch.utils.data import Dataset, Subset, ConcatDataset
 from torchvision.datasets import ImageFolder

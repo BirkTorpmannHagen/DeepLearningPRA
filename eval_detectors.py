@@ -32,15 +32,16 @@ def collect_gradient_data(sample_range, testbed_constructor, dataset_name, grad_
 
 def collect_data(testbed_constructor, dataset_name, mode="noise"):
     print(mode)
-    bench = testbed_constructor("classifier", mode=mode)
-    # features = [knn, cross_entropy, grad_magnitude, energy, typicality]
-    features = [cross_entropy, grad_magnitude, energy]
+    for model_name in ["deeplabv3plus", "unet", "segformer"]:
+        bench = testbed_constructor("classifier", mode=mode, model_name=model_name)
+        features = [mahalanobis]
+        # features = [cross_entropy, grad_magnitude, energy]
 
-    # features = [knn]
-    tsd = FeatureSD(bench.classifier,features)
-    tsd.register_testbed(bench)
-    compute_stats(*tsd.compute_pvals_and_loss(),
-                  fname=f"single_data/{dataset_name}_{mode}", feature_names=[f.__name__ for f in features])
+        # features = [knn]
+        tsd = FeatureSD(bench.classifier,features)
+        tsd.register_testbed(bench)
+        compute_stats(*tsd.compute_pvals_and_loss(),
+                      fname=f"polyp_data/{dataset_name}_{mode}_{model_name}", feature_names=[f.__name__ for f in features])
 
     # bench = testbed_constructor("glow", mode=mode)
     # features = [typicality]
@@ -56,7 +57,7 @@ if __name__ == '__main__':
     from features import *
     torch.multiprocessing.set_start_method('spawn')
 
-    # collect_data(PolypTestBed, "Polyp", mode="normal")
+    collect_data(PolypTestBed, "Polyp", mode="normal")
     # collect_data(PolypTestBed, "Polyp", mode="noise")
     # collect_data(PolypTestBed, "Polyp", mode="hue")
     # collect_data(PolypTestBed, "Polyp", mode="smear")
@@ -101,8 +102,8 @@ if __name__ == '__main__':
     # collect_data(Office31TestBed, "Office31", mode="saltpepper")
     # collect_data(Office31TestBed, "Office31", mode="fgsm")
 
-    collect_data(NicoTestBed, "NICO", mode="normal")
-    collect_data(NicoTestBed, "NICO", mode="noise")
+    # collect_data(NicoTestBed, "NICO", mode="normal")
+    # collect_data(NicoTestBed, "NICO", mode="noise")
     # collect_data(NicoTestBed, "NICO", mode="hue")
     # collect_data(NicoTestBed, "NICO", mode="smear")
     # collect_data(NicoTestBed, "NICO", mode="saturation")

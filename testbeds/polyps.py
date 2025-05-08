@@ -5,7 +5,8 @@ from datasets.polyps import build_polyp_dataset
 from vae.vae_experiment import VAEXperiment
 from segmentor.deeplab import SegmentationModel
 import yaml
-from glow.model import Glow
+from glow.plmodules import GlowPL
+
 from classifier.resnetclassifier import ResNetClassifier
 from ooddetectors import *
 
@@ -28,7 +29,7 @@ DEFAULT_PARAMS = {
 
 
 class PolypTestBed(BaseTestBed):
-    def __init__(self,rep_model, mode="normal"):
+    def __init__(self,rep_model, mode="normal", model_name="deeplabv3plus"):
         super().__init__()
         self.mode = mode
 
@@ -45,13 +46,12 @@ class PolypTestBed(BaseTestBed):
 
         #segmodel
         self.classifier = SegmentationModel.load_from_checkpoint(
-            "segmentation_logs/checkpoints/best.ckpt").to("cuda")
+            f"segmentation_logs/checkpoints/{model_name}/best.ckpt", model_name=model_name).to("cuda")
         self.classifier.eval()
 
-        # #assign rep model
-        # self.glow = Glow(3, 32, 4).cuda().eval()
-        # self.glow.load_state_dict(torch.load("../glow_logs/Polyp_checkpoint/model_040001.pt"))
-        # self.mode = mode
+        #assign rep model
+        self.glow = GlowPL.load_from_checkpoint("glow_logs/KvasirSegmentationDataset/checkpoints/epoch=99-step=5000.ckpt", in_channel=3, n_flow=32,n_block=4, affine=True, conv_lu=True, optimizer="adam", batch_size=32, img_size=64, lr=1e-4)
+        self.mode = mode
 
     def get_ood_dict(self):
         return {"EtisLaribDB":self.dl(self.etis),

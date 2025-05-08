@@ -17,12 +17,12 @@ from torch.utils.data import DataLoader
 
 
 
-def train_glow(train_set, val_set, load_from_checkpoint=None):
+def train_glow(train_set, val_set, img_size=32, load_from_checkpoint=None):
 
-    model =  GlowPL(3, 32,4, affine=True, conv_lu=True, optimizer="adam", img_size=32, lr=1e-4).to("cuda")
+    model =  GlowPL(3, 32,4, affine=True, conv_lu=True, optimizer="adam", img_size=img_size, lr=1e-4).to("cuda")
 
     if load_from_checkpoint:
-        model = GlowPL.load_from_checkpoint(load_from_checkpoint, in_channel=3, n_flow=32,n_block=4, affine=True, conv_lu=True, optimizer="adam", batch_size=32, img_size=32, lr=1e-4)
+        model = GlowPL.load_from_checkpoint(load_from_checkpoint, in_channel=3, n_flow=32,n_block=4, affine=True, conv_lu=True, optimizer="adam", batch_size=32, img_size=img_size, lr=1e-4)
     # model = cifarrr
     tb_logger = TensorBoardLogger(save_dir=f"glow_logs/{type(train_set).__name__}")
     checkpoint_callback = ModelCheckpoint(
@@ -60,10 +60,13 @@ if __name__ == '__main__':
     # train_set, val_set, ood_set = build_office31_dataset("../../Datasets/office31", train_transform=trans, val_transform=val_trans )
     # train_classifier(train_set, val_set, load_from_checkpoint="train_logs/Office31/checkpoints/epoch=64-step=9165.ckpt")
     #train_set, val_set, test_set, ood_val_set, ood_test_set = build_cct_dataset("../../Datasets/CCT", trans, val_trans)
-    train_set, val_set, test_set, ood_val_set, ood_test_set = build_office31_dataset("../../Datasets/office31", trans,val_trans)
-    train_glow(train_set, val_set)
+    # train_set, val_set, test_set, ood_val_set, ood_test_set = build_office31_dataset("../../Datasets/office31", trans,val_trans)
+    # train_glow(train_set, val_set)
     # train_set, val_set, ood_set = build_officehome_dataset("../../Datasets/OfficeHome", train_transform=trans, val_transform=val_trans)
     # train_set, test_set,val_set, ood_set = get_pneumonia_dataset("../../Datasets/Pneumonia", trans, val_trans)
 
+    train_set, val_set, test_set, _, _, _ = build_polyp_dataset("../../Datasets/Polyps", size)
+
+    train_glow(train_set, val_set, img_size=size)
     # CIAR10 and MNIST are already trained :D
 

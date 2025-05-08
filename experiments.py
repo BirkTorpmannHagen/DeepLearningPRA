@@ -1,6 +1,12 @@
 import itertools
+from itertools import combinations
+from os import listdir
 
 import numpy as np
+from albumentations.random_utils import normal
+from holoviews.plotting.bokeh.styles import font_size
+from numpy.ma.core import product
+from scipy.cluster.hierarchy import single
 
 from seaborn import FacetGrid
 
@@ -14,6 +20,7 @@ from tqdm import tqdm
 import pandas as pd
 from components import OODDetector
 from multiprocessing import Pool
+import matplotlib.patches as mpatches
 
 def simulate_dsd_accuracy_estimation(data, rate, val_set, test_set, ba, tpr, tnr, dsd):
     sim = UniformBatchSimulator(data, ood_test_shift=test_set, ood_val_shift=val_set, estimator=BernoulliEstimator,
@@ -538,10 +545,114 @@ def cost_benefit_analysis():
     plt.savefig("cba.pdf")
     plt.show()
 
+def load_polyp_data():
+    dfs = []
+    for dsd_name in ["energy", "knn", "grad_magnitude", "cross_entropy", "mahalanobis"]:
+        for model in ["deeplabv3plus", "unet", "segformer"]:
+            for ood_val in ["CVC-ClinicDB", "EndoCV2020", "EtisLaribDB"]:
+                df = load_pra_df(dataset_name="Polyp", feature_name=dsd_name, model=model, batch_size=1, samples=1000)
+                print(df.head(10))
+                dsd = OODDetector(df, ood_val)
+                df["verdict"] = df.apply(lambda row: dsd.predict(row), axis=1)
+                df["ood_val"] = ood_val
+                df["IoU"] = 1 - df["loss"]
+                df["model"] = model
+                df["feature_name"] = dsd_name
+                dfs.append(df)
+    df = pd.concat(dfs)
+    # df = df[df["shift"] != "train"]
+    print(df.head(10))
+    df.replace(DSD_PRINT_LUT, inplace=True)
+    return df
 
+def get_datasetwise_risk():
+    results_list = []
+    for dsd in DSDS:
+        for model_name in ["deeplabv3plus", "unet", "segformer"]:
+            df = load_pra_df("Polyp", dsd, model=model_name, batch_size=1, samples=1000)
+            for dataset in ["noise", "ind_test", "EndoCV2020", "EtisLaribDB", "CVC-ClinicDB" ]:
+                if dataset not in df["shift"].unique():
+                    print(f"Dataset {dataset} not in df")
+                    continue
+                print()
+                for ood_val_shift in ["EndoCV2020", "EtisLaribDB", "CVC-ClinicDB"]:
+                    sim = UniformBatchSimulator(df, ood_test_shift=dataset, ood_val_shift=ood_val_shift, maximum_loss=0.5, use_synth=False)
+                    results = sim.sim(1, 600)
+                    results["Dataset"]=dataset
+                    results["Model"]=model_name
+                    results["ood_val_shift"]=ood_val_shift
+                    results = results.groupby(["Model", "Tree",  "Dataset"])[["True Risk", "Accuracy"]].mean().reset_index()
+                    results["DSD"]=dsd
+                    results_list.append(results)
+    results = pd.concat(results_list)
+    print(results.groupby(["Model", "DSD", "Dataset", "Tree"])[["True Risk", "Accuracy"]].mean())
+    results.to_csv("datasetwise_risk.csv")
+
+def conditional_accs():
+    df = load_polyp_data()
+    # Set bin edges globally
+    bins = 20
+    bin_edges = np.linspace(df["IoU"].min(), df["IoU"].max(), bins + 1)
+    bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
+
+    # Prepare FacetGrid
+    g = sns.FacetGrid(df, col="feature_name", margin_titles=True, sharex=True, sharey=True, col_wrap=3)
+
+    # Plot manually in each facet
+    def stacked_bar(data, color=None, **kwargs):
+        data["bin"] = pd.cut(data["IoU"], bins=bin_edges, include_lowest=True)
+        count_df = data.groupby(["bin", "verdict"]).size().unstack(fill_value=0)
+        proportion_df = count_df.div(count_df.sum(axis=1), axis=0).fillna(0)
+
+        bottom = np.zeros(len(proportion_df))
+        for label in proportion_df.columns:
+            plt.bar(bin_centers, proportion_df[label], bottom=bottom,
+                    width=bin_edges[1] - bin_edges[0], label=label,
+                    edgecolor='white', align='center')
+            bottom += proportion_df[label].values
+
+    g.map_dataframe(stacked_bar)
+
+    # Optional: Add legend only once
+    handles, labels = plt.gca().get_legend_handles_labels()
+    g.fig.legend(handles, labels, title="verdict", loc='lower center', fontsize="large", bbox_to_anchor=(0.8, 0.20))
+    #increase size of legend
+
+    g.set_axis_labels("IoU", "Proportion")
+    g.set_titles(col_template="{col_name}")
+    # Check if the total number of facets is more than 3 and adjust accordingly
+    plt.tight_layout()
+
+    plt.savefig("proportions.pdf")
+    plt.show()
+
+def iou_distribution():
+
+    df = load_polyp_data()
+    df = df[df["shift"] != "train"]
+    df = df[df["shift"] != "ind_val"]
+    df.replace({"ind_test":"Kvasir"}, inplace=True)
+    palette = sns.color_palette("tab10", n_colors=df["Model"].nunique())
+    g = sns.FacetGrid(df, col="shift", palette=palette)
+    # g = sns.FacetGrid(df, col="shift")
+    g.map_dataframe(sns.kdeplot, x="IoU", hue="Model", clip=(0, 1), fill=True, multiple="stack", common_norm=False)
+    # manually extract legend from one of the axes
+    # g._legend.remove()  # in case it partially shows
+    df.replace({"deeplabv3plus":"DeepLabV3+", "unet":"UNet++", "segformer":"SegFormer"}, inplace=True)
+    model_names = sorted(df["Model"].unique())
+    colors = sns.color_palette("tab10", n_colors=len(model_names))
+    color_dict = dict(zip(model_names, colors))
+    patches = [mpatches.Patch(color=color_dict[m], label=m) for m in model_names]
+    plt.legend(handles=patches, title="Model", frameon=True,
+               loc="best", ncol=1)
+    plt.savefig("IoU_distributions.pdf")
+    plt.show()
 
 
 if __name__ == '__main__':
+    # get_datasetwise_risk()
+    # iou_distribution()
+    conditional_accs()
     # accuracy_table()
     #data = load_pra_df(dataset_name="Office31", feature_name="knn", batch_size=1, samples=1000)
     # collect_rate_estimator_data()
@@ -558,4 +669,4 @@ if __name__ == '__main__':
     # collect_dsd_accuracy_estimation_data()
     # uniform_bernoulli(data, load = False)
     # show_rate_risk()
-    cost_benefit_analysis()
+    # cost_benefit_analysis()
