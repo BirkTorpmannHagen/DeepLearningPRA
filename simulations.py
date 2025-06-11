@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from decimal import getcontext
 
-from components import LossEstimator, Trace, SyntheticOODDetector, SplitLossEstimator, OODDetector
+from components import Trace, SyntheticOODDetector, OODDetector
 from rateestimators import BernoulliEstimator
 from riskmodel import DetectorEventTree, BaseEventTree
 

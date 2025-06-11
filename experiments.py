@@ -457,6 +457,7 @@ def accuracy_table():
     df = load_all(1, samples=1000)
     df = df[df["shift"]!="noise"]
     accs = df.groupby(["Dataset", "shift"])["correct_prediction"].mean().reset_index()
+    print(accs)
     return accs
 
 
@@ -588,19 +589,20 @@ def get_datasetwise_risk():
     print(results.groupby(["Model", "DSD", "Dataset", "Tree"])[["True Risk", "Accuracy"]].mean())
     results.to_csv("datasetwise_risk.csv")
 
-def conditional_accs():
-    df = load_polyp_data()
+def verdictwise_proportions():
+    df = load_all(1)
     # Set bin edges globally
     bins = 20
-    bin_edges = np.linspace(df["IoU"].min(), df["IoU"].max(), bins + 1)
+
+    bin_edges = np.linspace(df["loss"].min(), df["loss"].max(), bins + 1)
     bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
 
     # Prepare FacetGrid
-    g = sns.FacetGrid(df, col="feature_name", margin_titles=True, sharex=True, sharey=True, col_wrap=3)
+    g = sns.FacetGrid(df, row="Dataset", col="feature_name", margin_titles=True, sharex=True, sharey=True)
 
     # Plot manually in each facet
     def stacked_bar(data, color=None, **kwargs):
-        data["bin"] = pd.cut(data["IoU"], bins=bin_edges, include_lowest=True)
+        data["bin"] = pd.cut(data["loss"], bins=bin_edges, include_lowest=True)
         count_df = data.groupby(["bin", "verdict"]).size().unstack(fill_value=0)
         proportion_df = count_df.div(count_df.sum(axis=1), axis=0).fillna(0)
 
@@ -618,13 +620,63 @@ def conditional_accs():
     g.fig.legend(handles, labels, title="verdict", loc='lower center', fontsize="large", bbox_to_anchor=(0.8, 0.20))
     #increase size of legend
 
-    g.set_axis_labels("IoU", "Proportion")
+    g.set_axis_labels("loss", "Proportion")
     g.set_titles(col_template="{col_name}")
     # Check if the total number of facets is more than 3 and adjust accordingly
     plt.tight_layout()
 
-    plt.savefig("proportions.pdf")
+    plt.savefig("proportions_all.pdf")
     plt.show()
+
+def ood_detector_correctness_prediction_accuracy(threshold_method):
+    data = load_all(prefix="single_data", compute_ood=False, batch_size=1)
+    data = data[data["fold"]!="train"]
+    data = data[data["shift"]!="noise"]
+    # data = data[data["shift"]!="noise"]
+    # data["ood"] = data["correct_prediction"]
+    dfs = []
+    with tqdm(total=len(DATASETS)*len(DSDS)) as pbar:
+        for dataset in DATASETS:
+            for feature in DSDS:
+                data_dataset = data[(data["Dataset"]==dataset) & (data["feature_name"]==feature)]
+                for ood_val_fold in data_dataset["shift"].unique():
+                    data_copy = data_dataset.copy()
+                    if ood_val_fold in ["train", "ind_val", "ind_test"]:
+                        continue
+                    data_copy["ood"]=~data_copy["correct_prediction"] #
+                    data_train = data_copy[(data_copy["shift"]==ood_val_fold)|(data_copy["shift"]=="ind_val")|(data_copy["shift"])]
+                    dsd = OODDetector(data_train, ood_val_fold, threshold_method=threshold_method)
+                    data_copy["detected_ood"] = data_copy.apply(lambda row: dsd.predict(row), axis=1)
+                    data_copy["correct_ood_detection"] = data_copy["ood"] == data_copy["detected_ood"]
+                    data_copy["ood_val_fold"] = ood_val_fold
+
+                    if feature=="knn" and dataset=="Office31":
+                        print("plotting")
+                        dsd.plot_hist()
+                    data_copy = data_copy[data_copy["ood_val_fold"]!=data_copy["shift"]]
+                    dfs.append(data_copy)
+                pbar.update(1)
+    data = pd.concat(dfs)
+    # data = data[data["ood_val_fold"]==data["shift"]]
+    data.replace(DSD_PRINT_LUT, inplace=True)
+    tprs = data[~data["shift"].isin(["ind_val", "ind_test"])].groupby(["Dataset", "feature_name", "shift"])["correct_ood_detection"].mean().reset_index().groupby(["Dataset", "feature_name"])["correct_ood_detection"].mean().reset_index()
+
+    tnrs = data[data["shift"].isin(["ind_val", "ind_test"])].groupby(["Dataset", "feature_name", "shift"])["correct_ood_detection"].mean().reset_index().groupby(["Dataset", "feature_name"])["correct_ood_detection"].mean().reset_index()
+
+    tprs = tprs.rename(columns={"correct_ood_detection": "TPR"})
+    tnrs = tnrs.rename(columns={"correct_ood_detection": "TNR"})
+
+    # Merge on Dataset and feature_name
+    balanced = pd.merge(tprs, tnrs, on=["Dataset", "feature_name"])
+
+    # Compute balanced accuracy
+    balanced["balanced_accuracy"] = (balanced["TPR"] + balanced["TNR"]) / 2
+    print(balanced)
+
+    # print(data.groupby(["Dataset", "feature_name", "shift"])["correct_ood_detection"].mean().reset_index().groupby(["Dataset", "feature_name"])["correct_ood_detection"].mean().reset_index())
+
+
+
 
 def iou_distribution():
 
@@ -652,7 +704,10 @@ def iou_distribution():
 if __name__ == '__main__':
     # get_datasetwise_risk()
     # iou_distribution()
-    conditional_accs()
+    # verdictwise_proportions()
+    for tm in THRESHOLD_METHODS:
+        print(tm)
+        ood_detector_correctness_prediction_accuracy(tm)
     # accuracy_table()
     #data = load_pra_df(dataset_name="Office31", feature_name="knn", batch_size=1, samples=1000)
     # collect_rate_estimator_data()

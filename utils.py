@@ -4,43 +4,7 @@ from os.path import join
 import numpy as np
 import pandas as pd
 
-
-
-def get_optimal_threshold(ind, ood):
-    merged = np.concatenate([ind, ood])
-    max_acc = 0
-    threshold = 0
-    if ind.mean()<ood.mean():
-        higher_is_ood = True
-    else:
-        higher_is_ood = False
-
-    #if linearly seperable, set the threshold to the middle
-    if ind.max()<ood.min() and higher_is_ood:
-        return (ind.max()+ood.min())/2
-    if ood.max()<ind.min() and not higher_is_ood:
-        return (ind.max() + ood.min()) / 2
-
-    for t in np.linspace(merged.min(), merged.max(), 100):
-        if higher_is_ood:
-            ind_acc = (ind<t).mean()
-            ood_acc = (ood>t).mean()
-        else:
-            ind_acc = (ind>t).mean()
-            ood_acc = (ood<t).mean()
-        bal_acc = 0.5*(ind_acc+ood_acc)
-        if not higher_is_ood:
-            if bal_acc>=max_acc: #ensures that the threshold is near ind data for highly seperable datasets
-                max_acc = bal_acc
-                threshold = t
-        else:
-            if bal_acc>max_acc:
-                max_acc = bal_acc
-                threshold = t
-
-
-    return threshold
-
+from components import OODDetector
 
 
 
@@ -70,22 +34,21 @@ class ArgumentIterator:
     def __len__(self):
         return len(self.iterable)
 
-def load_all(batch_size=30, samples=1000, feature="all"):
+def load_all(batch_size=30, samples=1000, feature="all", compute_ood=False, prefix="single_data"):
     dfs = []
     for dataset in DATASETS:
         if feature!="all":
-            dfs.append(load_pra_df(dataset, feature, batch_size, samples))
+            dfs.append(load_pra_df(dataset, feature, model="", batch_size=batch_size, samples=samples, compute_ood=compute_ood, prefix=prefix))
         else:
             for dsd in DSDS:
-               dfs.append(load_pra_df(dataset, dsd, batch_size, samples))
+               dfs.append(load_pra_df(dataset, dsd, model="", batch_size=batch_size, samples=samples, compute_ood=compute_ood, prefix=prefix))
     return pd.concat(dfs)
 
 
-def load_pra_df(dataset_name, feature_name, model, batch_size=30, samples=1000):
-
+def load_pra_df(dataset_name, feature_name, model, batch_size=30, samples=1000, prefix="single_data", compute_ood=True):
     try:
         df = pd.concat(
-        [pd.read_csv(join("polyp_data", fname)) for fname in os.listdir("polyp_data") if dataset_name in fname and feature_name in fname and model in fname])
+        [pd.read_csv(join("single_data", fname)) for fname in os.listdir("single_data") if dataset_name in fname and feature_name in fname and model in fname])
     except:
         print("no data found for ", dataset_name, feature_name)
         return pd.DataFrame()
@@ -130,6 +93,20 @@ def load_pra_df(dataset_name, feature_name, model, batch_size=30, samples=1000):
     df["shift"] = df["fold"].apply(lambda x: x.split("_")[0] if "_0." in x else x)            #what kind of shift has occured?
     df["shift_intensity"] = df["fold"].apply(lambda x: x.split("_")[1] if "_" in x else x)  #what intensity?
     df["ood"] = ~df["fold"].isin(["train", "ind_val", "ind_test"])#&~df["correct_prediction"] #is the prediction correct?
+    if compute_ood:
+        dfs = []
+        for ood_val in df[df["ood"]]["fold"].unique():
+            if "noise" in ood_val:
+                continue
+            else:
+                df_copy = df.copy()
+                detector = OODDetector(df_copy, ood_val)
+
+                df_copy["verdict"] = df_copy.apply(detector.predict, axis=1)
+                df_copy["ood_val_shift"] = ood_val
+                dfs.append(df_copy)
+        df = pd.concat(dfs)
+
     return df
 
 
@@ -138,4 +115,5 @@ DATASETS = ["CCT", "OfficeHome", "Office31", "NICO", "Polyp"]
 DSDS = ["knn", "grad_magnitude", "cross_entropy", "energy", "mahalanobis"]
 # BATCH_SIZES = [32]
 BATCH_SIZES = [1, 8, 16, 32, 64]
+THRESHOLD_METHODS = [ "val_optimal", "ind_span", "density"]
 # BATCH_SIZES = np.arange(1, 64)

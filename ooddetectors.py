@@ -41,24 +41,25 @@ def convert_stats_to_pandas_df(train_features, train_loss, ind_val_features, ood
 def convert_to_pandas_df(train_features, train_losses, ind_val_features, ind_val_losses, ind_test_features, ind_test_losses, ood_features, ood_losses, feature_names):
 
     dataframes = []
+
     for fi, feature_name in enumerate(feature_names):
 
         dataset = []
         for fold, train_fs in train_features.items():
             for i in range(train_fs.shape[0]):
-                dataset.append({"fold": "train", "feature_name": feature_name, "feature": train_fs[i][fi], "loss": train_losses[fold][i]})
+                dataset.append({"fold": "train", "feature_name": feature_name, "feature": train_fs[i][fi], "loss": train_losses[fold][i][0], "acc": train_losses[fold][i][1]})
+
         for fold, ind_val_fs in ind_val_features.items():
             for i in range(ind_val_fs.shape[0]):
-                dataset.append({"fold": fold, "feature_name":feature_name, "feature": ind_val_fs[i][fi], "loss": ind_val_losses[fold][i]})
+                dataset.append({"fold": fold, "feature_name":feature_name, "feature": ind_val_fs[i][fi], "loss": ind_val_losses[fold][i][0], "acc": ind_val_losses[fold][i][1]})
 
         for fold, ind_test_fs in ind_test_features.items():
             for i in range(ind_test_fs.shape[0]):
-                dataset.append({"fold": fold, "feature_name":feature_name, "feature": ind_test_fs[i][fi], "loss": ind_test_losses[fold][i]})
+                dataset.append({"fold": fold, "feature_name":feature_name, "feature": ind_test_fs[i][fi], "loss": ind_test_losses[fold][i][0], "acc": ind_test_losses[fold][i][1]})
         for fold, ood_fs in ood_features.items():
             for i in range(ood_fs.shape[0]):
-                dataset.append({"fold": fold, "feature_name":feature_name, "feature": ood_fs[i][fi], "loss": ood_losses[fold][i]})
+                dataset.append({"fold": fold, "feature_name":feature_name, "feature": ood_fs[i][fi], "loss": ood_losses[fold][i][0], "acc": ood_losses[fold][i][1]})
         df = pd.DataFrame(dataset)
-        print(df["fold"].unique())
         dataframes.append(df)
     return dataframes
 
@@ -79,6 +80,7 @@ class FeatureSD(BaseSD):
         super().__init__(rep_model)
         self.feature_fns = feature_fns
         self.num_features=len(feature_fns)
+
 
 
     def save(self, var, varname):
@@ -144,26 +146,13 @@ class FeatureSD(BaseSD):
         #these features are necessary to compute before-hand in order to compute knn and typicality
         self.train_test_features = self.get_encodings(self.testbed.ind_loader()["ind_train"])
 
-        try:
-            train_features = self.load("train_features")
-            train_loss = self.load("train_loss")
-            ind_val_features = self.load("val_features")
-            ind_val_losses = self.load("val_loss")
-            ind_test_features = self.load("test_features")
-            ind_test_losses = self.load("test_loss")
-        except FileNotFoundError as e:
-            print(e)
-            train_features, train_loss = self.compute_features_and_loss_for_loaders(self.testbed.ind_loader())
-            ind_val_features, ind_val_losses = self.compute_features_and_loss_for_loaders(self.testbed.ind_val_loader())
-            ind_test_features, ind_test_losses = self.compute_features_and_loss_for_loaders(self.testbed.ind_test_loader())
-            self.save(train_features, "train_features")
-            self.save(train_loss, "train_loss")
-            self.save(ind_val_features, "val_features")
-            self.save(ind_val_losses, "val_loss")
-            self.save(ind_test_features, "test_features")
-            self.save(ind_test_losses, "test_loss")
+        train_features, train_loss = self.compute_features_and_loss_for_loaders(self.testbed.ind_loader())
+        ind_val_features, ind_val_losses = self.compute_features_and_loss_for_loaders(self.testbed.ind_val_loader())
+        ind_test_features, ind_test_losses = self.compute_features_and_loss_for_loaders(self.testbed.ind_test_loader())
+
 
         ood_features, ood_losses = self.compute_features_and_loss_for_loaders(self.testbed.ood_loaders())
+
         return train_features, train_loss, ind_val_features,ind_val_losses, ind_test_features, ind_test_losses, ood_features,  ood_losses
 
 

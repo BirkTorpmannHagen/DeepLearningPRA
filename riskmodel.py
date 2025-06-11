@@ -1,14 +1,13 @@
 import numpy as np
 from astropy.visualization.wcsaxes.helpers import CORNERS
 
-from components import LossEstimator
 from rateestimators import BernoulliEstimator
 
 MISDIAGNOSIS = 635+6100
 CORRECT_DIAGNOSIS = 635 # cost of correct diagnosis during AI screening
 UNNECESSARY_INTERVENTION = 0.8*CORRECT_DIAGNOSIS+0.2*MISDIAGNOSIS
 NECESSARY_INTERVENTION = UNNECESSARY_INTERVENTION
-)
+
 
 
 class RiskNode:
