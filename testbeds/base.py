@@ -20,6 +20,8 @@ from glow.plmodules import GlowPL
 from glow.model import Glow
 from classifier.resnetclassifier import ResNetClassifier
 import os
+from bias_samplers import RandomSampler, ClassOrderSampler, ClusterSampler, SequentialSampler
+
 
 from torchmetrics import Accuracy
 
@@ -27,15 +29,23 @@ class BaseTestBed:
     """
     Abstract class for testbeds; feel free to override for your own datasets!
     """
-    def __init__(self, num_workers=5, mode="normal"):
+    def __init__(self, num_workers=5, mode="normal", sampler="RandomSampler"):
         self.mode=mode
         self.num_workers=5
         self.noise_range = np.arange(0.0, 0.35, 0.05)[1:]
         self.batch_size = 16
+        self.sampler = sampler
 
 
     def dl(self, dataset):
-        return DataLoader(dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers, drop_last=True)
+        if self.sampler=="RandomSampler":
+            return DataLoader(dataset, batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers, drop_last=True)
+        elif self.sampler=="SequentialSampler":
+            return DataLoader(dataset, batch_size=self.batch_size, num_workers=self.num_workers, drop_last=True, sampler=SequentialSampler(dataset))
+        elif self.sampler=="ClassOrderSampler":
+            return DataLoader(dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers, drop_last=True, sampler=ClassOrderSampler(dataset, num_classes))
+        elif self.sampler=="ClusterSampler":
+            return DataLoader(dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers, drop_last=True, sampler=ClusterSampler(dataset, self.classifier))
 
 
     def ind_loader(self):

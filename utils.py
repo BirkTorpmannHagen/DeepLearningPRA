@@ -48,7 +48,7 @@ def load_all(batch_size=30, samples=1000, feature="all", compute_ood=False, pref
 def load_pra_df(dataset_name, feature_name, model, batch_size=30, samples=1000, prefix="single_data", compute_ood=True):
     try:
         df = pd.concat(
-        [pd.read_csv(join("single_data", fname)) for fname in os.listdir("single_data") if dataset_name in fname and feature_name in fname and model in fname])
+        [pd.read_csv(join(prefix, fname)) for fname in os.listdir(prefix) if dataset_name in fname and feature_name in fname and model in fname])
     except:
         print("no data found for ", dataset_name, feature_name)
         return pd.DataFrame()
@@ -56,7 +56,10 @@ def load_pra_df(dataset_name, feature_name, model, batch_size=30, samples=1000, 
     df["Dataset"]=dataset_name
     df["batch_size"]=batch_size
     df["Model"]=model
-    df.drop(columns=["Unnamed: 0"], inplace=True)
+    try:
+        df.drop(columns=["Unnamed: 0"], inplace=True)
+    except:
+        pass
 
     if batch_size!=1:
         def sample_loss_feature(group, n_samples, n_size):

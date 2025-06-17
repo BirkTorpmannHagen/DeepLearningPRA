@@ -29,7 +29,7 @@ DEFAULT_PARAMS = {
 
 
 class PolypTestBed(BaseTestBed):
-    def __init__(self,rep_model, mode="normal", model_name="deeplabv3plus"):
+    def __init__(self,rep_model, mode="normal", model_name="deeplabv3plus", sampler="RandomSampler"):
         super().__init__()
         self.mode = mode
 

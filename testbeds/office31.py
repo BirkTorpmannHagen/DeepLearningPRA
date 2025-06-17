@@ -1,8 +1,8 @@
 from testbeds.base import *
 
 class Office31TestBed(BaseTestBed):
-    def __init__(self, sample_size, rep_model="vae", mode="severity"):
-        super().__init__(sample_size)
+    def __init__(self, sample_size, rep_model="vae", mode="severity", sampler="RandomSampler"):
+        super().__init__(sample_size, mode, sampler)
         self.trans = transforms.Compose([
             transforms.Resize((512, 512)),
             transforms.ToTensor(), ])

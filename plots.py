@@ -546,6 +546,7 @@ def get_risk_tables():
 
 if __name__ == '__main__':
     get_risk_tables()
+
     # data = load_pra_df(dataset_name="Polyp", feature_name="knn", batch_size=1, samples=1000)
     # plot_dsd_acc_errors()
     # plot_sensitivity_errors()

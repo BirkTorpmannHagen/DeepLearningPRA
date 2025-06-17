@@ -21,6 +21,15 @@ def collect_data(testbed_constructor, dataset_name, mode="noise"):
     compute_stats(*tsd.compute_pvals_and_loss(),
                   fname=f"final_data/{dataset_name}_{mode}", feature_names=[f.__name__ for f in features])
 
+
+def collect_debiased_data(testbed_constructor, dataset_name, mode="noise", sampler="Random", k=5):
+    bench = testbed_constructor("classifier", mode=mode, sampler=sampler)
+    features = [cross_entropy, grad_magnitude, energy, softmax, knn]
+    tsd = BatchedFeatureSD(bench.classifier,features)
+    tsd.register_testbed(bench)
+    compute_stats(*tsd.compute_pvals_and_loss(),
+                  fname=f"biased_data/{dataset_name}_{mode}_{sampler}_k={k}", feature_names=[f.__name__ for f in features])
+
 def collect_model_wise_data(testbed_constructor, dataset_name, mode="noise"):
     for model_name in ["deeplabv3plus", "unet", "segformer"]:
         bench = testbed_constructor("classifier", mode=mode, model_name=model_name)
@@ -41,10 +50,19 @@ def collect_model_wise_data(testbed_constructor, dataset_name, mode="noise"):
     #               fname=f"single_data/{dataset_name}_{mode}", feature_names=[f.__name__ for f in features])
 
 
+def collect_bias_data(k):
+    # collect_data(PolypTestBed, "Polyp", mode="normal")
+    for sampler in ["RandomSampler", "ClassOrderSampler", "ClusterSampler"]:
+        collect_debiased_data(CCTTestBed, "CCT", mode="normal", sampler=sampler, k=k)
+        collect_debiased_data(OfficeHomeTestBed, "OfficeHome", mode="normal", sampler=sampler, k=k)
+        collect_debiased_data(Office31TestBed, "Office31", mode="normal", sampler=sampler, k=k)
+        collect_debiased_data(NicoTestBed, "NICO", mode="normal", sampler=sampler, k=k)
 
 if __name__ == '__main__':
     from features import *
     torch.multiprocessing.set_start_method('spawn')
+    collect_bias_data(0)
+    collect_bias_data(5)
 
     # collect_data(PolypTestBed, "Polyp", mode="normal")
     # collect_data(PolypTestBed, "Polyp", mode="noise")

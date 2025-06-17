@@ -3,10 +3,24 @@ import pandas as pd
 from tqdm import tqdm
 import pickle as pkl
 import numpy as np
-
+import torch
 # import torch_two_sample as tts
 def list_to_str(some_list):
     return "".join([i.__name__ for i in some_list])
+
+def get_debiased_samples(ind_encodings, ind_features, sample_encodings, sample_features, k=5):
+    """
+        Returns debiased features from the ind set.
+    """
+
+    k_nearest_idx = np.concatenate(
+        [np.argpartition(
+            torch.sum((torch.Tensor(sample_encodings[i]).unsqueeze(0) - torch.Tensor(ind_encodings)) ** 2, dim=-1).cpu().numpy(),
+            k)[
+         :k] for i in
+         range(len(sample_encodings))])
+    k_nearest_ind = ind_features[k_nearest_idx]
+    return k_nearest_ind
 
 def process_dataframe(data, filter_noise=False, combine_losses=True, filter_by_sampler=""):
     # data = data[data["sampler"] != "ClassOrderSampler"]
@@ -72,11 +86,7 @@ class BaseSD:
 
 
 class FeatureSD(BaseSD):
-    """
-    General class for gradient-based detectors, including jacobian.
-    Computes a gradient norm/jacobian norm/hessian norm/etc
-    """
-    def __init__(self, rep_model, feature_fns, k=0):
+    def __init__(self, rep_model, feature_fns):
         super().__init__(rep_model)
         self.feature_fns = feature_fns
         self.num_features=len(feature_fns)
@@ -100,9 +110,9 @@ class FeatureSD(BaseSD):
             for j, feature_fn in enumerate(self.feature_fns):
                 # print(feature_fn)
                 if feature_fn.__name__=="typicality":
-                    features[i,:, j]=feature_fn(self.testbed.glow, x, self.train_test_features).detach().cpu().numpy()
+                    features[i,:, j]=feature_fn(self.testbed.glow, x, self.train_test_encodings).detach().cpu().numpy()
                 else:
-                    features[i,:, j]=feature_fn(self.rep_model, x, self.train_test_features).detach().cpu().numpy()
+                    features[i,:, j]=feature_fn(self.rep_model, x, self.train_test_encodings).detach().cpu().numpy()
 
         features = features.reshape((len(dataloader)*self.testbed.batch_size, self.num_features))
 
@@ -154,6 +164,71 @@ class FeatureSD(BaseSD):
         ood_features, ood_losses = self.compute_features_and_loss_for_loaders(self.testbed.ood_loaders())
 
         return train_features, train_loss, ind_val_features,ind_val_losses, ind_test_features, ind_test_losses, ood_features,  ood_losses
+
+class BatchedFeatureSD(FeatureSD):
+    def __init__(self, rep_model, feature_fns, k=5):
+        super().__init__(rep_model, feature_fns)
+        self.k = k
+
+    def compute_pvals_and_loss(self):
+        """
+
+        :param sample_size: sample size for the tests
+        :return: ind_p_values: p-values for ind fold for each sampler
+        :return ood_p_values: p-values for ood fold for each sampler
+        :return ind_sample_losses: losses for each sampler on ind fold, in correct order
+        :return ood_sample_losses: losses for each sampler on ood fold, in correct order
+        """
+
+        #these features are necessary to compute before-hand in order to compute knn and typicality
+        self.train_test_encodings = self.get_encodings(self.testbed.ind_loader()["ind_train"]).reshape((len(self.testbed.ind_loader()["ind_train"])*self.testbed.batch_size, self.rep_model.latent_dim))
+
+        indloaders = self.testbed.ind_loader()
+        self.train_features = dict(
+            zip(indloaders.keys(),
+                          [super(BatchedFeatureSD, self).get_features(loader)
+                           for fold_name, loader in indloaders.items()]))
+
+        train_loss = self.testbed.compute_losses(self.testbed.ind_loader()["ind_train"])
+
+        ind_val_features, ind_val_losses = self.compute_features_and_loss_for_loaders(self.testbed.ind_val_loader())
+        ind_test_features, ind_test_losses = self.compute_features_and_loss_for_loaders(self.testbed.ind_test_loader())
+
+
+        ood_features, ood_losses = self.compute_features_and_loss_for_loaders(self.testbed.ood_loaders())
+
+        return self.train_features, train_loss, ind_val_features,ind_val_losses, ind_test_features, ind_test_losses, ood_features,  ood_losses
+
+    def get_features(self, dataloader):
+        features = np.zeros((len(dataloader), self.num_features))
+        for i, data in tqdm(enumerate(dataloader), total=len(dataloader)):
+            x = data[0].cuda()
+            for j, feature_fn in enumerate(self.feature_fns):
+                # print(feature_fn)
+                if self.k==0:
+                    if feature_fn.__name__=="typicality":
+                        features[i, j]=feature_fn(self.testbed.glow, x, self.train_test_encodings).detach().cpu().numpy().mean()
+                    else:
+                        features[i, j]=feature_fn(self.rep_model, x, self.train_test_encodings).detach().cpu().numpy().mean()
+                else:
+                    k_nearest_features = get_debiased_samples(self.train_test_encodings, self.train_features, x, self.rep_model.get_encoding(x).detach().cpu().numpy(), k=self.k)
+                    if feature_fn.__name__=="typicality":
+                        features[i, j]=feature_fn(self.testbed.glow, x, k_nearest_features).detach().cpu().numpy().mean()
+                    else:
+                        features[i, j]=feature_fn(self.rep_model, x, k_nearest_features).detach().cpu().numpy().mean()
+
+        features = features.reshape((len(dataloader), self.num_features))
+        return features
+
+    def get_encodings(self, dataloader):
+
+        features = np.zeros((len(dataloader), self.testbed.batch_size, self.rep_model.latent_dim))
+        if self.testbed.batch_size==1:
+            features = np.zeros((len(dataloader), self.rep_model.latent_dim))
+        for i, data in tqdm(enumerate(dataloader), total=len(dataloader)):
+            x = data[0].cuda()
+            features[i] = self.rep_model.get_encoding(x).detach().cpu().numpy()
+        return features
 
 
 
