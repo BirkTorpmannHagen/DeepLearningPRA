@@ -30,7 +30,7 @@ class NICODataset(data.Dataset):
         image = Image.open(image_path)
         image = self.transform(image)
         label = self._get_label_index(image_path)
-        return image, label, self.context_map[image_path.split("/")[-3]]
+        return image, label, index
 
     def _get_label_index(self, image_path):
         class_name = image_path.split("/")[-2]

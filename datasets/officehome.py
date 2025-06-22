@@ -45,7 +45,7 @@ class OfficeHome(Dataset):
         return len(self.dataset)
 
     def __getitem__(self, index):
-        return self.dataset[index]
+        return self.dataset[index], index
 
 
 def build_officehome_dataset(root, train_transform, val_transform, context="Real World"):

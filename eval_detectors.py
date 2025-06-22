@@ -19,13 +19,14 @@ def collect_data(testbed_constructor, dataset_name, mode="noise"):
     tsd = FeatureSD(bench.classifier,features)
     tsd.register_testbed(bench)
     compute_stats(*tsd.compute_pvals_and_loss(),
-                  fname=f"final_data/{dataset_name}_{mode}", feature_names=[f.__name__ for f in features])
+                  fname=f"biased_data/{dataset_name}_{mode}", feature_names=[f.__name__ for f in features])
 
 
 def collect_debiased_data(testbed_constructor, dataset_name, mode="noise", sampler="Random", k=5):
     bench = testbed_constructor("classifier", mode=mode, sampler=sampler)
-    features = [cross_entropy, grad_magnitude, energy, softmax, knn]
-    tsd = BatchedFeatureSD(bench.classifier,features)
+    # features = [cross_entropy, grad_magnitude, energy, softmax, knn]
+    features = [typicality]
+    tsd = BatchedFeatureSD(bench.classifier,features,k=k)
     tsd.register_testbed(bench)
     compute_stats(*tsd.compute_pvals_and_loss(),
                   fname=f"biased_data/{dataset_name}_{mode}_{sampler}_k={k}", feature_names=[f.__name__ for f in features])
@@ -51,18 +52,17 @@ def collect_model_wise_data(testbed_constructor, dataset_name, mode="noise"):
 
 
 def collect_bias_data(k):
-    # collect_data(PolypTestBed, "Polyp", mode="normal")
-    for sampler in ["RandomSampler", "ClassOrderSampler", "ClusterSampler"]:
-        collect_debiased_data(CCTTestBed, "CCT", mode="normal", sampler=sampler, k=k)
-        collect_debiased_data(OfficeHomeTestBed, "OfficeHome", mode="normal", sampler=sampler, k=k)
-        collect_debiased_data(Office31TestBed, "Office31", mode="normal", sampler=sampler, k=k)
-        collect_debiased_data(NicoTestBed, "NICO", mode="normal", sampler=sampler, k=k)
+    collect_data(PolypTestBed, "Polyp", mode="normal")
+    collect_data(CCTTestBed, "CCT", mode="normal")
+    collect_data(OfficeHomeTestBed, "OfficeHome", mode="normal")
+    collect_data(Office31TestBed, "Office31", mode="normal")
+    collect_data(NicoTestBed, "NICO", mode="normal")
 
 if __name__ == '__main__':
     from features import *
     torch.multiprocessing.set_start_method('spawn')
     collect_bias_data(0)
-    collect_bias_data(5)
+    # collect_bias_data(5)
 
     # collect_data(PolypTestBed, "Polyp", mode="normal")
     # collect_data(PolypTestBed, "Polyp", mode="noise")
@@ -87,7 +87,7 @@ if __name__ == '__main__':
     # collect_data(CCTTestBed, "CCT", mode="saltpepper")
     # collect_data(CCTTestBed, "CCT", mode="fgsm")
 
-    collect_data(OfficeHomeTestBed, "OfficeHome", mode="normal")
+    # collect_data(OfficeHomeTestBed, "OfficeHome", mode="normal")
     # collect_data(OfficeHomeTestBed, "OfficeHome", mode="noise")
     # collect_data(OfficeHomeTestBed, "OfficeHome", mode="hue")
     # collect_data(OfficeHomeTestBed, "OfficeHome", mode="smear")
@@ -98,7 +98,7 @@ if __name__ == '__main__':
     # collect_data(OfficeHomeTestBed, "OfficeHome", mode="saltpepper")
     # collect_data(OfficeHomeTestBed, "OfficeHome", mode="fgsm")
 
-    collect_data(Office31TestBed, "Office31", mode="normal")
+    # collect_data(Office31TestBed, "Office31", mode="normal")
     # collect_data(Office31TestBed, "Office31", mode="noise")
     # collect_data(Office31TestBed, "Office31", mode="hue")
     # collect_data(Office31TestBed, "Office31", mode="smear")
@@ -109,7 +109,7 @@ if __name__ == '__main__':
     # collect_data(Office31TestBed, "Office31", mode="saltpepper")
     # collect_data(Office31TestBed, "Office31", mode="fgsm")
 
-    collect_data(NicoTestBed, "NICO", mode="normal")
+    # collect_data(NicoTestBed, "NICO", mode="normal")
     # collect_data(NicoTestBed, "NICO", mode="noise")
     # collect_data(NicoTestBed, "NICO", mode="hue")
     # collect_data(NicoTestBed, "NICO", mode="smear")

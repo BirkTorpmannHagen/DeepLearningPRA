@@ -1,15 +1,22 @@
 import itertools
-from itertools import combinations
+from itertools import combinations, count
 from os import listdir
+
+from dask.dataframe import read_csv
+from matplotlib.patches import Patch
+from matplotlib.lines import Line2D
 
 import numpy as np
 from albumentations.random_utils import normal
+from distributed.utils import palette
 from holoviews.plotting.bokeh.styles import font_size
+from matplotlib.pyplot import yscale
 from numpy.ma.core import product
 from scipy.cluster.hierarchy import single
 
 from seaborn import FacetGrid
-
+import warnings
+warnings.filterwarnings("ignore")
 from datasets.polyps import CVC_ClinicDB, EndoCV2020
 from riskmodel import UNNECESSARY_INTERVENTION
 from simulations import *
@@ -454,7 +461,7 @@ def accuracy_by_fold_and_dsd_verdict():
     # g.map_dataframe(sns.lineplot, x="batch_size", y="correct_prediction", hue="feature_name")
 
 def accuracy_table():
-    df = load_all(1, samples=1000)
+    df = load_all(1, samples=1000, prefix="final_data")
     df = df[df["shift"]!="noise"]
     accs = df.groupby(["Dataset", "shift"])["correct_prediction"].mean().reset_index()
     print(accs)
@@ -589,37 +596,43 @@ def get_datasetwise_risk():
     print(results.groupby(["Model", "DSD", "Dataset", "Tree"])[["True Risk", "Accuracy"]].mean())
     results.to_csv("datasetwise_risk.csv")
 
-def verdictwise_proportions():
-    df = load_all(1, prefix="final_data")
+def verdictwise_proportions(cal_idx=0, batch_size=1):
+    df = load_all(batch_size, prefix="final_data")
+
     dfs_processed = []
+
     for dataset in df["Dataset"].unique():
         for feature in df["feature_name"].unique():
-            df_dataset = df[(df["Dataset"]==dataset) & (df["feature_name"]==feature)]
+            if feature=="mahalanobis":
+                continue
+            df_dataset = df[(df["Dataset"]==dataset) & (df["feature_name"]==feature)].copy()
             try:
-                ood_calibration_set = df_dataset[~df_dataset["shift"].isin(["ind_val", "train", "ind_test"])]["shift"].unique()[0]
+                ood_calibration_set = df_dataset[~df_dataset["shift"].isin(["ind_val", "train", "ind_test"])]["shift"].unique()[cal_idx%len(df_dataset[~df_dataset["shift"].isin(["ind_val", "train", "ind_test"])]["shift"].unique())]
             except:
                 print(f"No OOD calibration set for {dataset} {feature}")
-                print(df_dataset.head(10))
-                input()
-            ood_detector = OODDetector(df_dataset, ood_val_shift=ood_calibration_set, threshold_method="val_optimal")
+                continue
+            train_data = df_dataset[(df_dataset["shift"]=="ind_val")|(df_dataset["shift"]==ood_calibration_set)]
+            ood_detector = OODDetector(train_data, ood_val_shift=ood_calibration_set, threshold_method="val_optimal")
+            print(f"Dataset: {dataset}, Feature: {feature}, OOD Calibration Set: {ood_calibration_set}, t={ood_detector.threshold}")
             df_dataset["verdict"] = df_dataset.apply(lambda row: ood_detector.predict(row), axis=1)
+            df_dataset.replace(DSD_PRINT_LUT, inplace=True)
+            df_dataset["verdict"] = df_dataset["verdict"].apply(lambda x: "OOD" if x==True else "IND")
             dfs_processed.append(df_dataset)
     df = pd.concat(dfs_processed)
 
 
 
-
     # Set bin edges globally
-    bins = 20
 
-    bin_edges = np.linspace(df["loss"].min(),10, bins + 1)
-    bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
-
-    # Prepare FacetGrid
-    g = sns.FacetGrid(df, row="Dataset", col="feature_name", margin_titles=True, sharex=False, sharey=False)
+    g = sns.FacetGrid(df, row="Dataset", col="feature_name", sharex=False, sharey=False)
 
     # Plot manually in each facet
     def stacked_bar(data, color=None, **kwargs):
+        # Compute bin edges locally for this subset of data
+        bins = 20
+        bin_edges = np.linspace(data["loss"].min(), data["loss"].quantile(0.99), bins + 1)
+        bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
+
         data["bin"] = pd.cut(data["loss"], bins=bin_edges, include_lowest=True)
         count_df = data.groupby(["bin", "verdict"]).size().unstack(fill_value=0)
         proportion_df = count_df.div(count_df.sum(axis=1), axis=0).fillna(0)
@@ -628,26 +641,95 @@ def verdictwise_proportions():
         for label in proportion_df.columns:
             plt.bar(bin_centers, proportion_df[label], bottom=bottom,
                     width=bin_edges[1] - bin_edges[0], label=label,
-                    edgecolor='white', align='center')
+                    edgecolor='white', align='center', alpha=0.5)
             bottom += proportion_df[label].values
 
-    g.map_dataframe(stacked_bar)
+    def correctness_hist(data, color=None, ax=None, **kwargs):
+        palette = sns.color_palette(n_colors=2)
+        # Compute bin edges locally for this subset of data
+        bins = 20
+        bin_edges = np.linspace(data["loss"].min(), data["loss"].quantile(0.99), bins + 1)
+        bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
 
-    # Optional: Add legend only once
-    handles, labels = plt.gca().get_legend_handles_labels()
-    g.fig.legend(handles, labels, title="verdict", loc='lower center', fontsize="large", bbox_to_anchor=(0.8, 0.20))
-    #increase size of legend
+        data["bin"] = pd.cut(data["loss"], bins=bin_edges, include_lowest=True)
+        count_df = data.groupby(["bin", "correct_prediction"]).size().unstack(fill_value=0)
+        total_counts = count_df.sum(axis=1)/ count_df.sum(axis=1).sum()  # Normalize by total counts
+        # total_counts = total_counts*2 # Scale to 2 for better visibility in the plot
+
+        proportion_df = count_df.div(count_df.sum(axis=1), axis=0).fillna(0)
+        if True in proportion_df.columns:
+            y = proportion_df[True].values
+        else:
+            y = np.zeros(len(proportion_df))  # fallback if no correct predictions
+        plt.plot(bin_edges[:-1], y, color="black", linestyle="--", label="Proportion correct")
+
+    def verdict_hist(data, color=None, ax=None, **kwargs):
+        palette = sns.color_palette(n_colors=2)
+        # Compute bin edges locally for this subset of data
+        bins = 20
+        bin_edges = np.linspace(data["loss"].min(), data["loss"].quantile(0.99), bins + 1)
+        bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
+
+        data["bin"] = pd.cut(data["loss"], bins=bin_edges, include_lowest=True)
+        count_df = data.groupby(["bin", "correct_prediction"]).size().unstack(fill_value=0)
+        y_true = count_df[True].values if True in count_df.columns else np.zeros(len(count_df))
+        y_false = count_df[False].values if False in count_df.columns else np.zeros(len(count_df))
+        # Normalize by total counts
+
+        y_true = y_true / y_true.max()
+        y_false = y_false / y_false.max()
+
+
+        plt.step(bin_edges[:-1], y_true, where='post', color=palette[0], label="IND")
+        plt.step(bin_edges[:-1], y_false, where='post', color=palette[1], label="OOD")
+
+
+    def baseline(data, color=None, ax=None, **kwargs):
+        dataset = data["Dataset"].unique()[0]
+        if dataset!="Polyp":
+            plt.axvline(DATASETWISE_RANDOM_LOSS[dataset], color="red", linestyle="--", label="Random Guessing")
+
+
+    palette = sns.color_palette(n_colors=2)  # Set1 has two distinct colors
+    g.map_dataframe(stacked_bar, palette="pastel")
+    g.map_dataframe(correctness_hist)
+    g.map_dataframe(verdict_hist)
+    g.map_dataframe(baseline)
+    # g.map_dataframe(sns.kdeplot, x="loss", color="black", legend=False, fill=False, clip = (0, 30))
+    verdict_handles = [
+        Patch(facecolor=palette[0], edgecolor='white', label="IND", alpha=0.5),
+        Patch(facecolor=palette[1], edgecolor='white', label="OOD", alpha=0.5)
+    ]
+    hist_handles = [
+        Line2D([0], [0], color=palette[0], lw=2, label="Proportion Correct "),
+    ]
+    all_handles = verdict_handles + hist_handles
+    g.fig.legend(all_handles, [h.get_label() for h in all_handles], title="Legend", loc='lower center',
+                 fontsize="large", ncol=4, bbox_to_anchor=(0.5, -0.01))
+
+    # Combine and add
+    all_handles = verdict_handles + hist_handles
+    g.fig.legend(all_handles, [h.get_label() for h in all_handles], title="Legend", loc='lower center',
+                 fontsize="large", ncol=4, bbox_to_anchor=(0.5, -0.01))
 
     g.set_axis_labels("loss", "Proportion")
     g.set_titles(col_template="{col_name}")
+
+    for ax in g.axes.flat:
+        dataset = ax.get_title().split(" = ")[-1].split("|")[0].strip()
+        print(dataset)
+        ax.set_xlim(0, df[df["Dataset"]==dataset]["loss"].quantile(0.99))
+        ax.set_ylim(0, 1)
+
+
     # Check if the total number of facets is more than 3 and adjust accordingly
     plt.tight_layout()
 
     plt.savefig("proportions_all.pdf")
     plt.show()
 
-def ood_detector_correctness_prediction_accuracy():
-    data = load_all(prefix="single_data", compute_ood=False, batch_size=1)
+def ood_detector_correctness_prediction_accuracy(batch_size):
+    data = load_all(prefix="final_data", compute_ood=False, batch_size=batch_size)
     data = data[data["fold"]!="train"]
     data = data[data["shift"]!="noise"]
     # data = data[data["shift"]!="noise"]
@@ -666,22 +748,25 @@ def ood_detector_correctness_prediction_accuracy():
                                     continue
                                 if perf_calibrated and not ood_perf:
                                     continue #unimportant
-                                if ood_perf and perf_calibrated:
+                                data_train = data_copy[
+                                    (data_copy["shift"] == ood_val_fold) | (data_copy["shift"] == "ind_val")]
+                                if perf_calibrated:
                                     data_copy["ood"]=~data_copy["correct_prediction"] #
                                 data_train = data_copy[(data_copy["shift"]==ood_val_fold)|(data_copy["shift"]=="ind_val")]
+
                                 dsd = OODDetector(data_train, ood_val_fold, threshold_method=threshold_method)
                                 data_copy["detected_ood"] = data_copy.apply(lambda row: dsd.predict(row), axis=1)
                                 data_copy["ood_val_fold"] = ood_val_fold
                                 data_copy["Threshold Method"] = threshold_method
                                 data_copy["OoD==f(x)=y"] = ood_perf
                                 data["Performance Calibrated"] = perf_calibrated
+                                # if dataset=="CCT" and feature=="knn" and threshold_method=="val_optimal":
+                                #     dsd.kde()
+
                                 if ood_perf and not perf_calibrated:
                                     data_copy["ood"]=~data_copy["correct_prediction"] #
                                 data_copy["correct_ood_detection"] = data_copy["ood"] == data_copy["detected_ood"]
 
-                                if feature=="knn" and dataset=="Office31":
-                                    print("plotting")
-                                    dsd.plot_hist()
                                 data_copy = data_copy[data_copy["ood_val_fold"]!=data_copy["shift"]]
                                 dfs.append(data_copy)
                             pbar.update(1)
@@ -700,8 +785,10 @@ def ood_detector_correctness_prediction_accuracy():
 
     # Compute balanced accuracy
     balanced["balanced_accuracy"] = (balanced["TPR"] + balanced["TNR"]) / 2
-    balanced.to_csv("ood_detector_correctness.csv", index=False)
-    print(balanced)
+    balanced.to_csv(f"ood_detector_correctness_{batch_size}.csv", index=False)
+    return balanced
+    # print(balanced)
+    # plot = balanced[(balanced["OoD==f(x)=y"]==True) & (balanced["Performance Calibrated"]==True) & balanced["Threshold Method"]=="val_optimal"]
 
     # print(data.groupby(["Dataset", "feature_name", "shift"])["correct_ood_detection"].mean().reset_index().groupby(["Dataset", "feature_name"])["correct_ood_detection"].mean().reset_index())
 
@@ -730,9 +817,11 @@ def iou_distribution():
     plt.savefig("IoU_distributions.pdf")
     plt.show()
 
-def scatter_ood_results():
+def ood_verdict_accuracy_table():
     results = pd.read_csv("ood_detector_correctness.csv")
-    # print(results.groupby(["OoD==f(x)=y", "Performance Calibrated", "Threshold Method"])[["balanced_accuracy"]].agg(["min", "mean", "max"]).reset_index())
+    # print(results)
+    print(results.groupby(["OoD==f(x)=y", "Performance Calibrated", "Threshold Method"])[["balanced_accuracy"]].agg(["min", "mean", "max"]).reset_index())
+
     results = results[results["Threshold Method"] == "val_optimal"]
     regular_ood = results[(results["OoD==f(x)=y"]==False) & (results["Performance Calibrated"]==False)]
     correctness = results[(results["OoD==f(x)=y"]==True) & (results["Performance Calibrated"]==True)]
@@ -745,13 +834,140 @@ def scatter_ood_results():
     #
     # plotter = pd.concat([df[df[]]])
     # sns.scatterplot(data=results, y="balanced_accuracy", hue="Dataset", style="feature_name", size="balanced_accuracy", sizes=(20, 200), alpha=0.7)
+
+def ood_verdict_plots_batched():
+    dfs = []
+    for i in BATCH_SIZES:
+        df = pd.read_csv(f"ood_detector_correctness_{i}.csv")
+        df["batch_size"] = i
+        print(df)
+        dfs.append(df)
+    data = pd.concat(dfs)
+    data = data[(data["Threshold Method"]=="val_optimal")&(data["Performance Calibrated"]==False)&data["OoD==f(x)=y"]==True]
+    data = data[data["feature_name"]!="Mahalanobis"]
+    print(data.groupby(["Dataset", "batch_size"])[["balanced_accuracy"]].max().reset_index())
+    g = sns.FacetGrid(data, col="Dataset", margin_titles=True, sharex=False, sharey=False, col_wrap=3)
+    g.map_dataframe(sns.lineplot, x="batch_size", y="balanced_accuracy", hue="feature_name", markers=True, dashes=False)
+    for ax in g.axes.flat:
+        ax.set_ylim(0.4, 1)
+
+    g.add_legend(bbox_to_anchor=(0.7, 0.3), loc='center left', title="Feature", ncol=1)
+    plt.savefig("batched_ood_verdict_accuracy.pdf")
+    plt.show()
+
+def compare_kdes():
+    df = load_all(prefix="final_data")
+    df = df[df["Dataset"]=="CCT"]
+
+    g = sns.FacetGrid(df, col="feature_name", margin_titles=True, sharex=False, sharey=False)
+    g.map_dataframe(sns.histplot, x="feature", hue="correct_prediction", fill=True, element="step")
+    plt.show()
+    g = sns.FacetGrid(df, col="feature_name", margin_titles=True, sharex=False, sharey=False)
+    g.map_dataframe(sns.histplot, x="feature", hue="fold", fill=True, element="step")
+    plt.show()
+
+
+def get_ood_detector_data(data):
+    data = data[data["fold"] != "train"]
+    data = data[data["shift"] != "noise"]
+    # data = data[data["shift"]!="noise"]
+    # data["ood"] = data["correct_prediction"]
+    dfs = []
+    with tqdm(total=len(DATASETS) * len(DSDS) * len(THRESHOLD_METHODS)) as pbar:
+        for dataset in DATASETS:
+            for feature in DSDS:
+                data_dataset = data[(data["Dataset"] == dataset) & (data["feature_name"] == feature)]
+                for ood_val_fold in data_dataset["shift"].unique():
+                    data_copy = data_dataset.copy()
+                    if ood_val_fold in ["train", "ind_val", "ind_test"]:
+                        continue
+
+                    data_train = data_copy[
+                        (data_copy["shift"] == ood_val_fold) | (data_copy["shift"] == "ind_val")]
+                    data_train = data_copy[
+                        (data_copy["shift"] == ood_val_fold) | (data_copy["shift"] == "ind_val")]
+
+                    dsd = OODDetector(data_train, ood_val_fold)
+                    data_copy["Verdict"] = data_copy.apply(lambda row: dsd.predict(row), axis=1)
+                    data_copy["ood_val_fold"] = ood_val_fold
+                    data_copy["ood"] = ~data_copy["correct_prediction"]  #
+                    data_copy = data_copy[data_copy["ood_val_fold"] != data_copy["shift"]]
+                    dfs.append(data_copy)
+                pbar.update(1)
+    data = pd.concat(dfs)
+    return data
+
+
+def loss_verdict_histogram(batch_size, prefix="final_data"):
+    df = load_all(prefix=prefix, compute_ood=False, batch_size=batch_size)
+
+    data = get_ood_detector_data(df)
+
+    def baseline(data, color=None, ax=None, **kwargs):
+        dataset = data["Dataset"].unique()[0]
+        plt.axvline(DATASETWISE_RANDOM_LOSS[dataset], color="red", linestyle="--", label="Random Guessing")
+
+
+    g = sns.FacetGrid(data, col="Dataset", row="feature_name", sharex=False, sharey=False)
+    g.map_dataframe(sns.histplot, x="loss", hue="Verdict", fill=True)
+    g.map_dataframe(baseline)
+
+    for ax in g.axes.flat:
+        dataset_name_for_ax = ax.get_title().split(" = ")[-1]
+        # ax.set_ylim(1, 1e3)
+        ax.set_xlim(0, data[data["Dataset"]==dataset_name_for_ax]["loss"].quantile(0.99))
+        # ax.set_yscale("log")
+    plt.legend()
+    plt.show()
+
+def loss_correctness_test():
+    data = load_all(1)
+
+    def plot_accs(data, color=None, **kwargs):
+        bins = 10
+        bin_edges = np.linspace(data["loss"].min(), data["loss"].quantile(0.99), bins + 1)
+        bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
+
+        data["bin"] = pd.cut(data["loss"], bins=bin_edges, include_lowest=True)
+        count_df = data.groupby(["bin", "correct_prediction"]).size().unstack(fill_value=0)
+        print(data["Dataset"].unique())
+        print(count_df)
+        input()
+
+
+        proportion_df = count_df.div(count_df.sum(axis=1), axis=0).fillna(0)
+        bottom = np.zeros(len(proportion_df))
+        for label in proportion_df.columns:
+            plt.bar(bin_centers, proportion_df[label], bottom=bottom,
+                    width=bin_edges[1] - bin_edges[0], label=label,
+                    edgecolor='white', align='center', alpha=0.5)
+            bottom += proportion_df[label].values
+
+    g = sns.FacetGrid(data, col="Dataset", margin_titles=True, sharex=False, sharey=False)
+    g.map_dataframe(plot_accs)
+    plt.show()
+
+
+def bias_correctness_test():
+    data = load_all(30, prefix="biased_data")
+    df = get_ood_detector_data(data)
+
+    print(df.groupby(["Dataset", "feature_name", "shift", "Verdict"])["correct_prediction"].mean().reset_index())
+
 if __name__ == '__main__':
     # get_datasetwise_risk()
     # iou_distribution()
-    verdictwise_proportions()
-    # ood_detector_correctness_prediction_accuracy()
-    # scatter_ood_results()
+    # compare_kdes()
+    # for i in range(3):
+    verdictwise_proportions(cal_idx=1, batch_size=1)
+    # loss_verdict_histogram(1)
     # accuracy_table()
+    # loss_correctness_test()
+    # for batch_size in BATCH_SIZES:
+    #     ood_detector_correctness_prediction_accuracy(batch_size)
+    # ood_verdict_plots_batched()
+
+    # ood_verdict_accuracy_table()
     #data = load_pra_df(dataset_name="Office31", feature_name="knn", batch_size=1, samples=1000)
     # collect_rate_estimator_data()
     # eval_rate_estimator()

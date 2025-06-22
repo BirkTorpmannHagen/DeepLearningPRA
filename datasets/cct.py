@@ -68,7 +68,9 @@ class CCT(Dataset):
         self.label_encoder.fit(np.unique(self.labels))  # classes seen during training
 
     def __len__(self):
+        # return 64 #debug
         return len(self.file_names)
+
 
     def __getitem__(self, index):
         img = Image.open(self.file_names[index])
@@ -80,7 +82,7 @@ class CCT(Dataset):
         else:
             img = self.val_transform(img)
         label = self.label_encoder.transform([self.labels[index]])[0]
-        return img, label
+        return img, label, index
 
     def extract_all_metadata(self):
         def extract_metadata(path_to_json):

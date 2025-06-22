@@ -51,7 +51,7 @@ class Office31Dataset(Dataset):
         return len(self.dataset)
 
     def __getitem__(self, index):
-        return self.dataset[index]
+        return self.dataset[index], index
 
 
 def build_office31_dataset(root, train_transform, val_transform, ind_context="amazon"):

@@ -49,6 +49,7 @@ class OODDetector:
         assert df["Dataset"].nunique() == 1
         self.df = df
         self.threshold_method = threshold_method
+
         # self.ind_val = df[(df["shift"] == "ind_val")&(~df["ood"])]
         # self.ood_val = df[(df["shift"] == ood_val_shift)&(df["ood"])]
         self.ind_val = df[~df["ood"]]
@@ -68,7 +69,15 @@ class OODDetector:
 
 
 
-
+    def kde(self):
+        sns.kdeplot(self.ind_val["feature"], label="ind_val", color="blue")
+        sns.kdeplot(self.ood_val["feature"], label="ood_val", color="red")
+        if self.threshold_method == "ind_span":
+            plt.axvline(self.threshold[0], color="red", linestyle="--")
+            plt.axvline(self.threshold[1], color="red", linestyle="--")
+        elif self.threshold_method == "val_optimal":
+            plt.axvline(self.threshold, color="red", linestyle="--")
+        plt.show()
 
     def predict(self, batch):
         # if isinstance(batch["feature"], pd.Series): #if it is a batch
@@ -80,9 +89,9 @@ class OODDetector:
             return not (self.threshold[0] <= feature <= self.threshold[1])
         elif self.threshold_method=="val_optimal":
             if self.higher_is_ood:
-                return  feature > self.threshold or feature<self.ind_val["feature"].min()
+                return  feature > self.threshold
             else:
-                return feature < self.threshold or feature>self.ind_val["feature"].max()
+                return feature < self.threshold
         elif self.threshold_method == "density":
             prob = np.exp(self.density_model.score(np.array(feature).reshape(1, -1)))
             return prob<0.01

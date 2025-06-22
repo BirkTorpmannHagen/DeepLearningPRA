@@ -8,7 +8,7 @@ import torch
 def list_to_str(some_list):
     return "".join([i.__name__ for i in some_list])
 
-def get_debiased_samples(ind_encodings, ind_features, sample_encodings, sample_features, k=5):
+def get_debiased_samples(ind_encodings, sample_encodings, k=5):
     """
         Returns debiased features from the ind set.
     """
@@ -19,8 +19,8 @@ def get_debiased_samples(ind_encodings, ind_features, sample_encodings, sample_f
             k)[
          :k] for i in
          range(len(sample_encodings))])
-    k_nearest_ind = ind_features[k_nearest_idx]
-    return k_nearest_ind
+    # k_nearest_ind = sample_features[k_nearest_idx]
+    return k_nearest_idx
 
 def process_dataframe(data, filter_noise=False, combine_losses=True, filter_by_sampler=""):
     # data = data[data["sampler"] != "ClassOrderSampler"]
@@ -52,29 +52,37 @@ def convert_stats_to_pandas_df(train_features, train_loss, ind_val_features, ood
     df = pd.DataFrame(dataset)
     return df
 
-def convert_to_pandas_df(train_features, train_losses, ind_val_features, ind_val_losses, ind_test_features, ind_test_losses, ood_features, ood_losses, feature_names):
+
+def convert_to_pandas_df(train_features, train_losses,
+                         ind_val_features, ind_val_losses,
+                         ind_test_features, ind_test_losses,
+                         ood_features, ood_losses,
+                         feature_names):
+    def add_entries(dataset, features_dict, losses_dict, fold_label_override=None):
+        for fold, features in features_dict.items():
+            losses = losses_dict[fold]
+            label = fold_label_override if fold_label_override else fold
+            for i in range(features.shape[0]):
+                dataset.append({
+                    "fold": label,
+                    "feature_name": feature_name,
+                    "feature": features[i][fi],
+                    "loss": losses[i][0],
+                    "acc": losses[i][1],
+                    "idx": losses[i][2],
+                    "class": losses[i][3] if losses.shape[1]>3 else None,
+                })
 
     dataframes = []
 
     for fi, feature_name in enumerate(feature_names):
-
         dataset = []
-        for fold, train_fs in train_features.items():
-            for i in range(train_fs.shape[0]):
-                dataset.append({"fold": "train", "feature_name": feature_name, "feature": train_fs[i][fi], "loss": train_losses[fold][i][0], "acc": train_losses[fold][i][1]})
+        add_entries(dataset, train_features, train_losses, fold_label_override="train")
+        add_entries(dataset, ind_val_features, ind_val_losses)
+        add_entries(dataset, ind_test_features, ind_test_losses)
+        add_entries(dataset, ood_features, ood_losses)
+        dataframes.append(pd.DataFrame(dataset))
 
-        for fold, ind_val_fs in ind_val_features.items():
-            for i in range(ind_val_fs.shape[0]):
-                dataset.append({"fold": fold, "feature_name":feature_name, "feature": ind_val_fs[i][fi], "loss": ind_val_losses[fold][i][0], "acc": ind_val_losses[fold][i][1]})
-
-        for fold, ind_test_fs in ind_test_features.items():
-            for i in range(ind_test_fs.shape[0]):
-                dataset.append({"fold": fold, "feature_name":feature_name, "feature": ind_test_fs[i][fi], "loss": ind_test_losses[fold][i][0], "acc": ind_test_losses[fold][i][1]})
-        for fold, ood_fs in ood_features.items():
-            for i in range(ood_fs.shape[0]):
-                dataset.append({"fold": fold, "feature_name":feature_name, "feature": ood_fs[i][fi], "loss": ood_losses[fold][i][0], "acc": ood_losses[fold][i][1]})
-        df = pd.DataFrame(dataset)
-        dataframes.append(df)
     return dataframes
 
 class BaseSD:
@@ -106,7 +114,6 @@ class FeatureSD(BaseSD):
 
         for i, data in tqdm(enumerate(dataloader), total=len(dataloader)):
             x = data[0].cuda()
-            feats = np.zeros((self.num_features, self.testbed.batch_size))
             for j, feature_fn in enumerate(self.feature_fns):
                 # print(feature_fn)
                 if feature_fn.__name__=="typicality":
@@ -115,7 +122,6 @@ class FeatureSD(BaseSD):
                     features[i,:, j]=feature_fn(self.rep_model, x, self.train_test_encodings).detach().cpu().numpy()
 
         features = features.reshape((len(dataloader)*self.testbed.batch_size, self.num_features))
-
         return features
 
     def get_encodings(self, dataloader):
@@ -154,7 +160,7 @@ class FeatureSD(BaseSD):
         """
 
         #these features are necessary to compute before-hand in order to compute knn and typicality
-        self.train_test_features = self.get_encodings(self.testbed.ind_loader()["ind_train"])
+        self.train_test_encodings = self.get_encodings(self.testbed.ind_loader()["ind_train"])
 
         train_features, train_loss = self.compute_features_and_loss_for_loaders(self.testbed.ind_loader())
         ind_val_features, ind_val_losses = self.compute_features_and_loss_for_loaders(self.testbed.ind_val_loader())
@@ -189,7 +195,10 @@ class BatchedFeatureSD(FeatureSD):
                           [super(BatchedFeatureSD, self).get_features(loader)
                            for fold_name, loader in indloaders.items()]))
 
-        train_loss = self.testbed.compute_losses(self.testbed.ind_loader()["ind_train"])
+        train_loaders = self.testbed.ind_loader()
+        train_loss = dict(
+            zip(train_loaders.keys(),
+                [self.testbed.compute_losses(loader) for fold_name, loader in train_loaders.items()]))
 
         ind_val_features, ind_val_losses = self.compute_features_and_loss_for_loaders(self.testbed.ind_val_loader())
         ind_test_features, ind_test_losses = self.compute_features_and_loss_for_loaders(self.testbed.ind_test_loader())
@@ -211,11 +220,14 @@ class BatchedFeatureSD(FeatureSD):
                     else:
                         features[i, j]=feature_fn(self.rep_model, x, self.train_test_encodings).detach().cpu().numpy().mean()
                 else:
-                    k_nearest_features = get_debiased_samples(self.train_test_encodings, self.train_features, x, self.rep_model.get_encoding(x).detach().cpu().numpy(), k=self.k)
-                    if feature_fn.__name__=="typicality":
-                        features[i, j]=feature_fn(self.testbed.glow, x, k_nearest_features).detach().cpu().numpy().mean()
-                    else:
-                        features[i, j]=feature_fn(self.rep_model, x, k_nearest_features).detach().cpu().numpy().mean()
+                    pass
+                    # x_encodings=  self.rep_model.get_encoding(x).detach().cpu().numpy()
+                    # k_nearest_indeces= get_debiased_samples(self.train_test_encodings, x_encodings, k=self.k)
+                    #
+                    # if feature_fn.__name__=="typicality":
+                    #     features[i, j]=feature_fn(self.testbed.glow, x, self.train_features[k_nearest_indeces]).detach().cpu().numpy().mean()
+                    # else:
+                    #     features[i, j]=feature_fn(self.rep_model, x, self.train_features[k_nearest_indeces]).detach().cpu().numpy().mean()
 
         features = features.reshape((len(dataloader), self.num_features))
         return features

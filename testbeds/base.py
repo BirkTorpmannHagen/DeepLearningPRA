@@ -106,7 +106,7 @@ class BaseTestBed:
 
 
     def compute_losses(self, loader):
-        losses = torch.zeros((len(loader), self.batch_size, 2))
+        losses = torch.zeros((len(loader), self.batch_size, 4)) # loss, acc, class, index
         criterion = nn.CrossEntropyLoss(reduction="none")  # still computing loss for each sample, just batched
         # criterion = Accuracy(task="multiclass", num_classes=self.num_classes, top_k=1).cuda()
 
@@ -117,8 +117,8 @@ class BaseTestBed:
                 yhat = self.classifier(x)
                 acc = (torch.argmax(yhat, dim=1)==y).cpu().int()
                 loss = criterion(yhat, y).cpu()
-
-                losses[i] = torch.stack([loss, acc], dim=1)
+                idx = data[2]
+                losses[i] = torch.stack([loss, acc, idx, y.cpu()], dim=1)
                 # losses[i]=vec
         return losses.flatten(0,1).numpy()
 
