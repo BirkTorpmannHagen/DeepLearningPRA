@@ -1,10 +1,30 @@
 import numpy as np
 import pandas as pd
+from cffi.cffi_opcode import PRIM_SIZE
 from matplotlib import pyplot as plt
 from pygam import LinearGAM
 import seaborn as sns
 from sklearn.neighbors import KernelDensity
+from statsmodels.sandbox.distributions.gof_new import bootstrap
+from scipy.stats import ks_2samp
+from watchdog.observers.inotify_c import inotify_init
+
 from vae.utils.general import check_python
+
+
+def l2_distance(a, b):
+    """
+    Compute the L2 distance between two vectors.
+    :param a: First vector (numpy array)
+    :param b: Second vector (numpy array)
+    :return: L2 distance (float)
+    """
+    return np.linalg.norm(a - b)
+
+def ks_distance(a, b):
+    return ks_2samp(a, b)[1]
+
+
 
 
 def get_optimal_threshold(ind, ood):
@@ -47,6 +67,8 @@ class OODDetector:
     def __init__(self, df, ood_val_shift, threshold_method="val_optimal"):
         assert df["feature_name"].nunique() == 1
         assert df["Dataset"].nunique() == 1
+        if "k" in df.columns:
+            assert df["k"].nunique() == 1, "OODDetector only works with k=1 due to the thresholding scheme"
         self.df = df
         self.threshold_method = threshold_method
 
@@ -117,6 +139,7 @@ class OODDetector:
 
     def plot_hist(self):
         sns.histplot(self.df, x="feature", hue="ood", alpha=0.5)
+        plt.title(f"{self.df['feature_name'].unique()[0]} - {self.df['Dataset'].unique()[0]}")
 
         if self.threshold_method == "ind_span":
             plt.axvline(self.threshold[0], color="red", linestyle="--")
@@ -129,6 +152,74 @@ class OODDetector:
 
     def get_likelihood(self):
         return self.get_tpr(self.df), self.get_tpr(self.df)
+
+
+class DebiasedOODDetector(OODDetector):
+    def __init__(self, df, ood_val_shift, threshold_method="val_optimal", k=5, batch_size=32, distance_metric=ks_distance):
+
+        super().__init__(df, ood_val_shift, threshold_method)
+        assert df["feature_name"].nunique() == 1
+        assert df["Dataset"].nunique() == 1
+        # assert df["batch_size"].unique() == 1, "DebiasedOODDetector only works with batch_size=1 due to k-nearest scheme"
+
+        self.df = df
+        self.threshold_method = threshold_method
+        self.distance = distance_metric
+        # self.ind_val = df[(df["shift"] == "ind_val")&(~df["ood"])]
+        # self.ood_val = df[(df["shift"] == ood_val_shift)&(df["ood"])]
+        self.ind_val = df[~df["ood"]]
+        self.ood_val = df[df["ood"]]
+        self.k=k
+
+        #calibration using bootstrapping
+        ind_bootstrap_dists = []
+        ood_bootstrap_dists = []
+        for _ in range(1000):
+            ind_sample_batch = self.ind_val.sample(batch_size)["feature"] #randomly sample from ind_val
+            k_nearest_for_each = np.array([self.ind_val["feature"].values[np.argpartition(np.abs(i-self.ind_val["feature"]), self.k)[:self.k]] for i in ind_sample_batch]).flatten() #get the k nearest neighbors in ind_val
+            ind_bootstrap_dists.append(self.distance(ind_sample_batch.values, k_nearest_for_each))
+
+            ood_sample_batch = self.ood_val.sample(batch_size)["feature"]  # randomly sample from ind_val
+            k_nearest_for_each = np.array(
+                [self.ind_val["feature"].values[np.argpartition(np.abs(i - self.ind_val["feature"]), self.k)[:self.k]]
+                 for i in ood_sample_batch]).flatten()  # get the k nearest neighbors in ind_val
+            ood_bootstrap_dists.append(self.distance(ood_sample_batch.values, k_nearest_for_each))
+
+
+        self.threshold = np.min(ind_bootstrap_dists) #set the threshold to the 90th percentile of the bootstrap distribution
+        # self.threshold
+        # self.threshold
+        # self.threshold = (np.min(ind_bootstrap_dists) + np.max(ood_bootstrap_dists))/2 # middle between the min of ind and max of ood bootstrap distances
+        # print(self.threshold)
+
+        # self.kde = KernelDensity(kernel='gaussian')
+        # self.kde.fit(np.array(bootstrap_dists).reshape(-1, 1))
+        # self.batch_size = batch_size
+        # ps =  np.exp(self.kde.score_samples(np.array(bootstrap_dists).reshape(-1, 1))) #set the threshold to the mean of the bootstrap distribution
+        # print(ps)
+        # input()
+
+        # sns.kdeplot(bootstrap_dists, label="bootstrap distances", color="blue")
+        # plt.show()
+
+        # self.threshold = np.quantile(bootstrap_dists, 0.9) #set the threshold to the 95th percentile of the bootstrap distribution
+
+    def predict(self, batch):
+        assert batch["ood"].nunique() == 1, "Batch should have a single ood value"
+        dists = []
+        features = batch["feature"].values
+        k_nearest_for_each = np.array(
+            [self.ind_val["feature"].values[np.argpartition(np.abs(i - self.ind_val["feature"]), self.k)[:self.k]] for i
+             in features]).flatten()  # get the k nearest neighbors in ind_val
+        ks = self.distance(features, k_nearest_for_each)
+        verdict = ks<self.threshold #if the distance is greater than the threshold, then it is ood
+        # print(ks)
+        # print(batch)
+
+        # print(f"{batch['fold'].unique()[0]}: {ks}<{self.threshold}: Correct={(verdict == batch['ood'].all())}")
+        # input()
+
+        return verdict
 
 
 

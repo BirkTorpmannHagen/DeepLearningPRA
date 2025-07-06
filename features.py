@@ -3,6 +3,8 @@ import torch.nn.functional as F
 import torchvision.transforms
 from torch.autograd import Variable
 
+from components import ks_distance
+
 
 def cross_entropy(model, image, num_features=1):
     out = model(image)
@@ -42,6 +44,9 @@ def knn(model, img, train_test_norms):
         min_dists[bidx] = torch.min(dist)
     return min_dists
 
+def rabanser_ks(model, img, train_test_norms):
+    encoding = model.get_encoding(img)
+    return ks_distance(encoding, train_test_norms)
 
 def energy(model, img, num_features=1):
     energy = torch.logsumexp(model(img), dim=1)

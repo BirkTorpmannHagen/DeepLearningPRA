@@ -55,7 +55,8 @@ class ResNetClassifier(pl.LightningModule):
         dummy = torch.zeros((1,3,512,512))
         return torch.nn.Sequential(*list(self.resnet_model.children())[:-1])(dummy).flatten(1).shape[-1]
     def get_encoding(self, X, depth=-2):
-        return torch.nn.Sequential(*list(self.resnet_model.children())[:-1])(X).flatten(1)
+        out = torch.nn.Sequential(*list(self.resnet_model.children())[:-1])(X).flatten(1)
+        return out
 
     def get_funny(self, X):
         return torch.nn.Sequential(*list(self.resnet_model.children())[:-1])(X)

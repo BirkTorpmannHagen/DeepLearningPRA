@@ -24,7 +24,6 @@ class Office31Dataset(Dataset):
         ind_train_idx, ind_val_idx = train_test_split(
             range(len(full_ind_dataset)),
             test_size=0.2,
-            stratify=ind_targets,
             random_state=42  # Ensures determinism
         )
         ind_test_idx = ind_val_idx[:len(ind_val_idx)//2]
@@ -51,7 +50,7 @@ class Office31Dataset(Dataset):
         return len(self.dataset)
 
     def __getitem__(self, index):
-        return self.dataset[index], index
+        return *self.dataset[index], index
 
 
 def build_office31_dataset(root, train_transform, val_transform, ind_context="amazon"):

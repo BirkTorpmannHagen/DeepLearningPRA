@@ -29,11 +29,11 @@ class BaseTestBed:
     """
     Abstract class for testbeds; feel free to override for your own datasets!
     """
-    def __init__(self, num_workers=5, mode="normal", sampler="RandomSampler"):
+    def __init__(self, num_workers=5, mode="normal", sampler="RandomSampler", batch_size=16):
         self.mode=mode
         self.num_workers=5
         self.noise_range = np.arange(0.0, 0.35, 0.05)[1:]
-        self.batch_size = 16
+        self.batch_size = batch_size
         self.sampler = sampler
 
 

@@ -1,7 +1,7 @@
 # from yellowbrick.features import PCA
-from panel.widgets.indicators import ptqdm
 
 from testbeds import *
+from utils import load_all
 
 
 def compute_stats(train_features, train_losses, ind_val_features, ind_val_losses, ind_test_features, ind_test_losses, ood_features, ood_losses, fname, feature_names):
@@ -13,23 +13,32 @@ def compute_stats(train_features, train_losses, ind_val_features, ind_val_losses
 def collect_data(testbed_constructor, dataset_name, mode="noise"):
     bench = testbed_constructor("classifier", mode=mode)
     # features = [mahalanobis]
-    features = [cross_entropy, grad_magnitude, energy, softmax, knn, typicality]
+    features = [cross_entropy, grad_magnitude, energy, softmax, knn]
 
     # features = [knn]
     tsd = FeatureSD(bench.classifier,features)
     tsd.register_testbed(bench)
     compute_stats(*tsd.compute_pvals_and_loss(),
-                  fname=f"biased_data/{dataset_name}_{mode}", feature_names=[f.__name__ for f in features])
+                  fname=f"final_data/{dataset_name}_{mode}", feature_names=[f.__name__ for f in features])
 
 
-def collect_debiased_data(testbed_constructor, dataset_name, mode="noise", sampler="Random", k=5):
-    bench = testbed_constructor("classifier", mode=mode, sampler=sampler)
-    # features = [cross_entropy, grad_magnitude, energy, softmax, knn]
-    features = [typicality]
+def collect_debiased_data(testbed_constructor, dataset_name, mode="noise", sampler="RandomSampler", k=5, batch_size=8):
+    bench = testbed_constructor("classifier", mode=mode, sampler=sampler, batch_size=batch_size)
+    features = [cross_entropy, grad_magnitude, energy]
+    # features = [typicality]
+    # features = [rabanser_ks]
     tsd = BatchedFeatureSD(bench.classifier,features,k=k)
     tsd.register_testbed(bench)
     compute_stats(*tsd.compute_pvals_and_loss(),
-                  fname=f"biased_data/{dataset_name}_{mode}_{sampler}_k={k}", feature_names=[f.__name__ for f in features])
+                  fname=f"debiased_data/{dataset_name}_{mode}_{sampler}_{batch_size}_k={k}", feature_names=[f.__name__ for f in features])
+
+def collect_rabanser_data(testbed_constructor, dataset_name, mode="noise", sampler="RandomSampler", k=5, batch_size=8):
+    bench = testbed_constructor("classifier", mode=mode, sampler=sampler, batch_size=batch_size)
+    tsd = RabanserSD(bench.classifier,k=k)
+    tsd.register_testbed(bench)
+    compute_stats(*tsd.compute_pvals_and_loss(),
+                  fname=f"debiased_data/{dataset_name}_{mode}_{sampler}_{batch_size}_k={k}", feature_names=["rabanser"])
+
 
 def collect_model_wise_data(testbed_constructor, dataset_name, mode="noise"):
     for model_name in ["deeplabv3plus", "unet", "segformer"]:
@@ -52,16 +61,30 @@ def collect_model_wise_data(testbed_constructor, dataset_name, mode="noise"):
 
 
 def collect_bias_data(k):
-    collect_data(PolypTestBed, "Polyp", mode="normal")
-    collect_data(CCTTestBed, "CCT", mode="normal")
-    collect_data(OfficeHomeTestBed, "OfficeHome", mode="normal")
-    collect_data(Office31TestBed, "Office31", mode="normal")
-    collect_data(NicoTestBed, "NICO", mode="normal")
+    # collect_data(PolypTestBed, "Polyp", mode="normal")
+    for sampler in ["ClusterSampler", "RandomSampler", "ClassOrderSampler"]:
+        for batch_size in [32]:
+            # collect_debiased_data(CCTTestBed, "CCT", mode="normal",k=k, sampler=sampler, batch_size=batch_size)
+            collect_rabanser_data(CCTTestBed, "CCT", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+
+            # collect_debiased_data(OfficeHomeTestBed, "OfficeHome", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+            # collect_debiased_data(Office31TestBed, "Office31", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+            # collect_debiased_data(NicoTestBed, "NICO", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+            collect_rabanser_data(OfficeHomeTestBed, "OfficeHome", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+            collect_rabanser_data(Office31TestBed, "Office31", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+            collect_rabanser_data(NicoTestBed, "NICO", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+
+
+
 
 if __name__ == '__main__':
     from features import *
-    torch.multiprocessing.set_start_method('spawn')
-    collect_bias_data(0)
+    # torch.multiprocessing.set_start_method('spawn')
+    # collect_bias_data(5)
+    # collect_bias_data(0)
+
+    # input("next")
+    # collect_data(CCTTestBed, "CCT",mode="normal")
     # collect_bias_data(5)
 
     # collect_data(PolypTestBed, "Polyp", mode="normal")
@@ -76,7 +99,7 @@ if __name__ == '__main__':
     # collect_data(PolypTestBed, "Polyp", mode="fgsm")
 
 
-    # collect_data(CCTTestBed, "CCT", mode="normal")
+    # # collect_data(CCTTestBed, "CCT", mode="normal")
     # collect_data(CCTTestBed, "CCT", mode="noise")
     # collect_data(CCTTestBed, "CCT", mode="hue")
     # collect_data(CCTTestBed, "CCT", mode="smear")
@@ -85,9 +108,9 @@ if __name__ == '__main__':
     # collect_data(CCTTestBed, "CCT", mode="contrast")
     # collect_data(CCTTestBed, "CCT", mode="multnoise")
     # collect_data(CCTTestBed, "CCT", mode="saltpepper")
-    # collect_data(CCTTestBed, "CCT", mode="fgsm")
-
-    # collect_data(OfficeHomeTestBed, "OfficeHome", mode="normal")
+    # # collect_data(CCTTestBed, "CCT", mode="fgsm")
+    #
+    # # collect_data(OfficeHomeTestBed, "OfficeHome", mode="normal")
     # collect_data(OfficeHomeTestBed, "OfficeHome", mode="noise")
     # collect_data(OfficeHomeTestBed, "OfficeHome", mode="hue")
     # collect_data(OfficeHomeTestBed, "OfficeHome", mode="smear")
@@ -96,20 +119,20 @@ if __name__ == '__main__':
     # collect_data(OfficeHomeTestBed, "OfficeHome", mode="contrast")
     # collect_data(OfficeHomeTestBed, "OfficeHome", mode="multnoise")
     # collect_data(OfficeHomeTestBed, "OfficeHome", mode="saltpepper")
-    # collect_data(OfficeHomeTestBed, "OfficeHome", mode="fgsm")
-
-    # collect_data(Office31TestBed, "Office31", mode="normal")
-    # collect_data(Office31TestBed, "Office31", mode="noise")
-    # collect_data(Office31TestBed, "Office31", mode="hue")
-    # collect_data(Office31TestBed, "Office31", mode="smear")
-    # collect_data(Office31TestBed, "Office31", mode="saturation")
-    # collect_data(Office31TestBed, "Office31", mode="brightness")
-    # collect_data(Office31TestBed, "Office31", mode="contrast")
-    # collect_data(Office31TestBed, "Office31", mode="multnoise")
-    # collect_data(Office31TestBed, "Office31", mode="saltpepper")
-    # collect_data(Office31TestBed, "Office31", mode="fgsm")
-
-    # collect_data(NicoTestBed, "NICO", mode="normal")
+    # # collect_data(OfficeHomeTestBed, "OfficeHome", mode="fgsm")
+    # #
+    collect_data(Office31TestBed, "Office31", mode="normal")
+    collect_data(Office31TestBed, "Office31", mode="noise")
+    collect_data(Office31TestBed, "Office31", mode="hue")
+    collect_data(Office31TestBed, "Office31", mode="smear")
+    collect_data(Office31TestBed, "Office31", mode="saturation")
+    collect_data(Office31TestBed, "Office31", mode="brightness")
+    collect_data(Office31TestBed, "Office31", mode="contrast")
+    collect_data(Office31TestBed, "Office31", mode="multnoise")
+    collect_data(Office31TestBed, "Office31", mode="saltpepper")
+    # # collect_data(Office31TestBed, "Office31", mode="fgsm")
+    #
+    # # collect_data(NicoTestBed, "NICO", mode="normal")
     # collect_data(NicoTestBed, "NICO", mode="noise")
     # collect_data(NicoTestBed, "NICO", mode="hue")
     # collect_data(NicoTestBed, "NICO", mode="smear")

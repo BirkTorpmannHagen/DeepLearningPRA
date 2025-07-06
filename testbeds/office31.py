@@ -1,8 +1,8 @@
 from testbeds.base import *
 
 class Office31TestBed(BaseTestBed):
-    def __init__(self, sample_size, rep_model="vae", mode="severity", sampler="RandomSampler"):
-        super().__init__(sample_size, mode, sampler)
+    def __init__(self, sample_size, rep_model="vae", mode="severity", sampler="RandomSampler", batch_size=16):
+        super().__init__(sample_size, mode, sampler, batch_size=16)
         self.trans = transforms.Compose([
             transforms.Resize((512, 512)),
             transforms.ToTensor(), ])
@@ -12,7 +12,7 @@ class Office31TestBed(BaseTestBed):
         self.num_classes = num_classes = self.ind_train.num_classes
 
         self.classifier = ResNetClassifier.load_from_checkpoint(
-            "train_logs/Office31/checkpoints/epoch=69-step=9870.ckpt", num_classes=num_classes,
+            "train_logs/Office31/checkpoints/epoch=140-step=19881.ckpt", num_classes=num_classes,
             resnet_version=101).to("cuda").eval()
         self.glow = GlowPL.load_from_checkpoint("glow_logs/Office31Dataset/checkpoints/epoch=297-step=42018.ckpt", in_channel=3, n_flow=32, n_block=4, conv_lu=True, affine=True).cuda().eval()
         self.mode = mode

@@ -21,7 +21,7 @@ from classifier.resnetclassifier import ResNetClassifier
 
 def train_classifier(train_set, val_set, load_from_checkpoint=None):
     num_classes =  train_set.num_classes
-    model =  ResNetClassifier(num_classes, 101, transfer=False, batch_size=32, lr=1e-4).to("cuda")
+    model =  ResNetClassifier(num_classes, 101, transfer=False, batch_size=16, lr=1e-3).to("cuda")
 
     if load_from_checkpoint:
         model = ResNetClassifier.load_from_checkpoint(load_from_checkpoint, num_classes=num_classes, resnet_version=101)
@@ -31,25 +31,27 @@ def train_classifier(train_set, val_set, load_from_checkpoint=None):
         dirpath=f"train_logs/{type(train_set).__name__}/checkpoints",
         save_top_k=3,
         verbose=True,
-        monitor="val_acc",
-        mode="max"
+        monitor="val_loss",
+        mode="min"
     )
 
     # ResNetClassifier.load_from_checkpoint("Imagenette_logs/checkpoints/epoch=82-step=24568.ckpt", resnet_version=101, nj
-    trainer = Trainer(max_epochs=200, logger=tb_logger, accelerator="gpu",callbacks=checkpoint_callback)
-    trainer.fit(model, train_dataloaders=DataLoader(train_set, shuffle=True, batch_size=16, num_workers=24),
-                val_dataloaders=DataLoader(val_set, batch_size=16, shuffle=True, num_workers=24))
+    trainer = Trainer(max_epochs=300, logger=tb_logger, accelerator="gpu",callbacks=checkpoint_callback)
+    trainer.fit(model, train_dataloaders=DataLoader(train_set, shuffle=True, batch_size=16, num_workers=16, persistent_workers=True, pin_memory=True),
+                val_dataloaders=DataLoader(val_set, batch_size=16, shuffle=True, num_workers=16, persistent_workers=True, pin_memory=True))
 
 
 if __name__ == '__main__':
     #NICO
     size = 512
-    trans = transforms.Compose([transforms.RandomHorizontalFlip(),
+    trans = transforms.Compose([                        transforms.Resize((size,size)),
+                        transforms.ToTensor(),
+                            transforms.RandomHorizontalFlip(),
                         transforms.RandomVerticalFlip(),
                         transforms.RandomRotation(90),
+                        transforms.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1, hue=0.1),
                         # transforms.ElasticTransform(),
-                        transforms.Resize((size,size)),
-                        transforms.ToTensor(), ])
+])
     val_trans = transforms.Compose([
                         transforms.Resize((size,size)),
                         transforms.ToTensor(), ])
