@@ -29,13 +29,13 @@ DEFAULT_PARAMS = {
 
 
 class PolypTestBed(BaseTestBed):
-    def __init__(self,rep_model, mode="normal", model_name="deeplabv3plus", sampler="RandomSampler"):
-        super().__init__()
+    def __init__(self,rep_model, mode="normal", model_name="deeplabv3plus", batch_size=16, sampler="RandomSampler"):
+        super().__init__(num_workers=5, mode=mode, sampler=sampler, batch_size=batch_size)
         self.mode = mode
 
         self.ind_train, self.ind_val, self.ind_test, self.etis, self.cvc, self.endo = build_polyp_dataset("../../Datasets/Polyps")
         self.noise_range = np.arange(0.05, 0.3, 0.05)
-        self.batch_size=1
+        self.batch_size=batch_size
         #vae
         if rep_model=="vae":
             self.vae = VanillaVAE(in_channels=3, latent_dim=512).to("cuda").eval()
@@ -59,16 +59,14 @@ class PolypTestBed(BaseTestBed):
                 "EndoCV2020":self.dl(self.endo)}
 
     def compute_losses(self, loader):
-        losses = np.zeros((len(loader), 3))
-        indices = torch.arange(len(loader))
-
+        losses = np.zeros((len(loader), self.batch_size, 3))
         print("computing losses")
         with torch.no_grad():
             for i, data in tqdm(enumerate(loader), total=len(loader)):
                 x = data[0].to("cuda")
                 y = data[1].to("cuda")
                 idx = data[2]
-                loss=self.classifier.compute_loss(x,y).mean()
-                losses[i] = torch.hstack([loss, 1-loss, idx.cuda()]).cpu().numpy()
-        return losses
+                loss=self.classifier.compute_loss(x,y, reduce=False).cpu().unsqueeze(1)
+                losses[i] = torch.cat([loss, 1-loss, idx.unsqueeze(1)], dim=1).cpu()
 
+        return losses.reshape(-1, 3)

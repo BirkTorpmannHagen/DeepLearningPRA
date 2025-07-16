@@ -50,18 +50,15 @@ def rabanser_ks(model, img, train_test_norms):
 
 def energy(model, img, num_features=1):
     energy = torch.logsumexp(model(img), dim=1)
-    if len(energy.shape)>1:
-        while energy.shape[-1]!=1:
-            energy = torch.logsumexp(energy, dim=-1)
+    while len(energy.shape)>1:
+        energy = torch.logsumexp(energy, dim=-1)
     return energy
 
 def softmax(model, img, num_features=1):
     sm = F.softmax(model(img))
     feat = torch.max(sm, dim=1)[0]
-    if len(feat.shape)>1:
-        while feat.shape[-1]!=1:
+    while len(feat.shape)!=1:
             feat = torch.max(feat, dim=-1)[0]
-    assert (feat>=0).all()
     return feat
 
 

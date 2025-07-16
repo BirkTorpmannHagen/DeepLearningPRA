@@ -1,5 +1,4 @@
 import numpy as np
-from astropy.visualization.wcsaxes.helpers import CORNERS
 
 from rateestimators import BernoulliEstimator
 

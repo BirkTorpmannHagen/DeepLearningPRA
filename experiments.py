@@ -3,15 +3,12 @@ from itertools import combinations, count
 from os import listdir
 
 import pygam
-from dask.dataframe import read_csv
 from matplotlib import pyplot as plt, patches as patches
 from matplotlib.patches import Patch
 from matplotlib.lines import Line2D
 
 import numpy as np
-from albumentations.random_utils import normal
-from distributed.utils import palette
-from holoviews.plotting.bokeh.styles import font_size
+# from albumentations.random_utils import normal
 from matplotlib.pyplot import yscale
 from numpy.ma.core import product
 from scipy.cluster.hierarchy import single
@@ -971,7 +968,7 @@ def loss_correctness_test():
 
 
 def bias_correctness_test():
-    data = load_all_biased(32, prefix="final_data")
+    data = load_all_biased(prefix="final_data")
     data = data[data["fold"] != "train"]
     data = data[data["shift"] != "noise"]
 
@@ -1083,11 +1080,27 @@ def eval_debiased_ood_detectors(batch_size):
     balanced = pd.merge(tprs, tnrs,
                         on=["Dataset", "feature_name", "bias", "k"])
 
-    # Compute balanced accuracy
     balanced["balanced_accuracy"] = (balanced["TPR"] + balanced["TNR"]) / 2
     balanced.replace(DSD_PRINT_LUT, inplace=True)
-    table = balanced.groupby(["Dataset", "feature_name", "k", "bias"]).mean().reset_index()
-    print(table)
+
+    table = balanced.groupby(["Dataset", "feature_name", "k", "bias"]).mean(numeric_only=True).reset_index()
+    avg_over_biased = table.groupby(["Dataset", "feature_name", "k"]).mean(numeric_only=True).reset_index()
+
+    best_features = avg_over_biased.loc[
+        avg_over_biased.groupby(["Dataset", "k"])["balanced_accuracy"].idxmax()
+    ][["Dataset", "k", "feature_name"]]
+
+    best_table = table.merge(best_features, on=["Dataset", "k", "feature_name"])
+
+    print(best_table)
+    g = sns.FacetGrid(best_table, col="bias")
+    g.map_dataframe(sns.barplot, x="Dataset", y="balanced_accuracy", hue="k", palette=sns.color_palette())
+    plt.legend()
+    plt.show()
+    input()
+
+    best_performing_for_each_dataset_and_k = table.groupby(["Dataset", "k", "bias"])
+    input()
     # Extract the reference values for k == -1
     ref = (
         table[table["k"] == -1]
@@ -1103,13 +1116,13 @@ def eval_debiased_ood_detectors(batch_size):
 
     # Now compute difference (this ensures difference is zero when k == -1)
     table["balanced_accuracy_diff"] = table["balanced_accuracy"] - table["ref_balanced_accuracy"]
-    table = table[table["k"]!=-1]
+    # table = table[table["k"]!=-1]
     print(table)
 
-    g = sns.FacetGrid(table, col="Dataset")
-    g.map_dataframe(sns.boxplot, x="bias", y="balanced_accuracy_diff",  hue="k", palette=sns.color_palette())
-    for ax in g.axes.flat:
-        ax.axhline(0)
+    g = sns.FacetGrid(table, col="bias")
+    g.map_dataframe(sns.boxplot, x="Dataset", y="balanced_accuracy",  hue="k", palette=sns.color_palette())
+    # for ax in g.axes.flat:
+    #     ax.axhline(0)
 
     plt.legend()
     plt.show()
@@ -1357,7 +1370,7 @@ if __name__ == '__main__':
 
     #runtime verification
     # bias_correctness_test()
-    eval_debiased_ood_detectors(8)
+    eval_debiased_ood_detectors(16)
 
     #loss regression
     # get_gam_data(load=False)

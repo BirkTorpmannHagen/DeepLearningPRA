@@ -1,7 +1,6 @@
 from itertools import starmap
 
 import pandas as pd
-from statsmodels.sandbox.distributions.gof_new import ks_2samp
 
 from torch.utils.data import RandomSampler
 
@@ -139,13 +138,6 @@ class FeatureSD(BaseSD):
                 # print(feature_fn)
                 if feature_fn.__name__=="typicality":
                     features[i,:, j]=feature_fn(self.testbed.glow, x, self.train_test_encodings).detach().cpu().numpy()
-                elif feature_fn.__name__=="rabanser_ks":
-                    x_encodings = self.rep_model.get_encoding(x).detach().cpu().numpy()
-                    enc_dim = range(x_encodings.shape[-1])
-                    pool = Pool(20)
-                    results = pool.starmap(ks_2samp,
-                                           [(x_encodings[:, i], self.train_test_encodings[:, i]) for i in enc_dim])
-                    features[i,:, j] = np.min(results)
                 else:
                     features[i,:, j]=feature_fn(self.rep_model, x, self.train_test_encodings).detach().cpu().numpy()
 
@@ -256,25 +248,15 @@ class BatchedFeatureSD(FeatureSD):
                     if feature_fn.__name__ == "typicality":
                         features_batch[j] = feature_fn(self.testbed.glow, x,
                                                        self.train_test_encodings).detach().cpu().numpy()
-                        pool = Pool(len(self.feature_fns))
-                        results = pool.starmap(ks_distance, zip([features_batch[k] for k in range(self.num_features)],
-                                                                [k_nearest_ind_features[k] for k in
-                                                                 range(self.num_features)]))
-                        pool.close()
-                    elif feature_fn.__name__ == "rabanser_ks":
-                        enc_dim = range(k_nearest_ind_features.shape[-1])
-                        pool = Pool(20)
-                        results = pool.starmap(ks_2samp, [(x_encodings[:,i], k_nearest_ind_features[:,i]) for i in enc_dim])
-                        features_batch[j] = np.min(results)
                     else:
                         features_batch[j] = feature_fn(self.rep_model, x,
                                                        self.train_test_encodings).detach().cpu().numpy()
 
-                        pool = Pool(len(self.feature_fns))
-                        results = pool.starmap(ks_distance, zip([features_batch[k] for k in range(self.num_features)],
-                                                                    [k_nearest_ind_features[k] for k in
-                                                                     range(self.num_features)]))
-                        pool.close()
+                    pool = Pool(len(self.feature_fns))
+                    results = pool.starmap(ks_distance, zip([features_batch[k] for k in range(self.num_features)],
+                                                                [k_nearest_ind_features[k] for k in
+                                                                 range(self.num_features)]))
+                    pool.close()
             else:
                 for j, feature_fn in enumerate(self.feature_fns):
                     if feature_fn.__name__ == "typicality":
@@ -290,14 +272,10 @@ class BatchedFeatureSD(FeatureSD):
                                                             [self.train_features["ind_train"][k] for k in
                                                              range(self.num_features)]))
                     pool.close()
-
                 else:
                     results = features_batch.mean(axis=1)
 
-
-
             features[i]=results
-        print(features)
         features = features.reshape((len(dataloader), self.num_features))
         return features
 
@@ -310,47 +288,13 @@ class BatchedFeatureSD(FeatureSD):
             x = data[0].cuda()
             features[i] = self.rep_model.get_encoding(x).detach().cpu().numpy()
         return features
-import os
 
-def open_and_process(fname, filter_noise=False, combine_losses=True, exclude_sampler=""):
-    try:
-        data = pd.read_csv(fname)
-        # data = data[data["sampler"] != "ClassOrderSampler"]
-        # print(pd.unique(data["sampler"]))
-        if exclude_sampler!="":
-            data = data[data["sampler"]!=exclude_sampler]
-        if "_" in str(pd.unique(data["fold"])) and filter_noise:
-            folds =  pd.unique(data["fold"])
-            prefix = folds[folds != "ind"][0].split("_")[0]
-            max_noise = sorted([float(i.split("_")[1]) for i in pd.unique(data["fold"]) if "_" in i])[-1]
-            data = data[(data["fold"] == f"{prefix}_{max_noise}") | (data["fold"] == "ind")]
-
-        try:
-            data["loss"] = data["loss"].map(lambda x: float(x))
-        except:
-
-            data["loss"] = data["loss"].str.strip('[]').str.split().apply(lambda x: [float(i) for i in x])
-            if combine_losses:
-                data["loss"] = data["loss"].apply(lambda x: np.mean(x))
-            else:
-                data=data.expbrlode("loss")
-        data.loc[data['fold'] == 'ind', 'oodness'] = 0
-        data.loc[data['fold'] != 'ind', 'oodness'] = 2
-        # data["oodness"] = data["loss"] / data[data["fold"] == "ind"]["loss"].max()
-        if filter_noise and "_" in str(pd.unique(data["fold"])):
-            assert len(pd.unique(data["fold"])) == 2, f"Expected 2 unique folds, got {pd.unique(data['fold'])}"
-        return data
-    except FileNotFoundError:
-        # print(f"File {fname} not found")
-        return None
 
 
 class RabanserSD(FeatureSD):
     def __init__(self, rep_model,k):
         super().__init__(rep_model, feature_fns=[])
         self.k=k
-
-
 
     def get_features(self, dataloader):
         features = np.zeros(len(dataloader))

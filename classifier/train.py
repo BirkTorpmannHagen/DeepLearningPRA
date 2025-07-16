@@ -20,9 +20,9 @@ from classifier.resnetclassifier import ResNetClassifier
 # into a pytorch-lightning module so that we can take advantage of lightning's Trainer object.
 # We aim to make it a little more general by allowing users to define the number of prediction classes.
 
-def train_classifier(train_set, val_set, load_from_checkpoint=None):
+def train_classifier(train_set, val_set, load_from_checkpoint=None, batch_size=16):
     num_classes =  train_set.num_classes
-    model =  ResNetClassifier(num_classes, 101, transfer=False, batch_size=16, lr=1e-3).to("cuda")
+    model =  ResNetClassifier(num_classes, 101, transfer=False, batch_size=batch_size, lr=1e-3).to("cuda")
 
     if load_from_checkpoint:
         model = ResNetClassifier.load_from_checkpoint(load_from_checkpoint, num_classes=num_classes, resnet_version=101)
@@ -38,8 +38,8 @@ def train_classifier(train_set, val_set, load_from_checkpoint=None):
 
     # ResNetClassifier.load_from_checkpoint("Imagenette_logs/checkpoints/epoch=82-step=24568.ckpt", resnet_version=101, nj
     trainer = Trainer(max_epochs=300, logger=tb_logger, accelerator="gpu",callbacks=checkpoint_callback)
-    trainer.fit(model, train_dataloaders=DataLoader(train_set, shuffle=True, batch_size=16, num_workers=16, persistent_workers=True, pin_memory=True),
-                val_dataloaders=DataLoader(val_set, batch_size=16, shuffle=True, num_workers=16, persistent_workers=True, pin_memory=True))
+    trainer.fit(model, train_dataloaders=DataLoader(train_set, shuffle=True, batch_size=batch_size, num_workers=8, persistent_workers=True),
+                val_dataloaders=DataLoader(val_set, batch_size=batch_size, shuffle=True, num_workers=8, persistent_workers=True))
 
 
 if __name__ == '__main__':

@@ -24,7 +24,7 @@ def collect_data(testbed_constructor, dataset_name, mode="noise"):
 
 def collect_debiased_data(testbed_constructor, dataset_name, mode="noise", sampler="RandomSampler", k=5, batch_size=8):
     bench = testbed_constructor("classifier", mode=mode, sampler=sampler, batch_size=batch_size)
-    features = [cross_entropy, grad_magnitude, energy]
+    features = [cross_entropy, grad_magnitude, energy, typicality, softmax]
     # features = [typicality]
     # features = [rabanser_ks]
     tsd = BatchedFeatureSD(bench.classifier,features,k=k)
@@ -67,26 +67,28 @@ def collect_model_wise_data(testbed_constructor, dataset_name, mode="noise"):
 
 def collect_bias_data(k):
     # collect_data(PolypTestBed, "Polyp", mode="normal")
-    for batch_size in BATCH_SIZES[1:]:
-        for sampler in ["RandomSampler","ClusterSampler",  "ClassOrderSampler"]:
-                # collect_debiased_data(CCTTestBed, "CCT", mode="normal",k=k, sampler=sampler, batch_size=batch_size)
-                # collect_debiased_data(OfficeHomeTestBed, "OfficeHome", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-                # collect_debiased_data(Office31TestBed, "Office31", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-                # collect_debiased_data(NicoTestBed, "NICO", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-                collect_rabanser_data(CCTTestBed, "CCT", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-                # collect_rabanser_data(OfficeHomeTestBed, "OfficeHome", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-                collect_rabanser_data(Office31TestBed, "Office31", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-                collect_rabanser_data(NicoTestBed, "NICO", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-
+    for batch_size in [8,16]:
+        # for sampler in ["RandomSampler","ClusterSampler",  "ClassOrderSampler"]:
+        for sampler in ["RandomSampler", "ClusterSampler", "SequentialSampler"]:
+            collect_debiased_data(PolypTestBed, "Polyp", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+            # collect_debiased_data(CCTTestBed, "CCT", mode="normal",k=k, sampler=sampler, batch_size=batch_size)
+            # collect_debiased_data(OfficeHomeTestBed, "OfficeHome", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+            # collect_debiased_data(Office31TestBed, "Office31", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+            # collect_debiased_data(NicoTestBed, "NICO", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+            # collect_rabanser_data(CCTTestBed, "CCT", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+            # # collect_rabanser_data(OfficeHomeTestBed, "OfficeHome", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+            # collect_rabanser_data(Office31TestBed, "Office31", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+            # collect_rabanser_data(NicoTestBed, "NICO", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+            collect_rabanser_data(PolypTestBed, "Polyp", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
 
 
 
 if __name__ == '__main__':
     from features import *
     # torch.multiprocessing.set_start_method('spawn')
-    # collect_bias_data(5)
+    collect_bias_data(5)
     collect_bias_data(0)
-    # collect_bias_data(-1)
+    collect_bias_data(-1)
 
 
     # input("next")
