@@ -22,7 +22,7 @@ def l2_distance(a, b):
     return np.linalg.norm(a - b)
 
 def ks_distance(a, b):
-    return ks_2samp(a, b)[1]
+    return ks_2samp(a, b)[0]
 
 
 
@@ -122,13 +122,14 @@ class OODDetector:
 
     def get_tpr(self, data):
         eval_copy = data.copy()
-        eval_copy["pred_ood"] = eval_copy.apply(lambda row: self.predict(row))
+
+        eval_copy["pred_ood"] = eval_copy.apply(lambda row: self.predict(row), axis=1)
         return eval_copy[eval_copy["ood"]]["pred_ood"].mean()
 
     def get_tnr(self, data):
         eval_copy = data.copy()
         eval_copy["pred_ood"] = eval_copy.apply(lambda row: self.predict(row), axis=1)
-        return 1-eval_copy[eval_copy["ind"]]["pred_ood"].mean()
+        return 1-eval_copy[~eval_copy["ood"]]["pred_ood"].mean()
 
     def get_accuracy(self, data):
         return 0.5*(self.get_tpr(data)+self.get_tnr(data))

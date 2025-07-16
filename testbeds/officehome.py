@@ -13,7 +13,7 @@ class OfficeHomeTestBed(BaseTestBed):
         # self.ind, self.ind_test = random_split(self.ind, [0.5, 0.5])
 
         self.classifier = ResNetClassifier.load_from_checkpoint(
-            "train_logs/OfficeHome/checkpoints/epoch=193-step=42292.ckpt", num_classes=num_classes,
+            "train_logs/OfficeHome/checkpoints/epoch=189-step=41420.ckpt", num_classes=num_classes,
             resnet_version=101).to("cuda").eval()
         self.glow = Glow(3, 32, 4).cuda().eval()
         self.glow.load_state_dict(torch.load("glow_logs/OfficeHome_checkpoint/model_040001.pt"))

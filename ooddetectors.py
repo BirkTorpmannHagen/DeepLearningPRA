@@ -11,8 +11,9 @@ import numpy as np
 import torch
 from multiprocessing import Pool
 from components import ks_distance
-from features import rabanser_ks
 
+def ks_stat(a,b):
+    return ks_2samp(a,b)[0]
 
 # import torch_two_sample as tts
 def list_to_str(some_list):
@@ -240,7 +241,7 @@ class BatchedFeatureSD(FeatureSD):
 
     def get_features(self, dataloader):
         features = np.zeros((len(dataloader), self.num_features))
-        for i, data in tqdm(enumerate(dataloader), total=len(dataloader)):
+        for i, data in tqdm(enumerate(dataloader), total=len(dataloader), desc="Computing Features"):
             x = data[0].cuda()
             features_batch = np.zeros((self.num_features, self.testbed.batch_size))
             if self.k>0:
@@ -349,22 +350,26 @@ class RabanserSD(FeatureSD):
         super().__init__(rep_model, feature_fns=[])
         self.k=k
 
+
+
     def get_features(self, dataloader):
         features = np.zeros(len(dataloader))
         # self.train_test_encodings = np.reshape(self.train_test_encodings, (len(self.train_test_encodings)*self.testbed.batch_size, self.rep_model.latent_dim))
-        for i, data in tqdm(enumerate(dataloader), total=len(dataloader)):
+        for i, data in tqdm(enumerate(dataloader), total=len(dataloader), desc="Computing Features"):
             x = data[0].cuda()
             x_encodings = self.rep_model.get_encoding(x).detach().cpu().numpy()
             enc_dim = range(x_encodings.shape[-1])
             pool = Pool(20)
             if self.k==0:
-                results = pool.starmap(ks_2samp,
+                results = pool.starmap(ks_distance,
                                        [(x_encodings[:, i], self.train_test_encodings[:, i]) for i in enc_dim])
                 features[i] = np.min(results)
             else:
 
                 k_nearest_idx = get_debiased_samples(self.train_test_encodings, x_encodings, k=self.k)
                 iterable = [(x_encodings[:, j], self.train_test_encodings[k_nearest_idx, j]) for j in enc_dim]
-                results = pool.starmap(ks_2samp, iterable)
-                features[i] = np.min(results)
+                results = pool.starmap(ks_distance, iterable)
+                features[i] = np.median(results)
+            pool.close()
         return features
+

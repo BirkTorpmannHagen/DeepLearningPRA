@@ -156,7 +156,7 @@ def load_pra_df(dataset_name, feature_name, model="", sampler="", batch_size=30,
             df["correct_prediction"] = df["loss"] < df[df["fold"] == "ind_val"]["loss"].quantile(0.95)#losswise definition
             # df["correct_prediction"] = df["acc"]>=ind_val_acc   #accuracywise definition
     df["shift"] = df["fold"].apply(lambda x: x.split("_")[0] if "_0." in x else x)            #what kind of shift has occured?
-    df["shift_intensity"] = df["fold"].apply(lambda x: x.split("_")[1] if "_" in x else x)  #what intensity?
+    df["shift_intensity"] = df["fold"].apply(lambda x: x.split("_")[1] if "0." in x else "InD" if "ind" in x else "OoD")  #what intensity?
     df["ood"] = ~df["fold"].isin(["train", "ind_val", "ind_test"])
     df["batch_size"]=batch_size
 
@@ -165,7 +165,7 @@ def load_pra_df(dataset_name, feature_name, model="", sampler="", batch_size=30,
 
 DSD_PRINT_LUT = {"grad_magnitude": "GradNorm", "cross_entropy" : "Entropy", "energy":"Energy", "knn":"kNN", "mahalanobis":"Mahalanobis", "softmax":"Softmax", "typicality":"Typicality"}
 DATASETS = ["CCT", "OfficeHome", "Office31", "NICO", "Polyp"]
-DSDS = ["knn", "grad_magnitude", "cross_entropy", "energy", "typicality"]
+DSDS = ["knn", "grad_magnitude", "cross_entropy", "energy", "typicality", "softmax", "rabanser"]
 # BATCH_SIZES = [32]
 BATCH_SIZES = [1, 8, 16, 32, 64]
 THRESHOLD_METHODS = [ "val_optimal", "ind_span", "density"]
@@ -177,4 +177,5 @@ DATASETWISE_RANDOM_LOSS = {
     "Polyp": -10 #segmentation task; never incidentally correct
 }
 BIAS_TYPES = ["Unbiased", "Class", "Synthetic", "Temporal"]
+SYNTHETIC_SHIFTS = ["noise", "multnoise", "brightness", "contrast", "hue", "saltpepper", "saturation",  "smear"]
 # BATCH_SIZES = np.arange(1, 64)
