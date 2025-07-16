@@ -1080,11 +1080,27 @@ def eval_debiased_ood_detectors(batch_size):
     balanced = pd.merge(tprs, tnrs,
                         on=["Dataset", "feature_name", "bias", "k"])
 
-    # Compute balanced accuracy
     balanced["balanced_accuracy"] = (balanced["TPR"] + balanced["TNR"]) / 2
     balanced.replace(DSD_PRINT_LUT, inplace=True)
-    table = balanced.groupby(["Dataset", "feature_name", "k", "bias"]).mean().reset_index()
-    print(table)
+
+    table = balanced.groupby(["Dataset", "feature_name", "k", "bias"]).mean(numeric_only=True).reset_index()
+    avg_over_biased = table.groupby(["Dataset", "feature_name", "k"]).mean(numeric_only=True).reset_index()
+
+    best_features = avg_over_biased.loc[
+        avg_over_biased.groupby(["Dataset", "k"])["balanced_accuracy"].idxmax()
+    ][["Dataset", "k", "feature_name"]]
+
+    best_table = table.merge(best_features, on=["Dataset", "k", "feature_name"])
+
+    print(best_table)
+    g = sns.FacetGrid(best_table, col="bias")
+    g.map_dataframe(sns.barplot, x="Dataset", y="balanced_accuracy", hue="k", palette=sns.color_palette())
+    plt.legend()
+    plt.show()
+    input()
+
+    best_performing_for_each_dataset_and_k = table.groupby(["Dataset", "k", "bias"])
+    input()
     # Extract the reference values for k == -1
     ref = (
         table[table["k"] == -1]
@@ -1353,8 +1369,8 @@ if __name__ == '__main__':
 
 
     #runtime verification
-    bias_correctness_test()
-    # eval_debiased_ood_detectors(16)
+    # bias_correctness_test()
+    eval_debiased_ood_detectors(16)
 
     #loss regression
     # get_gam_data(load=False)

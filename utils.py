@@ -82,6 +82,8 @@ def load_all_biased(prefix="debiased_data"):
             for batch_size in BATCH_SIZES[1:]:
                 for k in [-1, 0, 5]:
                     for feature in DSDS:
+                        if feature=="softmax" and dataset=="Polyp":
+                            continue
                         try:
                             df = pd.read_csv(join(prefix, f"{dataset}_normal_{sampler}_{batch_size}_k={k}_{feature}.csv"))
                         except FileNotFoundError:

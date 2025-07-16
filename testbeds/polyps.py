@@ -66,6 +66,7 @@ class PolypTestBed(BaseTestBed):
                 x = data[0].to("cuda")
                 y = data[1].to("cuda")
                 idx = data[2]
-                loss=self.classifier.compute_loss(x,y).mean()
-                losses[i] = torch.hstack([loss, 1-loss, idx.cuda()]).cpu().numpy()
+                loss=self.classifier.compute_loss(x,y, reduce=False).cpu().unsqueeze(1)
+                losses[i] = torch.cat([loss, 1-loss, idx.unsqueeze(1)], dim=1).cpu()
+
         return losses.reshape(-1, 3)

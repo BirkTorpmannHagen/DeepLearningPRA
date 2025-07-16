@@ -60,10 +60,13 @@ class SegmentationModel(pl.LightningModule):
         code =  torch.mean(self.segmentor.encoder(X)[-2], [-1, -2]).flatten(1).squeeze(-1)
         return code
 
-    def compute_loss(self, x, y):
+    def compute_loss(self, x, y, reduce=True):
         out = self.segmentor(x)
+        if reduce: #s
+            return self.criterion(out, y)
+        else:
+            return torch.Tensor([self.criterion(out[i], y[i]) for i in range(out.shape[0])])
 
-        return self.criterion(out, y)
 
     def configure_optimizers(self):
         return self.optimizer(self.parameters(), lr=self.lr)
