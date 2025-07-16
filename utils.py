@@ -75,7 +75,7 @@ class ArgumentIterator:
     def __len__(self):
         return len(self.iterable)
 
-def load_all_biased(prefix="final_data"):
+def load_all_biased(prefix="debiased_data"):
     dfs = []
     for dataset in DATASETS:
         for sampler in ["RandomSampler", "SequentialSampler", "ClassOrderSampler", "ClusterSampler"]:
