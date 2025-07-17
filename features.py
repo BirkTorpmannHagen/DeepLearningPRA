@@ -9,7 +9,7 @@ from components import ks_distance
 def cross_entropy(model, image, num_features=1):
     out = model(image)
     if isinstance(out, list):
-        out = out[1]  #for njord
+        out = out[1]
     return model.criterion(out, torch.ones_like(out))
 
 
@@ -18,14 +18,13 @@ def grad_magnitude(model, x, num_features=1):
     image.requires_grad = True
     output = model(image)
     if isinstance(output, list):
-        output = output[1]  #for njord
+        output = output[1]
     loss = model.criterion(output, torch.ones_like(output)).mean()
     model.zero_grad()
     loss.backward()
     data_grad = image.grad.data
     data_grad.requires_grad=False
     image.requires_grad=False
-
     return torch.norm(torch.norm(data_grad, "fro", dim=(1,2)), "fro", dim=-1) #torch only likes 2-dims
 
 

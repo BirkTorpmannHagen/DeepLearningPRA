@@ -1372,6 +1372,7 @@ if __name__ == '__main__':
 
     #runtime verification
     # bias_correctness_test()
+    eval_debiased_ood_detectors(8)
     eval_debiased_ood_detectors(16)
 
     #loss regression
