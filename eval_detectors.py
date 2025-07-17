@@ -24,7 +24,7 @@ def collect_data(testbed_constructor, dataset_name, mode="noise"):
 
 def collect_debiased_data(testbed_constructor, dataset_name, mode="noise", sampler="RandomSampler", k=5, batch_size=8):
     bench = testbed_constructor("classifier", mode=mode, sampler=sampler, batch_size=batch_size)
-    features = [cross_entropy, grad_magnitude, energy, typicality, softmax]
+    features = [cross_entropy, energy, softmax]
     uncollected_features = features.copy()
     for feature in features:
         print(feature)
@@ -81,9 +81,9 @@ def collect_bias_data(k):
     # collect_data(PolypTestBed, "Polyp", mode="normal")
     for batch_size in [8,16]:
         # for sampler in ["RandomSampler","ClusterSampler",  "ClassOrderSampler"]:
-        for sampler in ["RandomSampler", "ClusterSampler", "SequentialSampler", ]:
+        for sampler in [ "ClassOrderSampler" ]:
             # collect_debiased_data(PolypTestBed, "Polyp", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-            collect_debiased_data(CCTTestBed, "CCT", mode="normal",k=k, sampler=sampler, batch_size=batch_size)
+            # collect_debiased_data(CCTTestBed, "CCT", mode="normal",k=k, sampler=sampler, batch_size=batch_size)
             # collect_debiased_data(OfficeHomeTestBed, "OfficeHome", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
             # collect_debiased_data(Office31TestBed, "Office31", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
             collect_debiased_data(NicoTestBed, "NICO", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
@@ -91,6 +91,7 @@ def collect_bias_data(k):
             # collect_rabanser_data(OfficeHomeTestBed, "OfficeHome", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
             # collect_rabanser_data(Office31TestBed, "Office31", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
             collect_rabanser_data(NicoTestBed, "NICO", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+
             # collect_rabanser_data(PolypTestBed, "Polyp", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
 
 
@@ -98,9 +99,11 @@ def collect_bias_data(k):
 if __name__ == '__main__':
     from features import *
     # torch.multiprocessing.set_start_method('spawn')
-    collect_bias_data(5)
-    collect_bias_data(0)
-    collect_bias_data(-1)
+    # collect_bias_data(5)
+    collect_bias_data(1)
+    collect_bias_data(10)
+    # collect_bias_data(0)
+    # collect_bias_data(-1)
 
 
     # input("next")

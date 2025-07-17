@@ -136,11 +136,14 @@ class FeatureSD(BaseSD):
             x = data[0].cuda()
             for j, feature_fn in enumerate(self.feature_fns):
                 # print(feature_fn)
+
                 if feature_fn.__name__=="typicality":
                     features[i,:, j]=feature_fn(self.testbed.glow, x, self.train_test_encodings).detach().cpu().numpy()
-                else:
+                elif feature_fn.__name__=="grad_magnitude":
                     features[i,:, j]=feature_fn(self.rep_model, x, self.train_test_encodings).detach().cpu().numpy()
-
+                else:
+                    with torch.no_grad():
+                        features[i,:, j]=feature_fn(self.rep_model, x, self.train_test_encodings).detach().cpu().numpy()
         features = features.reshape((len(dataloader)*self.testbed.batch_size, self.num_features))
         return features
 
@@ -149,7 +152,8 @@ class FeatureSD(BaseSD):
         features = np.zeros((len(dataloader), self.testbed.batch_size, self.rep_model.latent_dim))
         for i, data in tqdm(enumerate(dataloader), total=len(dataloader)):
             x = data[0].cuda()
-            out = self.rep_model.get_encoding(x).detach().cpu().numpy()
+            with torch.no_grad():
+                out = self.rep_model.get_encoding(x).detach().cpu().numpy()
             features[i]=out
         features = features.reshape((len(dataloader)*self.testbed.batch_size, self.rep_model.latent_dim))
         return features
@@ -240,7 +244,8 @@ class BatchedFeatureSD(FeatureSD):
                 k_nearest_ind_features = np.zeros((self.num_features, self.testbed.batch_size * self.k))
                 for j, feature_fn in enumerate(self.feature_fns):
                     # print(feature_fn)
-                    x_encodings = self.rep_model.get_encoding(x).detach().cpu().numpy()
+                    with torch.no_grad():
+                        x_encodings = self.rep_model.get_encoding(x).detach().cpu().numpy()
                     k_nearest_indeces = get_debiased_samples(self.train_test_encodings, x_encodings,
                                                              k=self.k)  # batch size x k samples
 
@@ -248,8 +253,12 @@ class BatchedFeatureSD(FeatureSD):
                     if feature_fn.__name__ == "typicality":
                         features_batch[j] = feature_fn(self.testbed.glow, x,
                                                        self.train_test_encodings).detach().cpu().numpy()
-                    else:
+                    elif feature_fn.__name__ == "grad_magnitude":
                         features_batch[j] = feature_fn(self.rep_model, x,
+                                                       self.train_test_encodings).detach().cpu().numpy()
+                    else:
+                        with torch.no_grad():
+                            features_batch[j] = feature_fn(self.rep_model, x,
                                                        self.train_test_encodings).detach().cpu().numpy()
 
                     pool = Pool(len(self.feature_fns))
@@ -286,7 +295,8 @@ class BatchedFeatureSD(FeatureSD):
             features = np.zeros((len(dataloader), self.rep_model.latent_dim))
         for i, data in tqdm(enumerate(dataloader), total=len(dataloader)):
             x = data[0].cuda()
-            features[i] = self.rep_model.get_encoding(x).detach().cpu().numpy()
+            with torch.no_grad():
+                features[i] = self.rep_model.get_encoding(x).detach().cpu().numpy()
         return features
 
 

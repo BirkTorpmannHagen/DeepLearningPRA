@@ -5,13 +5,6 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-
-
-
-
-
-#write a method that takes an object as argument and returns a class that extends that object
-
 def sample_loss_feature(group, n_samples, n_size, bias="None", reduce=True):
     samples = []
     print("Sampling group with bias:", bias)
@@ -33,8 +26,7 @@ def sample_loss_feature(group, n_samples, n_size, bias="None", reduce=True):
             sample = group.sample(n=n_size, replace=True, weights=group_weights)  # Sampling with replacement
         else:
             raise ValueError(f"Unknown bias type: {bias}")
-        sample["index"] = i  # Add an index to the sample for identification
-        # input()
+        sample["index"] = i
         if reduce:
             if sample["Dataset"].all() == "Polyp":
                 mean_loss = sample['loss'].median()
@@ -51,7 +43,6 @@ def sample_loss_feature(group, n_samples, n_size, bias="None", reduce=True):
                     'acc': row['acc'],
                     'index': i
                 })
-        # samples.append({'loss': mean_loss, 'feature': brunnermunzel(df[df["fold"]=="train"]["feature"], sample['feature'])[0], "reduction":"bm"})
     return pd.DataFrame(samples)
 
 class ArgumentIterator:
@@ -80,14 +71,14 @@ def load_all_biased(prefix="debiased_data"):
     for dataset in DATASETS:
         for sampler in ["RandomSampler", "SequentialSampler", "ClassOrderSampler", "ClusterSampler"]:
             for batch_size in BATCH_SIZES[1:]:
-                for k in [-1, 0, 5]:
+                for k in [-1, 0, 1, 5, 10]:
                     for feature in DSDS:
                         if feature=="softmax" and dataset=="Polyp":
                             continue
                         try:
                             df = pd.read_csv(join(prefix, f"{dataset}_normal_{sampler}_{batch_size}_k={k}_{feature}.csv"))
                         except FileNotFoundError:
-                            print(f"No data found for {prefix}/{dataset}_normal_{sampler}_{batch_size}_k={k}_{feature}.csv")
+                            # print(f"No data found for {prefix}/{dataset}_normal_{sampler}_{batch_size}_k={k}_{feature}.csv")
                             continue
                         df["bias"] = sampler
                         df["feature_name"]=feature
