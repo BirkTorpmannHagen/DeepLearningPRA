@@ -12,7 +12,7 @@ import numpy as np
 from matplotlib.pyplot import yscale
 from numpy.ma.core import product
 from scipy.cluster.hierarchy import single
-from scipy.stats import spearmanr
+from scipy.stats import spearmanr, ks_2samp
 
 from seaborn import FacetGrid
 import warnings
@@ -1055,7 +1055,7 @@ def eval_debiased_ood_detectors(batch_size):
                         if data_train.empty:
                             continue
                         # dsd = DebiasedOODDetector(data_train, ood_val_fold, k=5, batch_size=32)
-                        dsd = OODDetector(data_train, ood_val_fold, threshold_method="ind_span")
+                        dsd = OODDetector(data_train, ood_val_fold, threshold_method="val_optimal")
                         # dsd.plot_hist() # for debugging
                         data_copy["Verdict"] =  data_copy.apply(lambda row: dsd.predict(row), axis=1)
                         data_copy["ood_val_fold"] = ood_val_fold
@@ -1097,10 +1097,8 @@ def eval_debiased_ood_detectors(batch_size):
     g.map_dataframe(sns.barplot, x="Dataset", y="balanced_accuracy", hue="k", palette=sns.color_palette())
     plt.legend()
     plt.show()
-    input()
 
     best_performing_for_each_dataset_and_k = table.groupby(["Dataset", "k", "bias"])
-    input()
     # Extract the reference values for k == -1
     ref = (
         table[table["k"] == -1]
@@ -1118,9 +1116,13 @@ def eval_debiased_ood_detectors(batch_size):
     table["balanced_accuracy_diff"] = table["balanced_accuracy"] - table["ref_balanced_accuracy"]
     # table = table[table["k"]!=-1]
     print(table)
+    sns.boxplot(table, x="k", y="balanced_accuracy", palette=sns.color_palette())
+    plt.show()
+    # accs = table[table["k"]==-1]["balanced_accuracy"].values
+    # knn_accs = table[table["k"]==5]["balanced_accuracy"].values
 
     g = sns.FacetGrid(table, col="bias")
-    g.map_dataframe(sns.boxplot, x="Dataset", y="balanced_accuracy",  hue="k", palette=sns.color_palette())
+    g.map_dataframe(sns.boxplot, x="k", y="balanced_accuracy",  hue="k", palette=sns.color_palette())
     # for ax in g.axes.flat:
     #     ax.axhline(0)
 
