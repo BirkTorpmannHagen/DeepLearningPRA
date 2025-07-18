@@ -129,21 +129,15 @@ class FeatureSD(BaseSD):
 
     def get_features(self, dataloader):
         features = np.zeros((len(dataloader), self.testbed.batch_size, self.num_features))
-        if self.testbed.batch_size==1:
-            features = np.zeros((len(dataloader),1, self.num_features))
-
         for i, data in tqdm(enumerate(dataloader), total=len(dataloader)):
             x = data[0].cuda()
             for j, feature_fn in enumerate(self.feature_fns):
                 # print(feature_fn)
-
-                if feature_fn.__name__=="typicality":
-                    features[i,:, j]=feature_fn(self.testbed.glow, x, self.train_test_encodings).detach().cpu().numpy()
-                elif feature_fn.__name__=="grad_magnitude":
-                    features[i,:, j]=feature_fn(self.rep_model, x, self.train_test_encodings).detach().cpu().numpy()
-                else:
-                    with torch.no_grad():
-                        features[i,:, j]=feature_fn(self.rep_model, x, self.train_test_encodings).detach().cpu().numpy()
+                with torch.no_grad():
+                    if feature_fn.__name__=="typicality":
+                        features[i,:, j]=feature_fn(self.testbed.glow, x, self.train_test_encodings).detach().cpu().numpy()
+                    else:
+                        features[i,:, j]=feature_fn(self.rep_model, x, self.train_test_encodings).cpu().numpy()
         features = features.reshape((len(dataloader)*self.testbed.batch_size, self.num_features))
         return features
 

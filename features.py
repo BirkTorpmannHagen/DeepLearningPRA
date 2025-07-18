@@ -14,18 +14,19 @@ def cross_entropy(model, image, num_features=1):
 
 
 def grad_magnitude(model, x, num_features=1):
-    image = x.detach().clone()
-    image.requires_grad = True
-    output = model(image)
-    if isinstance(output, list):
-        output = output[1]
-    loss = model.criterion(output, torch.ones_like(output)).mean()
-    model.zero_grad()
-    loss.backward()
-    data_grad = image.grad.data
-    data_grad.requires_grad=False
-    image.requires_grad=False
-    return torch.norm(torch.norm(data_grad, "fro", dim=(1,2)), "fro", dim=-1) #torch only likes 2-dims
+    with torch.enable_grad():
+        image = x.detach().clone()
+        image.requires_grad = True
+        output = model(image)
+        if isinstance(output, list):
+            output = output[1]
+        loss = model.criterion(output, torch.ones_like(output)).mean()
+        model.zero_grad()
+        loss.backward()
+        data_grad = image.grad.data
+        data_grad.requires_grad=False
+        image.requires_grad=False
+        return torch.norm(torch.norm(data_grad, "fro", dim=(1,2)), "fro", dim=-1) #torch only likes 2-dims
 
 
 def typicality(model, img, num_features=1):
