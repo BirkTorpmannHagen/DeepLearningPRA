@@ -760,7 +760,6 @@ def ood_detector_correctness_prediction_accuracy(batch_size):
 
                             for ood_val_fold in data_dataset["shift"].unique():
                                 data_copy = data_dataset.copy()
-                                print(data_copy["shift"].unique())
                                 if ood_val_fold in ["train", "ind_val", "ind_test"] or ood_val_fold in SYNTHETIC_SHIFTS :
                                     #dont calibrate on ind data or synthetic ood data
                                     continue
@@ -1371,7 +1370,7 @@ if __name__ == '__main__':
     # loss_correctness_test()
     # for batch in BATCH_SIZES:
     #     ood_detector_correctness_prediction_accuracy(batch)
-    #     ood_verdict_accuracy_table(batch)
+        # ood_verdict_accuracy_table(batch)
 
 
 
