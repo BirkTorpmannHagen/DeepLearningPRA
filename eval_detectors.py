@@ -81,7 +81,7 @@ def collect_bias_data(k):
     # collect_data(PolypTestBed, "Polyp", mode="normal")
     for batch_size in [8,16]:
         # for sampler in ["RandomSampler","ClusterSampler",  "ClassOrderSampler"]:
-        for sampler in [ "ClassOrderSampler" ]:
+        for sampler in [ "ClassOrderSampler", "RandomSampler", "SequentialSampler", "ClusterSampler" ]:
             # collect_debiased_data(PolypTestBed, "Polyp", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
             # collect_debiased_data(CCTTestBed, "CCT", mode="normal",k=k, sampler=sampler, batch_size=batch_size)
             collect_debiased_data(OfficeHomeTestBed, "OfficeHome", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
@@ -89,7 +89,7 @@ def collect_bias_data(k):
             # collect_debiased_data(NicoTestBed, "NICO", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
             # collect_rabanser_data(CCTTestBed, "CCT", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
             collect_rabanser_data(OfficeHomeTestBed, "OfficeHome", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-            # collect_rabanser_data(Office31TestBed, "Office31", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+            # collect_rabanseBRr_data(Office31TestBed, "Office31", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
             # collect_rabanser_data(NicoTestBed, "NICO", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
 
             # collect_rabanser_data(PolypTestBed, "Polyp", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
@@ -99,11 +99,11 @@ def collect_bias_data(k):
 if __name__ == '__main__':
     from features import *
     # torch.multiprocessing.set_start_method('spawn')
-    # collect_bias_data(5)
+    collect_bias_data(5)
     collect_bias_data(1)
     collect_bias_data(10)
-    # collect_bias_data(0)
-    # collect_bias_data(-1)
+    collect_bias_data(0)
+    collect_bias_data(-1)
 
 
     # input("next")
@@ -133,15 +133,15 @@ if __name__ == '__main__':
     # collect_data(CCTTestBed, "CCT", mode="saltpepper")
     # collect_data(CCTTestBed, "CCT", mode="fgsm")
 
-    # collect_data(OfficeHomeTestBed, "OfficeHome", mode="normal")
-    # collect_data(OfficeHomeTestBed, "OfficeHome", mode="noise")
+    collect_data(OfficeHomeTestBed, "OfficeHome", mode="normal")
+    collect_data(OfficeHomeTestBed, "OfficeHome", mode="noise")
     # collect_data(OfficeHomeTestBed, "OfficeHome", mode="hue")
     # collect_data(OfficeHomeTestBed, "OfficeHome", mode="smear")
     # collect_data(OfficeHomeTestBed, "OfficeHome", mode="saturation")
     # collect_data(OfficeHomeTestBed, "OfficeHome", mode="brightness")
     # collect_data(OfficeHomeTestBed, "OfficeHome", mode="contrast")
-    # collect_data(OfficeHomeTestBed, "OfficeHome", mode="multnoise")
-    # collect_data(OfficeHomeTestBed, "OfficeHome", mode="saltpepper")
+    collect_data(OfficeHomeTestBed, "OfficeHome", mode="multnoise")
+    collect_data(OfficeHomeTestBed, "OfficeHome", mode="saltpepper")
     # collect_data(OfficeHomeTestBed, "OfficeHome", mode="fgsm")
     # #
     # collect_data(Office31TestBed, "Office31", mode="normal")

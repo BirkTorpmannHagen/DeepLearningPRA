@@ -760,7 +760,6 @@ def ood_detector_correctness_prediction_accuracy(batch_size):
 
                             for ood_val_fold in data_dataset["shift"].unique():
                                 data_copy = data_dataset.copy()
-                                print(data_copy["shift"].unique())
                                 if ood_val_fold in ["train", "ind_val", "ind_test"] or ood_val_fold in SYNTHETIC_SHIFTS :
                                     #dont calibrate on ind data or synthetic ood data
                                     continue
@@ -1356,13 +1355,13 @@ def compare_gam_errors():
 
 if __name__ == '__main__':
     #accuracies on each dataset
-    # accuracy_table()
+    accuracy_table()
     #class distribution
     # dataset_summaries()
     # loss_correctness_test()
-    # for batch in BATCH_SIZES:
-    #     ood_detector_correctness_prediction_accuracy(batch)
-    #     ood_verdict_accuracy_table(batch)
+    for batch in BATCH_SIZES:
+        ood_detector_correctness_prediction_accuracy(batch)
+        # ood_verdict_accuracy_table(batch)
 
 
 
@@ -1372,8 +1371,8 @@ if __name__ == '__main__':
 
     #runtime verification
     # bias_correctness_test()
-    eval_debiased_ood_detectors(8)
-    eval_debiased_ood_detectors(16)
+    # eval_debiased_ood_detectors(8)
+    # eval_debiased_ood_detectors(16)
 
     #loss regression
     # get_gam_data(load=False)
