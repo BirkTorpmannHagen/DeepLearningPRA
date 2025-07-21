@@ -24,7 +24,7 @@ def collect_data(testbed_constructor, dataset_name, mode="noise"):
 
 def collect_debiased_data(testbed_constructor, dataset_name, mode="noise", sampler="RandomSampler", k=5, batch_size=8):
     bench = testbed_constructor("classifier", mode=mode, sampler=sampler, batch_size=batch_size)
-    features = [cross_entropy, energy, softmax, typicality]
+    features = [cross_entropy, energy, softmax]
     uncollected_features = features.copy()
     for feature in features:
         print(feature)
@@ -35,28 +35,28 @@ def collect_debiased_data(testbed_constructor, dataset_name, mode="noise", sampl
     if (uncollected_features== []):
         print(f"No features left to compute for {dataset_name} in {mode} mode with {sampler} sampler and batch size {batch_size} and k={k}")
         return
-    else:
-        features = uncollected_features
-        print(f"Collecting {features} data for {dataset_name} in {mode} mode with {sampler} sampler and batch size {batch_size} and k={k}")
-        # features = [typicality]
-        # features = [rabanser_ks]
-        tsd = BatchedFeatureSD(bench.classifier,features,k=k)
-        tsd.register_testbed(bench)
-        compute_stats(*tsd.compute_pvals_and_loss(),
-                      fname=f"debiased_data/{dataset_name}_{mode}_{sampler}_{batch_size}_k={k}", feature_names=[f.__name__ for f in features])
+    features = uncollected_features
+    print(f"Collecting data for {dataset_name} in {mode} mode with {sampler} sampler and batch size {batch_size} and k={k}")
+    # features = [typicality]
+    # features = [rabanser_ks]
+    tsd = BatchedFeatureSD(bench.classifier,features,k=k)
+    tsd.register_testbed(bench)
+    compute_stats(*tsd.compute_pvals_and_loss(),
+                  fname=f"debiased_data/{dataset_name}_{mode}_{sampler}_{batch_size}_k={k}", feature_names=[f.__name__ for f in features])
 
 def collect_rabanser_data(testbed_constructor, dataset_name, mode="noise", sampler="RandomSampler", k=5, batch_size=8):
     fname = f"{dataset_name}_{mode}_{sampler}_{batch_size}_k={k}_rabanser.csv"
     if fname in os.listdir("debiased_data"):
         print(f"{fname} already exists, skipping...")
         return
-    print(f"Collecting Rabanser data for {dataset_name} in {mode} mode with {sampler} sampler and batch size {batch_size} and k={k}")
+    print(f"Collecting data for {dataset_name} in {mode} mode with {sampler} sampler and batch size {batch_size} and k={k}")
     bench = testbed_constructor("classifier", mode=mode, sampler=sampler, batch_size=batch_size)
     tsd = RabanserSD(bench.classifier,k=k)
     tsd.register_testbed(bench)
     compute_stats(*tsd.compute_pvals_and_loss(),
                   fname=f"debiased_data/{dataset_name}_{mode}_{sampler}_{batch_size}_k={k}", feature_names=["rabanser"])
 
+<<<<<<< HEAD
 def collect_knn_featurewise_data(testbed_constructor, dataset_name, mode="noise", sampler="RandomSampler", k=5, batch_size=8):
     bench = testbed_constructor("classifier", mode=mode, sampler=sampler, batch_size=batch_size)
     features = [cross_entropy, energy, softmax, typicality]
@@ -82,6 +82,8 @@ def collect_knn_featurewise_data(testbed_constructor, dataset_name, mode="noise"
                       fname=f"debiased_data/{dataset_name}_{mode}_{sampler}_{batch_size}_k=featurewise_{k}",
                       feature_names=[f.__name__ for f in features])
 
+=======
+>>>>>>> 93856fd667aa22a3423c04af9aaf8890b967b56f
 
 def collect_model_wise_data(testbed_constructor, dataset_name, mode="noise"):
     for model_name in ["deeplabv3plus", "unet", "segformer"]:
@@ -123,25 +125,17 @@ def collect_bias_data(k):
             # collect_rabanser_data(NicoTestBed, "NICO", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
             # collect_rabanser_data(OfficeHomeTestBed, "OfficeHome", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
             # collect_rabanser_data(Office31TestBed, "Office31", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-            # collect_rabanser_data(NicoTestBed, "NICO", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-            # collect_rabanser_data(PolypTestBed, "Polyp", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-            # collect_knn_featurewise_data(NicoTestBed, "NICO", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-            # collect_knn_featurewise_data(PolypTestBed, "Polyp", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-            # collect_knn_featurewise_data(Office31TestBed, "Office31", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
 
 
 if __name__ == '__main__':
     from features import *
     # torch.multiprocessing.set_start_method('spawn')
-    # collect_bias_data(5)
-    # collect_bias_data(1)
-    # collect_bias_data(10)
-    # collect_bias_data(0)
     collect_bias_data(5)
     collect_bias_data(-1)
     # collect_bias_data(0)
     # collect_bias_data(1)
     # collect_bias_data(10)
+
 
 
 
@@ -172,15 +166,15 @@ if __name__ == '__main__':
     # collect_data(CCTTestBed, "CCT", mode="saltpepper")
     # collect_data(CCTTestBed, "CCT", mode="fgsm")
 
-    # collect_data(OfficeHomeTestBed, "OfficeHome", mode="normal")
-    # collect_data(OfficeHomeTestBed, "OfficeHome", mode="noise")
+    collect_data(OfficeHomeTestBed, "OfficeHome", mode="normal")
+    collect_data(OfficeHomeTestBed, "OfficeHome", mode="noise")
     # collect_data(OfficeHomeTestBed, "OfficeHome", mode="hue")
     # collect_data(OfficeHomeTestBed, "OfficeHome", mode="smear")
     # collect_data(OfficeHomeTestBed, "OfficeHome", mode="saturation")
     # collect_data(OfficeHomeTestBed, "OfficeHome", mode="brightness")
     # collect_data(OfficeHomeTestBed, "OfficeHome", mode="contrast")
-    # collect_data(OfficeHomeTestBed, "OfficeHome", mode="multnoise")
-    # collect_data(OfficeHomeTestBed, "OfficeHome", mode="saltpepper")
+    collect_data(OfficeHomeTestBed, "OfficeHome", mode="multnoise")
+    collect_data(OfficeHomeTestBed, "OfficeHome", mode="saltpepper")
     # collect_data(OfficeHomeTestBed, "OfficeHome", mode="fgsm")
     # #
     # collect_data(Office31TestBed, "Office31", mode="normal")

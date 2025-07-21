@@ -305,13 +305,13 @@ class RabanserSD(FeatureSD):
     def get_features(self, dataloader):
         features = np.zeros(len(dataloader))
         # self.train_test_encodings = np.reshape(self.train_test_encodings, (len(self.train_test_encodings)*self.testbed.batch_size, self.rep_model.latent_dim))
+
         with Pool(20) as pool:
             for i, data in tqdm(enumerate(dataloader), total=len(dataloader), desc="Computing Features"):
                 x = data[0].cuda()
                 with torch.no_grad():
                     x_encodings = self.rep_model.get_encoding(x).detach().cpu().numpy()
                 enc_dim = range(x_encodings.shape[-1])
-
                 if self.k==0:
                     results = pool.starmap(ks_distance,
                                            [(x_encodings[:, i], self.train_test_encodings[:, i]) for i in enc_dim])
