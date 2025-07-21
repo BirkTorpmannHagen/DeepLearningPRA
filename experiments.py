@@ -1086,63 +1086,41 @@ def eval_debiased_ood_detectors(batch_size):
     balanced.replace(DSD_PRINT_LUT, inplace=True)
 
     table = balanced.groupby(["Dataset", "feature_name", "k", "bias"]).mean(numeric_only=True).reset_index()
+    return table
 
-    avg_over_biased = table.groupby(["Dataset", "feature_name", "k"]).mean(numeric_only=True).reset_index()
 
-    best_features = avg_over_biased.loc[
-        avg_over_biased.groupby(["Dataset", "k"])["balanced_accuracy"].idxmax()
-    ][["Dataset", "k", "feature_name"]]
+def debiased_plots():
 
-    best_table = table.merge(best_features, on=["Dataset", "k", "feature_name"])
-    # g = sns.FacetGrid(table, col="Dataset")
-    # g.map_dataframe(sns.boxplot, x="feature_name", y="balanced_accuracy", hue="k", palette=sns.color_palette())
-    # plt.legend()
-    # plt.show()
-    #
-    # g = sns.FacetGrid(table, col="Dataset")
-    # g.map_dataframe(sns.boxplot, x="k", y="balanced_accuracy", hue="k", palette=sns.color_palette())
-    # plt.legend()
-    # plt.show()
-    table.replace(SAMPLER_LUT, inplace=True)
-    print(table[table["k"]==-1].groupby(["Dataset", "feature_name", "bias"])["balanced_accuracy"].mean().reset_index())
-    g = sns.FacetGrid(table, col="Dataset", col_wrap=3, margin_titles=True, sharex=False, sharey=False)
-    g.map_dataframe(sns.boxplot, x="bias", y="balanced_accuracy", hue="k", palette=sns.color_palette())
-    g.add_legend(bbox_to_anchor=(0.7, 0.3), loc='center left', title="k", ncol=1)
-    plt.savefig("debiased_ood_detector_bias_boxplots.pdf")
+    across_batch_sizes = []
+    for batch_size in BATCH_SIZES[1:]:
+        data = eval_debiased_ood_detectors(batch_size)
+        data["Batch Size"] = batch_size
+        across_batch_sizes.append(data)
+
+        # g = sns.FacetGrid(table, col="Dataset")
+        # g.map_dataframe(sns.boxplot, x="feature_name", y="balanced_accuracy", hue="k", palette=sns.color_palette())
+        # plt.legend()
+        # plt.show()
+        #
+        # g = sns.FacetGrid(table, col="Dataset")
+        # g.map_dataframe(sns.boxplot, x="k", y="balanced_accuracy", hue="k", palette=sns.color_palette())
+        # plt.legend()
+        # plt.show()
+        # table = data.copy()
+        # table.replace(SAMPLER_LUT, inplace=True)
+        #
+        # g = sns.FacetGrid(table, col="Dataset", col_wrap=3, margin_titles=True, sharex=False, sharey=False)
+        # g.map_dataframe(sns.boxplot, x="bias", y="balanced_accuracy", hue="k", palette=sns.color_palette())
+        # g.add_legend(bbox_to_anchor=(0.7, 0.3), loc='center left', title="k", ncol=1)
+        # plt.savefig("debiased_ood_detector_bias_boxplots.pdf")
+        # plt.show()
+        # print(balanced.groupby(["Dataset", "feature_name",  "k", "bias",]).mean())
+    data = pd.concat(across_batch_sizes)
+    print(data)
+    g = sns.FacetGrid(data, col="Dataset", margin_titles=True, sharex=False, sharey=False, col_wrap=2)
+    g.map_dataframe(sns.boxplot, x="Batch Size", y="balanced_accuracy", hue="bias", palette=sns.color_palette())
+    # g.add_legend(bbox_to_anchor=(0.7, 0.3), loc='center left', title="Bias", ncol=1)
     plt.show()
-
-    best_performing_for_each_dataset_and_k = table.groupby(["Dataset", "k", "bias"])
-    # Extract the reference values for k == -1
-    ref = (
-        table[table["k"] == -1]
-        .set_index(["Dataset", "feature_name", "bias"])["balanced_accuracy"]
-        .rename("ref_balanced_accuracy")
-    )
-
-    # Join reference values back (broadcasting over other k's)
-    table = table.set_index(["Dataset", "feature_name", "bias"]).join(ref, on=["Dataset", "feature_name", "bias"])
-
-    # Reset index
-    table = table.reset_index()
-
-    # Now compute difference (this ensures difference is zero when k == -1)
-    table["balanced_accuracy_diff"] = table["balanced_accuracy"] - table["ref_balanced_accuracy"]
-    # table = table[table["k"]!=-1]
-    # print(table)
-    sns.boxplot(table, x="k", y="balanced_accuracy", palette=sns.color_palette())
-    plt.show()
-    # accs = table[table["k"]==-1]["balanced_accuracy"].values
-    # knn_accs = table[table["k"]==5]["balanced_accuracy"].values
-
-    g = sns.FacetGrid(table, col="bias")
-    g.map_dataframe(sns.boxplot, x="k", y="balanced_accuracy",  hue="k", palette=sns.color_palette())
-    # for ax in g.axes.flat:
-    #     ax.axhline(0)
-
-    plt.legend()
-    plt.show()
-    # print(balanced.groupby(["Dataset", "feature_name",  "k", "bias",]).mean())
-
 
 
 
@@ -1386,7 +1364,8 @@ if __name__ == '__main__':
     #runtime verification
     # bias_correctness_test()
     # eval_debiased_ood_detectors(8)
-    eval_debiased_ood_detectors(16)
+    # eval_debiased_ood_detectors(8)
+    debiased_plots()
 
     #loss regression
     # get_gam_data(load=False)

@@ -57,12 +57,11 @@ def collect_rabanser_data(testbed_constructor, dataset_name, mode="noise", sampl
     compute_stats(*tsd.compute_pvals_and_loss(),
                   fname=f"debiased_data/{dataset_name}_{mode}_{sampler}_{batch_size}_k={k}", feature_names=["rabanser"])
 
-def collect_knn_featurewise_data(testbed_constructor, dataset_name, mode="noise", sampler="RandomSampler", k=5, batch_size=8)
+def collect_knn_featurewise_data(testbed_constructor, dataset_name, mode="noise", sampler="RandomSampler", k=5, batch_size=8):
     bench = testbed_constructor("classifier", mode=mode, sampler=sampler, batch_size=batch_size)
     features = [cross_entropy, energy, softmax, typicality]
     uncollected_features = features.copy()
     for feature in features:
-        print(feature)
         fname = f"{dataset_name}_{mode}_{sampler}_{batch_size}_k={k}_{feature.__name__}.csv"
         if fname in os.listdir("debiased_data"):
             uncollected_features.remove(feature)
@@ -106,25 +105,29 @@ def collect_model_wise_data(testbed_constructor, dataset_name, mode="noise"):
 
 def collect_bias_data(k):
     # collect_data(PolypTestBed, "Polyp", mode="normal")
-    for batch_size in [8,16]:
+    for batch_size in [8,16, 32, 64]:
         # for sampler in ["RandomSampler","ClusterSampler",  "ClassOrderSampler"]:
-        for sampler in [ "ClassOrderSampler", "RandomSampler", "SequentialSampler", "ClusterSampler" ]:
-            # collect_debiased_data(PolypTestBed, "Polyp", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+        for sampler in [ "RandomSampler", "SequentialSampler", "ClusterSampler" ]:
+
+            collect_debiased_data(PolypTestBed, "Polyp", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
             # collect_debiased_data(CCTTestBed, "CCT", mode="normal",k=k, sampler=sampler, batch_size=batch_size)
             # collect_debiased_data(OfficeHomeTestBed, "OfficeHome", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-            # collect_debiased_data(Office31TestBed, "Office31", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-            # collect_debiased_data(NicoTestBed, "NICO", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+            collect_debiased_data(Office31TestBed, "Office31", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+            collect_debiased_data(NicoTestBed, "NICO", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+        collect_debiased_data(Office31TestBed, "Office31", mode="normal", k=k, sampler="ClassOrderSampler",
+                                  batch_size=batch_size)
+        collect_debiased_data(NicoTestBed, "NICO", mode="normal", k=k, sampler="ClassOrderSampler", batch_size=batch_size)
             # collect_rabanser_data(CCTTestBed, "CCT", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
             # collect_rabanser_data(OfficeHomeTestBed, "OfficeHome", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
             # collect_rabanser_data(Office31TestBed, "Office31", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
             # collect_rabanser_data(NicoTestBed, "NICO", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
             # collect_rabanser_data(OfficeHomeTestBed, "OfficeHome", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-            # collect_rabanseBRr_data(Office31TestBed, "Office31", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+            # collect_rabanser_data(Office31TestBed, "Office31", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
             # collect_rabanser_data(NicoTestBed, "NICO", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
             # collect_rabanser_data(PolypTestBed, "Polyp", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-            collect_knn_featurewise_data(NicoTestBed, "NICO", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-            collect_knn_featurewise_data(PolypTestBed, "Polyp", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-            collect_knn_featurewise_data(Office31TestBed, "Office31", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+            # collect_knn_featurewise_data(NicoTestBed, "NICO", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+            # collect_knn_featurewise_data(PolypTestBed, "Polyp", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+            # collect_knn_featurewise_data(Office31TestBed, "Office31", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
 
 
 if __name__ == '__main__':
@@ -136,9 +139,9 @@ if __name__ == '__main__':
     # collect_bias_data(0)
     collect_bias_data(5)
     collect_bias_data(-1)
-    collect_bias_data(0)
-    collect_bias_data(1)
-    collect_bias_data(10)
+    # collect_bias_data(0)
+    # collect_bias_data(1)
+    # collect_bias_data(10)
 
 
 
