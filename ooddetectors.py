@@ -28,6 +28,15 @@ def get_debiased_samples(ind_encodings, sample_encodings, k=5):
 
     return k_nearest_idx
 
+def get_k_nearest_features(ind_features, ood_features, k=5):
+    k_nearest_idx = np.concatenate(
+        [np.argpartition(
+            np.sum(ind_features - ood_features) ** 2, k)[:k] for i in
+         range(len(ind_features))])
+    # k_nearest_ind = sample_features[k_nearest_idx]
+
+    return k_nearest_idx
+
 def process_dataframe(data, filter_noise=False, combine_losses=True, filter_by_sampler=""):
     # data = data[data["sampler"] != "ClassOrderSampler"]
     # print(pd.unique(data["sampler"]))
@@ -228,54 +237,50 @@ class BatchedFeatureSD(FeatureSD):
 
     def get_features(self, dataloader):
         features = np.zeros((len(dataloader), self.num_features))
-        for i, data in tqdm(enumerate(dataloader), total=len(dataloader), desc="Computing Features"):
-            x = data[0].cuda()
-            features_batch = np.zeros((self.num_features, self.testbed.batch_size))
-            if self.k>0:
-                k_nearest_ind_features = np.zeros((self.num_features, self.testbed.batch_size * self.k))
-                for j, feature_fn in enumerate(self.feature_fns):
-                    # print(feature_fn)
-                    with torch.no_grad():
+        with torch.no_grad():
+            for i, data in tqdm(enumerate(dataloader), total=len(dataloader), desc="Computing Features"):
+                x = data[0].cuda()
+                features_batch = np.zeros((self.num_features, self.testbed.batch_size))
+                if self.k>0:
+                    k_nearest_ind_features = np.zeros((self.num_features, self.testbed.batch_size * self.k))
+                    for j, feature_fn in enumerate(self.feature_fns):
+                        # print(feature_fn)
                         x_encodings = self.rep_model.get_encoding(x).detach().cpu().numpy()
-                    k_nearest_indeces = get_debiased_samples(self.train_test_encodings, x_encodings,
-                                                             k=self.k)  # batch size x k samples
+                        k_nearest_indeces = get_debiased_samples(self.train_test_encodings, x_encodings,
+                                                                 k=self.k)  # batch size x k samples
 
-                    k_nearest_ind_features[j] = self.train_features["ind_train"][:, j][k_nearest_indeces]  # 5
-                    if feature_fn.__name__ == "typicality":
-                        features_batch[j] = feature_fn(self.testbed.glow, x,
-                                                       self.train_test_encodings).detach().cpu().numpy()
-                    elif feature_fn.__name__ == "grad_magnitude":
-                        features_batch[j] = feature_fn(self.rep_model, x,
-                                                       self.train_test_encodings).detach().cpu().numpy()
-                    else:
-                        with torch.no_grad():
+                        k_nearest_ind_features[j] = self.train_features["ind_train"][:, j][k_nearest_indeces]  # 5
+                        if feature_fn.__name__ == "typicality":
+                            features_batch[j] = feature_fn(self.testbed.glow, x,
+                                                           self.train_test_encodings).detach().cpu().numpy()
+                        else:
                             features_batch[j] = feature_fn(self.rep_model, x,
                                                        self.train_test_encodings).detach().cpu().numpy()
 
-                    pool = Pool(len(self.feature_fns))
-                    results = pool.starmap(ks_distance, zip([features_batch[k] for k in range(self.num_features)],
-                                                                [k_nearest_ind_features[k] for k in
-                                                                 range(self.num_features)]))
-                    pool.close()
-            else:
-                for j, feature_fn in enumerate(self.feature_fns):
-                    if feature_fn.__name__ == "typicality":
-                        features_batch[j] = feature_fn(self.testbed.glow, x,
-                                                       self.train_test_encodings).detach().cpu().numpy()
-                    else:
-                        features_batch[j] = feature_fn(self.rep_model, x,
-                                                       self.train_test_encodings).detach().cpu().numpy()
-
-                pool = Pool(len(self.feature_fns))
-                if self.k == 0:
-                    results = pool.starmap(ks_distance, zip([features_batch[k] for k in range(self.num_features)],
-                                                            [self.train_features["ind_train"][k] for k in
-                                                             range(self.num_features)]))
-                    pool.close()
+                        pool = Pool(len(self.feature_fns))
+                        results = pool.starmap(ks_distance, zip([features_batch[k] for k in range(self.num_features)],
+                                                                    [k_nearest_ind_features[k] for k in
+                                                                     range(self.num_features)]))
+                        pool.close()
                 else:
-                    results = features_batch.mean(axis=1)
+                    for j, feature_fn in enumerate(self.feature_fns):
+                        if feature_fn.__name__ == "typicality":
+                            features_batch[j] = feature_fn(self.testbed.glow, x,
+                                                           self.train_test_encodings).cpu().numpy()
+                        else:
+                            features_batch[j] = feature_fn(self.rep_model, x,
+                                                           self.train_test_encodings).cpu().numpy()
 
-            features[i]=results
+                    pool = Pool(len(self.feature_fns))
+                    if self.k == 0:
+                        results = pool.starmap(ks_distance, zip([features_batch[k] for k in range(self.num_features)],
+                                                                [self.train_features["ind_train"][k] for k in
+                                                                 range(self.num_features)]))
+                        pool.close()
+                    else:
+                        results = features_batch.mean(axis=1)
+
+                features[i]=results
         features = features.reshape((len(dataloader), self.num_features))
         return features
 
@@ -319,3 +324,31 @@ class RabanserSD(FeatureSD):
                     features[i] = np.median(results)
         return features
 
+class KNNFeaturewiseSD(FeatureSD):
+    def __init__(self, rep_model, feature_fns, k=5):
+        super().__init__(rep_model, feature_fns=feature_fns)
+        self.k=k
+
+    def get_features(self, dataloader):
+        features = np.zeros((len(dataloader), self.num_features))
+        with torch.no_grad():
+            for i, data in tqdm(enumerate(dataloader), total=len(dataloader), desc="Computing Features"):
+                x = data[0].cuda()
+                features_batch = np.zeros((self.num_features, self.testbed.batch_size))
+                k_nearest_ind_features = np.zeros((self.num_features, self.testbed.batch_size*self.k))
+                for j, feature_fn in enumerate(self.feature_fns):
+                    # print(feature_fn)
+                    if feature_fn.__name__ == "typicality":
+                        features_batch[j] = feature_fn(self.testbed.glow, x,
+                                                       self.train_test_encodings).detach().cpu().numpy()
+                    else:
+                        features_batch[j] = feature_fn(self.rep_model, x,
+                                                       self.train_test_encodings).detach().cpu().numpy()
+
+                    k_nearest_indeces = get_debiased_samples(self.train_features["ind_train"][:, j],  features)
+                    k_nearest_ind_features[j] = self.train_features["ind_train"][:, j][k_nearest_indeces]
+
+                with Pool(20) as pool:
+                    results = pool.starmap(ks_distance, zip([features_batch[k] for k in range(self.num_features)], [k_nearest_ind_features[k] for k in range(self.num_features)]))
+                    features[i]=results
+        return features

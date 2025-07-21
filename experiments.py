@@ -1038,10 +1038,10 @@ def eval_debiased_ood_detectors(batch_size):
     with tqdm(total=len(DATASETS) * len(DSDS)*3) as pbar:
         for dataset in DATASETS:
             for feature in DSDS:
-                if feature=="softmax":
-                    continue
+                # if feature=="softmax":
+                #     continue
                 # for k in data["k"].unique():
-                for k in [-1, 5]:
+                for k in [-1, 0, 5]:
                     data_dataset = data[(data["Dataset"] == dataset) & (data["feature_name"] == feature) & (data["k"]==k)]
 
                     if data_dataset.empty:
@@ -1094,16 +1094,21 @@ def eval_debiased_ood_detectors(batch_size):
     ][["Dataset", "k", "feature_name"]]
 
     best_table = table.merge(best_features, on=["Dataset", "k", "feature_name"])
-
-
-    g = sns.FacetGrid(table, col="Dataset")
-    g.map_dataframe(sns.boxplot, x="feature_name", y="balanced_accuracy", hue="k", palette=sns.color_palette())
-    plt.legend()
-    plt.show()
-
-    g = sns.FacetGrid(table, col="Dataset")
-    g.map_dataframe(sns.boxplot, x="k", y="balanced_accuracy", hue="k", palette=sns.color_palette())
-    plt.legend()
+    # g = sns.FacetGrid(table, col="Dataset")
+    # g.map_dataframe(sns.boxplot, x="feature_name", y="balanced_accuracy", hue="k", palette=sns.color_palette())
+    # plt.legend()
+    # plt.show()
+    #
+    # g = sns.FacetGrid(table, col="Dataset")
+    # g.map_dataframe(sns.boxplot, x="k", y="balanced_accuracy", hue="k", palette=sns.color_palette())
+    # plt.legend()
+    # plt.show()
+    table.replace(SAMPLER_LUT, inplace=True)
+    print(table[table["k"]==-1].groupby(["Dataset", "feature_name", "bias"])["balanced_accuracy"].mean().reset_index())
+    g = sns.FacetGrid(table, col="Dataset", col_wrap=3, margin_titles=True, sharex=False, sharey=False)
+    g.map_dataframe(sns.boxplot, x="bias", y="balanced_accuracy", hue="k", palette=sns.color_palette())
+    g.add_legend(bbox_to_anchor=(0.7, 0.3), loc='center left', title="k", ncol=1)
+    plt.savefig("debiased_ood_detector_bias_boxplots.pdf")
     plt.show()
 
     best_performing_for_each_dataset_and_k = table.groupby(["Dataset", "k", "bias"])
@@ -1123,7 +1128,7 @@ def eval_debiased_ood_detectors(batch_size):
     # Now compute difference (this ensures difference is zero when k == -1)
     table["balanced_accuracy_diff"] = table["balanced_accuracy"] - table["ref_balanced_accuracy"]
     # table = table[table["k"]!=-1]
-    print(table)
+    # print(table)
     sns.boxplot(table, x="k", y="balanced_accuracy", palette=sns.color_palette())
     plt.show()
     # accs = table[table["k"]==-1]["balanced_accuracy"].values
@@ -1136,7 +1141,7 @@ def eval_debiased_ood_detectors(batch_size):
 
     plt.legend()
     plt.show()
-    print(balanced.groupby(["Dataset", "feature_name",  "k", "bias",]).mean())
+    # print(balanced.groupby(["Dataset", "feature_name",  "k", "bias",]).mean())
 
 
 
