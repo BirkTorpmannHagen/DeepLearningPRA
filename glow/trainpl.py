@@ -52,7 +52,7 @@ if __name__ == '__main__':
                         transforms.Resize((size,size)),
                         transforms.ToTensor(), ])
 
-    # train_set, val_set = build_nico_dataset(1, "../../Datasets/NICO++", 0.2, trans, val_trans, context="dim", seed=0)
+    train_set, val_set, test, ood  = build_nico_dataset( "../../Datasets/NICO++",  trans, val_trans, ind_context="dim")
     # train_set, val_set = build_imagenette_dataset("../../Datasets/imagenette2", train_trans=trans, val_trans=val_trans)
     # train_set, val_set, ood_set = build_officehome_dataset("../../Datasets/OfficeHome", train_transform=trans, val_transform=val_trans )
     # train_classifier(train_set, val_set)
@@ -65,8 +65,7 @@ if __name__ == '__main__':
     # train_set, val_set, ood_set = build_officehome_dataset("../../Datasets/OfficeHome", train_transform=trans, val_transform=val_trans)
     # train_set, test_set,val_set, ood_set = get_pneumonia_dataset("../../Datasets/Pneumonia", trans, val_trans)
 
-    train_set, val_set, test_set, _, _, _ = build_polyp_dataset("../../Datasets/Polyps", size)
+    # train_set, val_set, test_set, _, _, _ = build_polyp_dataset("../../Datasets/Polyps", size)
 
     train_glow(train_set, val_set, img_size=size)
-    # CIAR10 and MNIST are already trained :D
 

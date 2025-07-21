@@ -171,4 +171,5 @@ DATASETWISE_RANDOM_LOSS = {
 }
 BIAS_TYPES = ["Unbiased", "Class", "Synthetic", "Temporal"]
 SYNTHETIC_SHIFTS = ["noise", "multnoise", "brightness", "contrast", "hue", "saltpepper", "saturation",  "smear"]
+SAMPLER_LUT = dict(zip(["RandomSampler",  "ClassOrderSampler", "ClusterSampler", "SequentialSampler",], BIAS_TYPES))
 # BATCH_SIZES = np.arange(1, 64)

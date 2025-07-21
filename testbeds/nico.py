@@ -18,9 +18,7 @@ class NicoTestBed(BaseTestBed):
         self.classifier = ResNetClassifier.load_from_checkpoint(
            "train_logs/NICO/checkpoints/epoch=279-step=175000.ckpt", num_classes=num_classes,
             resnet_version=101).to("cuda").eval()
-        self.glow = Glow(3, 32, 4).cuda().eval()
-        self.glow.load_state_dict(torch.load("glow_logs/NICODataset_checkpoint/model_040001.pt"))
-        self.rep_model = self.glow
+        self.glow = GlowPL.load_from_checkpoint("glow_logs/NICODataset/checkpoints/epoch=499-step=312500.ckpt",  in_channel=3, n_flow=32, n_block=4, conv_lu=True, affine=True).cuda().eval()
         self.mode=mode
 
     def get_ood_dict(self):
