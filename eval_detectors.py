@@ -24,7 +24,7 @@ def collect_data(testbed_constructor, dataset_name, mode="noise"):
 
 def collect_debiased_data(testbed_constructor, dataset_name, mode="noise", sampler="RandomSampler", k=5, batch_size=8):
     bench = testbed_constructor("classifier", mode=mode, sampler=sampler, batch_size=batch_size)
-    features = [cross_entropy, energy, softmax]
+    features = [cross_entropy, energy, softmax, typicality, knn, grad_magnitude]
     uncollected_features = features.copy()
     for feature in features:
         print(feature)
@@ -56,7 +56,6 @@ def collect_rabanser_data(testbed_constructor, dataset_name, mode="noise", sampl
     compute_stats(*tsd.compute_pvals_and_loss(),
                   fname=f"debiased_data/{dataset_name}_{mode}_{sampler}_{batch_size}_k={k}", feature_names=["rabanser"])
 
-<<<<<<< HEAD
 def collect_knn_featurewise_data(testbed_constructor, dataset_name, mode="noise", sampler="RandomSampler", k=5, batch_size=8):
     bench = testbed_constructor("classifier", mode=mode, sampler=sampler, batch_size=batch_size)
     features = [cross_entropy, energy, softmax, typicality]
@@ -82,8 +81,6 @@ def collect_knn_featurewise_data(testbed_constructor, dataset_name, mode="noise"
                       fname=f"debiased_data/{dataset_name}_{mode}_{sampler}_{batch_size}_k=featurewise_{k}",
                       feature_names=[f.__name__ for f in features])
 
-=======
->>>>>>> 93856fd667aa22a3423c04af9aaf8890b967b56f
 
 def collect_model_wise_data(testbed_constructor, dataset_name, mode="noise"):
     for model_name in ["deeplabv3plus", "unet", "segformer"]:
@@ -111,14 +108,14 @@ def collect_bias_data(k):
         # for sampler in ["RandomSampler","ClusterSampler",  "ClassOrderSampler"]:
         for sampler in [ "RandomSampler", "SequentialSampler", "ClusterSampler" ]:
 
-            collect_debiased_data(PolypTestBed, "Polyp", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-            # collect_debiased_data(CCTTestBed, "CCT", mode="normal",k=k, sampler=sampler, batch_size=batch_size)
-            # collect_debiased_data(OfficeHomeTestBed, "OfficeHome", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-            collect_debiased_data(Office31TestBed, "Office31", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-            collect_debiased_data(NicoTestBed, "NICO", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-        collect_debiased_data(Office31TestBed, "Office31", mode="normal", k=k, sampler="ClassOrderSampler",
-                                  batch_size=batch_size)
-        collect_debiased_data(NicoTestBed, "NICO", mode="normal", k=k, sampler="ClassOrderSampler", batch_size=batch_size)
+            # collect_debiased_data(PolypTestBed, "Polyp", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+            collect_debiased_data(CCTTestBed, "CCT", mode="normal",k=k, sampler=sampler, batch_size=batch_size)
+            collect_debiased_data(OfficeHomeTestBed, "OfficeHome", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+        #     collect_debiased_data(Office31TestBed, "Office31", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+        #     collect_debiased_data(NicoTestBed, "NICO", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+        # collect_debiased_data(Office31TestBed, "Office31", mode="normal", k=k, sampler="ClassOrderSampler",
+        #                           batch_size=batch_size)
+        # collect_debiased_data(NicoTestBed, "NICO", mode="normal", k=k, sampler="ClassOrderSampler", batch_size=batch_size)
             # collect_rabanser_data(CCTTestBed, "CCT", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
             # collect_rabanser_data(OfficeHomeTestBed, "OfficeHome", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
             # collect_rabanser_data(Office31TestBed, "Office31", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
@@ -130,7 +127,7 @@ def collect_bias_data(k):
 if __name__ == '__main__':
     from features import *
     # torch.multiprocessing.set_start_method('spawn')
-    collect_bias_data(5)
+    # collect_bias_data(5)
     collect_bias_data(-1)
     # collect_bias_data(0)
     # collect_bias_data(1)
