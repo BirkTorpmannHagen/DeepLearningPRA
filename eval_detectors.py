@@ -112,9 +112,9 @@ def collect_bias_data(k):
         for sampler in [ "RandomSampler", "SequentialSampler", "ClusterSampler", "ClassOrderSampler"]:
             if sampler!="ClassOrderSampler":
                 collect_debiased_data(PolypTestBed, "Polyp", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-            collect_debiased_data(CCTTestBed, "CCT", mode="normal",k=k, sampler=sampler, batch_size=batch_size)
-            collect_debiased_data(OfficeHomeTestBed, "OfficeHome", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-            collect_debiased_data(Office31TestBed, "Office31", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+            # collect_debiased_data(CCTTestBed, "CCT", mode="normal",k=k, sampler=sampler, batch_size=batch_size)
+            # collect_debiased_data(OfficeHomeTestBed, "OfficeHome", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+            # collect_debiased_data(Office31TestBed, "Office31", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
             collect_debiased_data(NicoTestBed, "NICO", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
 
             # collect_rabanser_data(CCTTestBed, "CCT", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
@@ -128,7 +128,7 @@ def collect_bias_data(k):
 if __name__ == '__main__':
     from features import *
     # torch.multiprocessing.set_start_method('spawn')
-    collect_bias_data(5)
+    # collect_bias_data(5)
     collect_bias_data(-1)
     collect_bias_data(0)
     # collect_bias_data(1)

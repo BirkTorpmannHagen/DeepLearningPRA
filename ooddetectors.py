@@ -271,12 +271,11 @@ class BatchedFeatureSD(FeatureSD):
                             features_batch[j] = feature_fn(self.rep_model, x,
                                                            self.train_test_encodings).cpu().numpy()
 
-                    pool = Pool(len(self.feature_fns))
                     if self.k == 0:
-                        results = pool.starmap(ks_distance, zip([features_batch[k] for k in range(self.num_features)],
+                        with Pool(self.num_features) as pool:
+                            results = pool.starmap(ks_distance, zip([features_batch[k] for k in range(self.num_features)],
                                                                 [self.train_features["ind_train"][k] for k in
                                                                  range(self.num_features)]))
-                        pool.close()
                     else:
                         results = features_batch.mean(axis=1)
 

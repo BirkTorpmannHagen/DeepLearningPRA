@@ -125,11 +125,14 @@ def load_random_rabanser(batch_size, prefix="debiased_data"):
         return []
 
 
-def load_all_biased(prefix="debiased_data"):
+def load_all_biased(prefix="debiased_data", filter_batch=False):
     dfs = []
     for dataset in DATASETS:
         for sampler in ["RandomSampler", "SequentialSampler", "ClassOrderSampler", "ClusterSampler"]:
             for batch_size in BATCH_SIZES[1:]:
+                if filter_batch:
+                    if batch_size!=filter_batch:
+                        continue
                 for k in [-1, 0, 1, 5, 10]:
                     for feature in DSDS:
                         if feature=="softmax" and dataset=="Polyp":
