@@ -5,7 +5,33 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-def sample_loss_feature(group, n_samples, n_size, bias="None", reduce=True):
+from components import OODDetector
+
+
+def sample_loss_feature(group, n_samples, n_size, reduce=True):
+    samples = []
+    for i in range(n_samples):
+        sample = group.sample(n=n_size, replace=True)  # Sampling with replacement
+        sample["index"] = i
+        if reduce:
+            if sample["Dataset"].all() == "Polyp":
+                mean_loss = sample['loss'].median()
+            else:
+                mean_loss = sample['loss'].mean()
+
+            mean_feature = sample['feature'].mean()
+            samples.append({'loss': mean_loss, 'feature': mean_feature, "acc": sample["acc"].mean(), "index": i})
+        else:
+            for _, row in sample.iterrows():
+                samples.append({
+                    'loss': row['loss'],
+                    'feature': row['feature'],
+                    'acc': row['acc'],
+                    'index': i
+                })
+    return pd.DataFrame(samples)
+
+def sample_biased_loss_feature(group, n_samples, n_size, bias="None", reduce=True):
     samples = []
     print("Sampling group with bias:", bias)
     for i in range(n_samples):
@@ -66,6 +92,39 @@ class ArgumentIterator:
     def __len__(self):
         return len(self.iterable)
 
+def load_random_rabanser(batch_size, prefix="debiased_data"):
+    dfs = []
+    for dataset in DATASETS:
+        try:
+            fname = f"{dataset}_normal_RandomSampler_{batch_size}_k=0_rabanser.csv"
+            df = pd.read_csv(
+                join(prefix, f"{dataset}_normal_RandomSampler_{batch_size}_k=0_rabanser.csv"))
+        except FileNotFoundError:
+            print(f"No data found for {prefix}/{dataset}_normal_RandomSampler_{batch_size}_k=0_rabanser.csv")
+            continue
+        df["feature_name"] = "rabanser"
+        df["Dataset"] = dataset
+        df["batch_size"] = batch_size
+        if dataset == "Polyp":
+            df["correct_prediction"] = df["loss"] < df[df["fold"] == "ind_val"][
+                "loss"].max()  # maximum observed val mean jaccard
+        else:
+            df["correct_prediction"] = df["loss"] < df[df["fold"] == "ind_val"]["loss"].quantile(
+                0.95)  # losswise definition
+            # df["correct_prediction"] = df["acc"]>=ind_val_acc   #accuracywise definition
+        df["shift"] = df["fold"].apply(
+            lambda x: x.split("_")[0] if "_0." in x else x)  # what kind of shift has occured?
+        df["shift_intensity"] = df["fold"].apply(
+            lambda x: x.split("_")[1] if "_" in x else x)  # what intensity?
+        df["ood"] = ~df["fold"].isin(["train", "ind_val", "ind_test"])
+        dfs.append(df)
+    try:
+        return pd.concat(dfs)
+    except ValueError:
+        print(f"No data found for and {batch_size}.csv")
+        return []
+
+
 def load_all_biased(prefix="debiased_data"):
     dfs = []
     for dataset in DATASETS:
@@ -101,22 +160,21 @@ def load_all_biased(prefix="debiased_data"):
     return pd.concat(dfs)
 
 
-def load_all(batch_size=30, samples=1000, feature="all", shift="normal", bias="Unbiased", prefix="final_data", reduce=True):
+def load_all(batch_size=30, samples=1000, feature="all", shift="normal", prefix="final_data", reduce=True):
     dfs = []
     for dataset in DATASETS:
         if feature!="all":
-            dfs.append(load_pra_df(dataset, feature, model="", batch_size=batch_size, samples=samples,bias=bias, prefix=prefix, reduce=reduce, shift=shift))
+            dfs.append(load_pra_df(dataset, feature, model="", batch_size=batch_size, samples=samples, prefix=prefix, reduce=reduce, shift=shift))
         else:
             for dsd in DSDS:
-               dfs.append(load_pra_df(dataset, dsd, model="", batch_size=batch_size, samples=samples, bias=bias, prefix=prefix, reduce=reduce, shift=shift))
+               dfs.append(load_pra_df(dataset, dsd, model="", batch_size=batch_size, samples=samples, prefix=prefix, reduce=reduce, shift=shift))
     return pd.concat(dfs)
 
 
-def load_pra_df(dataset_name, feature_name, model="", sampler="", batch_size=30, samples=1000, prefix="final_data", shift="normal", bias="Unbiased", reduce=True):
-    assert bias in BIAS_TYPES
+def load_pra_df(dataset_name, feature_name, model="" , batch_size=1, samples=1000, prefix="final_data", shift="normal", reduce=True):
     try:
         df = pd.concat(
-        [pd.read_csv(join(prefix, fname)) for fname in os.listdir(prefix) if dataset_name in fname and feature_name in fname and model in fname and sampler in fname and shift in fname])
+        [pd.read_csv(join(prefix, fname)) for fname in os.listdir(prefix) if dataset_name in fname and feature_name in fname and model in fname  and shift in fname])
     except:
         print("no data found for ", dataset_name, feature_name)
         return pd.DataFrame()
@@ -125,15 +183,13 @@ def load_pra_df(dataset_name, feature_name, model="", sampler="", batch_size=30,
     df["batch_size"]=batch_size
     if model!="":
         df["Model"]=model
-    if sampler!="":
-        df["Sampler"]=sampler
     try:
         df.drop(columns=["Unnamed: 0"], inplace=True)
     except:
         pass
 
     if batch_size!=1:
-        df = df.groupby(["fold", "feature_name", "Dataset"]).apply(sample_loss_feature, samples, batch_size, bias, reduce=reduce).reset_index()
+        df = df.groupby(["fold", "feature_name", "Dataset"]).apply(sample_loss_feature, samples, batch_size, reduce=reduce).reset_index()
     # ind_acc = df[df["fold"]=="ind_val"]["acc"].mean()
 
     if dataset_name=="Polyp":
@@ -173,3 +229,22 @@ BIAS_TYPES = ["Unbiased", "Class", "Synthetic", "Temporal"]
 SYNTHETIC_SHIFTS = ["noise", "multnoise", "brightness", "contrast", "hue", "saltpepper", "saturation",  "smear"]
 SAMPLER_LUT = dict(zip(["RandomSampler",  "ClassOrderSampler", "ClusterSampler", "SequentialSampler",], BIAS_TYPES))
 # BATCH_SIZES = np.arange(1, 64)
+def load_polyp_data():
+    dfs = []
+    for dsd_name in ["energy", "knn", "grad_magnitude", "cross_entropy", "mahalanobis"]:
+        for model in ["deeplabv3plus", "unet", "segformer"]:
+            for ood_val in ["CVC-ClinicDB", "EndoCV2020", "EtisLaribDB"]:
+                df = load_pra_df(dataset_name="Polyp", feature_name=dsd_name, model=model, batch_size=1, samples=1000)
+                print(df.head(10))
+                dsd = OODDetector(df, ood_val)
+                df["verdict"] = df.apply(lambda row: dsd.predict(row), axis=1)
+                df["ood_val"] = ood_val
+                df["IoU"] = 1 - df["loss"]
+                df["model"] = model
+                df["feature_name"] = dsd_name
+                dfs.append(df)
+    df = pd.concat(dfs)
+    # df = df[df["shift"] != "train"]
+    print(df.head(10))
+    df.replace(DSD_PRINT_LUT, inplace=True)
+    return df

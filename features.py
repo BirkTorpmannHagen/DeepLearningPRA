@@ -8,8 +8,6 @@ from components import ks_distance
 
 def cross_entropy(model, image, num_features=1):
     out = model(image)
-    if isinstance(out, list):
-        out = out[1]
     return model.criterion(out, torch.ones_like(out))
 
 
