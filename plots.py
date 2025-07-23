@@ -312,7 +312,8 @@ def get_risk_tables():
 
 
 if __name__ == '__main__':
-    get_risk_tables()
+    pass
+    # get_risk_tables()
 
     # data = load_pra_df(dataset_name="Polyp", feature_name="knn", batch_size=1, samples=1000)
     # plot_dsd_acc_errors()
@@ -345,7 +346,4 @@ if __name__ == '__main__':
     # classification_metrics(simulate=False)
     # correleations(100, simulate=True)
     # correleations(sample_size=100)
-    # load_old_dfs()
     # quantize_values_and_plot_kdes()
-
-

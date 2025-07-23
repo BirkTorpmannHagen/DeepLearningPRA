@@ -1,37 +1,22 @@
-import itertools
-from itertools import combinations, count
-from os import listdir
-
-import pygam
-from matplotlib import pyplot as plt, patches as patches
 from matplotlib.patches import Patch
 from matplotlib.lines import Line2D
 
-import numpy as np
 # from albumentations.random_utils import normal
-from matplotlib.pyplot import yscale
-from numpy.ma.core import product
-from scipy.cluster.hierarchy import single
-from scipy.stats import spearmanr, ks_2samp
 
 from seaborn import FacetGrid
 import warnings
 
 from plots import load_dfs
-from utils import BATCH_SIZES
 
 warnings.filterwarnings("ignore")
-from datasets.polyps import CVC_ClinicDB, EndoCV2020
-from riskmodel import UNNECESSARY_INTERVENTION
 from simulations import *
 import matplotlib.pyplot as plt
 from utils import *
 import seaborn as sns
 from tqdm import tqdm
 import pandas as pd
-from components import OODDetector, DebiasedOODDetector
-from multiprocessing import Pool
-import matplotlib.patches as mpatches
+from components import OODDetector
+
 
 def simulate_dsd_accuracy_estimation(data, rate, val_set, test_set, ba, tpr, tnr, dsd):
     sim = UniformBatchSimulator(data, ood_test_shift=test_set, ood_val_shift=val_set, estimator=BernoulliEstimator,
@@ -71,147 +56,6 @@ def get_dsd_verdicts_given_true_trace(trace, tpr, tnr):
     return [transform(i) for i in trace]
 
 
-def collect_tpr_tnr_sensitivity_data():
-    bins = 10
-    total_num_tpr_tnr = np.sum(
-    [i + j / 2 >= 0.5 for i in np.linspace(0, 1, bins) for j in np.linspace(0, 1, bins)])
-    for dataset in DATASETS:
-        dfs = []
-
-        data = load_pra_df(dataset_name=dataset, feature_name="knn", batch_size=1,
-                           samples=1000)  # we are just interested in the loss and oodness values, knn is arbitray
-        ood_sets = data[~data["shift"].isin(["ind_val", "ind_test", "train"])]["shift"].unique()
-
-        with tqdm(total=bins**2*(len(ood_sets)-1)*len(ood_sets)) as pbar:
-            for val_set in ood_sets:
-                for test_set in ood_sets:
-                    if test_set=="noise":
-                        continue #used only to estimate accuracies
-                    for rate in np.linspace(0, 1, bins):
-                        for ba in np.linspace(0.5, 1, bins):
-                            sim = UniformBatchSimulator(data, ood_test_shift=test_set, ood_val_shift=val_set, estimator=BernoulliEstimator, dsd_tpr=ba, dsd_tnr=ba)
-                            results = sim.sim(rate, 600)
-                            results = results.groupby(["Tree"]).mean().reset_index()
-
-                            # results = results.mean()
-                            results["tpr"] = ba
-                            results["tnr"] = ba
-                            results["ba"] = ba
-                            results["rate"] = rate
-                            results["test_set"] = test_set
-                            results["val_set"] = val_set
-                            results["Dataset"] = dataset
-                            # results = results.groupby(["tpr", "tnr", "rate", "test_set", "val_set", "Tree"]).mean().reset_index()
-
-                            dfs.append(results)
-                            pbar.update(1)
-        df_final = pd.concat(dfs)
-        print(df_final.head(10))
-        df_final.to_csv(f"pra_data/{dataset}_sensitivity_results.csv")
-
-def collect_dsd_accuracy_estimation_data():
-
-    bins=11
-    for batch_sizes in BATCH_SIZES:
-        dsd_accuracies = fetch_dsd_accuracies(batch_size=batch_sizes, plot=False, samples=1000)
-        dsd_accuracies = dsd_accuracies.groupby(["Dataset", "DSD"])[["tpr", "tnr", "ba"]].mean().reset_index()
-        best_dsds = dsd_accuracies.loc[dsd_accuracies.groupby("Dataset")["ba"].idxmax()].reset_index(drop=True)
-        print(best_dsds)
-        for dataset in DATASETS:
-            dfs = []
-            dsd = best_dsds[(best_dsds["Dataset"]==dataset)]["DSD"].values[0]
-            filt = dsd_accuracies[(dsd_accuracies["Dataset"]==dataset)&(dsd_accuracies["DSD"]==dsd)]
-            tpr, tnr, ba = filt["tpr"].mean(), filt["tnr"].mean(), filt["ba"].mean()
-            print(f"Dataset: {dataset}, dsd:{dsd}, ba: {ba}")
-
-            data = load_pra_df(dataset, dsd, batch_size=batch_sizes, samples=1000)
-            ood_sets = data[~data["shift"].isin(["ind_val", "ind_test", "train"])]["shift"].unique()
-            with tqdm(total=bins*len(ood_sets)*(len(ood_sets)-1)) as pbar:
-                for val_set in ood_sets:
-                    for test_set in ood_sets:
-                        if test_set=="noise":
-                            continue
-                        pool = Pool(bins)
-                        print("multiprocessing...")
-                        results = pool.starmap(simulate_dsd_accuracy_estimation, [(data, rate, val_set, test_set, tpr, tnr, ba, dsd) for rate in np.linspace(0, 1, bins)])
-                        pool.close()
-                            # results = results.groupby(["tpr", "tnr", "rate", "test_set", "val_set", "Tree"]).mean().reset_index()
-                        for result in results:
-                            dfs.append(result)
-                            pbar.update(1)
-            df_final = pd.concat(dfs)
-            print(df_final.head(10))
-            df_final.to_csv(f"pra_data/dsd_results_{dataset}_{batch_sizes}.csv")
-
-
-def plot_ba_rate_sensitivity():
-    df = pd.read_csv("tpr_tnr_sensitivity.csv").groupby(["tpr", "tnr", "rate"]).mean().reset_index()
-    df["tpr"] = df["tpr"].round(2)
-    df["tnr"] = df["tnr"].round(2)
-    df.rename(columns={"rate": "Bernoulli Expectation"}, inplace=True)
-
-    df["DSD Accuracy"] = (df["tpr"] + df["tnr"]) / 2
-    df = df.groupby(["DSD Accuracy", "Bernoulli Expectation"]).mean().reset_index() # Average over tpr and tnr
-    df["Error"] = np.abs(df["Risk Estimate"] - df["True Risk"])/df["True Risk"]
-    sns.lineplot(df, x="DSD Accuracy", y="Error")
-    plt.show()
-    df = df.sort_values(by=["DSD Accuracy", "Bernoulli Expectation"])
-
-    pivot_table = df.pivot(index="Bernoulli Expectation", columns="DSD Accuracy", values="Error")
-
-    # Reverse the `tpr` axis (y-axis) order
-
-    pivot_table = pivot_table.loc[::-1]
-    sns.heatmap(pivot_table)
-    plt.xticks([0, df["DSD Accuracy"].nunique()], [0,1], rotation=0)  # x-axis: only 0 and 1
-    plt.yticks([0, df["Bernoulli Expectation"].nunique()], [1, 0])  # y-axis: only 0 and 1
-    plt.savefig("ba_sensitivity.eps")
-    plt.show()
-
-def fetch_dsd_accuracies(batch_size=32, plot=False, samples=1000):
-    data = []
-    with tqdm(total=len(DATASETS) * len(DSDS)) as pbar:
-        for dataset in DATASETS:
-            for feature in DSDS:
-                df = load_pra_df(dataset, feature, batch_size=batch_size, samples=samples)
-                # df["ood"]=df["correct_prediction"]==False
-                df = df[df["shift"]!="noise"]
-                if df.empty:
-                    continue
-                ind_val = df[df["shift"]=="ind_val"]
-                ind_test = df[df["shift"]=="ind_test"]
-                ood_folds = df[~df["fold"].isin(["ind_val", "ind_test", "train"])]["shift"].unique()
-                for ood_val_fold in ood_folds:
-                    for ood_test_fold in ood_folds:
-                        ood_val = df[df["shift"]==ood_val_fold]
-                        ood_test = df[df["shift"]==ood_test_fold]
-
-                        dsd = OODDetector(df, ood_val_fold)
-                        test = pd.concat([ind_test, ood_test])
-                        tpr, tnr, ba = dsd.get_metrics(test)
-                        threshold = dsd.threshold
-
-                        if ood_test_fold == ood_folds[0] and plot:
-                            plt.hist(ind_val["feature"], bins=100, alpha=0.5, label="ind_val", density=True)
-                            plt.hist(ind_test["feature"], bins=100, alpha=0.5, label="ind_test", density=True )
-                            plt.hist(ood_val["feature"], bins=100, alpha=0.5, label=ood_val_fold, density=True)
-                            plt.hist(ood_test["feature"], bins=100, alpha=0.5, label=ood_test_fold, density=True)
-
-                            plt.axvline(threshold, color="red", label="Threshold")
-                            plt.title(f"{dataset} {feature} {ood_val_fold} {ood_test_fold}")
-                            plt.legend()
-                            plt.show()
-                        data.append({"Dataset": dataset, "DSD":feature, "val_fold": ood_val_fold, "test_fold":ood_test_fold, "tpr": tpr, "tnr": tnr, "ba": ba, "t":threshold})
-                        pbar.update(1)
-    df = pd.DataFrame(data)
-
-    df.to_csv("dsd_accuracies.csv")
-    df = df[df["val_fold"]!=df["test_fold"]]  # remove cases where val and test folds are the same
-    df.replace(DSD_PRINT_LUT, inplace=True)
-    print(df.groupby(["Dataset", "DSD"])[["tpr", "tnr", "ba"]].mean())
-    # print(df.groupby(["Dataset", "DSD", "val_fold", "test_fold"])[["tpr", "tnr", "ba"]].mean())
-    return df
-
 def plot_dsd_accuracies(samples=1000):
     data = []
     for batch_size in BATCH_SIZES:
@@ -249,105 +93,6 @@ def plot_dsd_accuracies(samples=1000):
     g.map_dataframe(plot_with_error)
     g.add_legend()
     plt.savefig("dsd_accuracy.pdf")
-    plt.show()
-
-
-def collect_rate_estimator_data():
-    data = []
-    with tqdm(total=26*26*26*9) as pbar:
-        for rate in tqdm(np.linspace(0, 1, 26)):
-            for tpr in np.linspace(0, 1, 26):
-                for tnr in np.linspace(0, 1, 26):
-                    for tl in [10, 20, 30, 50, 60, 100, 200, 500, 1000]:
-                        ba = round((tpr + tnr) / 2,2)
-                        if ba <= 0.5:
-                            continue
-                        pbar.update(1)
-                        re = BernoulliEstimator(prior_rate=rate, tpr=tpr, tnr=tnr)
-                        sample = re.sample(10_000, rate)
-                        dsd = get_dsd_verdicts_given_true_trace(sample, tpr, tnr)
-                        for i in np.array_split(dsd, int(10_000//tl)):
-                            re.update(i)
-                            rate_estimate = re.get_rate()
-                            error = np.abs(rate-rate_estimate)
-                            data.append({"rate": rate, "ba": ba,  "tl": tl, "rate_estimate": rate_estimate, "error":error})
-    df = pd.DataFrame(data)
-    df = df.groupby(["ba","tl", "rate"]).mean()
-    df.to_csv("rate_estimator_eval.csv")
-
-def eval_rate_estimator():
-    df = pd.read_csv("rate_estimator_eval.csv")
-    df_barate = df.groupby(["ba", "rate"]).mean().reset_index()
-    pivot_table = df_barate.pivot(index="ba", columns="rate", values="error")
-    pivot_table = pivot_table.loc[::-1]
-    sns.heatmap(pivot_table, vmin=0, vmax=1)
-    plt.savefig("rate_sensitivity.eps")
-    plt.tight_layout()
-    plt.show()
-
-    #rate x ba
-
-def plot_rate_estimation_errors_for_dsds(batch_size=16, cross_validate=False):
-    data = []
-    dsd_data = fetch_dsd_accuracies(batch_size)
-    if not cross_validate:
-        dsd_data = dsd_data[dsd_data["val_fold"]==dsd_data["test_fold"]]
-    # print(dsd_data.groupby(["Dataset", "DSD", "val_fold", "test_fold"])[["tpr", "tnr", "ba"]].mean())
-    # input()
-    with tqdm(total=len(DATASETS) * len(DSDS) * 26) as pbar:
-        for dataset in DATASETS:
-            for feature in DSDS:
-                for rate in tqdm(np.linspace(0, 1, 26)):
-                    subdata = dsd_data[(dsd_data["Dataset"]==dataset)&(dsd_data["DSD"]==feature)]
-                    tpr, tnr, ba = subdata["tpr"].mean(), subdata["tnr"].mean(), subdata["ba"].mean()
-                    for tl in [10, 20, 30, 50, 60, 100, 200, 500, 1000]:
-                        re = BernoulliEstimator(prior_rate=rate, tpr=tpr, tnr=tnr)
-                        sample = re.sample(10_000, rate)
-                        dsd = get_dsd_verdicts_given_true_trace(sample, tpr, tnr)
-                        for i in np.array_split(dsd, int(10_000 // tl)):
-                            re.update(i)
-                            rate_estimate = re.get_rate()
-                            error = np.abs(rate - rate_estimate)
-                            data.append(
-                                {"Dataset": dataset, "DSD":feature, "rate": rate, "ba": ba, "tl": tl, "rate_estimate": rate_estimate, "error": error})
-                        pbar.update(1)
-
-    df = pd.DataFrame(data)
-    df.replace(DSD_PRINT_LUT, inplace=True)
-
-    df = df.groupby(["Dataset", "DSD", "tl", "rate"]).mean().reset_index()
-    # df = df[df["tl"]==100]
-    print(df)
-    df = df
-    g = sns.FacetGrid(df, col="Dataset")
-    g.map_dataframe(sns.lineplot, x="rate", y="error", hue="DSD")
-    # g.add_legend()
-    g.tight_layout()
-    plt.legend(frameon=True, ncol=len(np.unique(df["DSD"])), loc="upper center", bbox_to_anchor = (-2, -0.15))
-    # plt.tight_layout(w_pad=0.5)Note that these error estimates are computed based
-    plt.subplots_adjust(bottom=0.3)
-    plt.savefig("dsd_rate_error.pdf")
-    plt.show()
-    df.to_csv("rate_estimator_eval.csv")
-
-
-def plot_rate_estimates():
-    df = pd.read_csv("rate_estimator_eval.csv")
-    df["ba"] = np.round((df["tpr"] + df["tnr"]) / 2, 2)
-    df.drop("Unnamed: 0", axis=1, inplace=True)
-    df["error"] = np.abs(df["rate"] - df["rate_estimate"])
-
-    df = df[df["tl"] == 10]
-    df = df[df["ba"]>0.5]
-    df = df.groupby(["ba", "rate"]).mean().reset_index()
-    print(df)
-    pivot_table = df.pivot(index="ba", columns="rate", values="error")
-    pivot_table = pivot_table.loc[::-1]
-    sns.heatmap(pivot_table)
-
-    # plt.xticks([0, df["ba"].nunique()], [0, 1], rotation=0)  # x-axis: only 0 and 1
-    # plt.yticks([0, df["rate"].nunique()], [1, 0])  # y-axis: only 0 and 1
-    plt.savefig("rate_sensitivity.eps")
     plt.show()
 
 
@@ -470,56 +215,6 @@ def accuracy_by_fold_and_dsd_verdict():
     # g = sns.FacetGrid(data.reset_index(), col="Dataset", row="D(ood)")
     # g.map_dataframe(sns.lineplot, x="batch_size", y="correct_prediction", hue="feature_name")
 
-def accuracy_table():
-    df = load_all(1, samples=1000, prefix="final_data")
-    df = df[df["shift"]!="noise"]
-    accs = df.groupby(["Dataset", "shift"])["correct_prediction"].mean().reset_index()
-    print(accs)
-    return accs
-
-
-
-def t_check():
-    df = load_pra_df("Polyp", "knn",batch_size=32)
-    df = df[df["shift"]!="noise"]
-    for shift in df["shift"].unique():
-        print(f"plotting : {shift}")
-
-        plt.hist(df[df["shift"]==shift]["feature"], bins=100, alpha=0.5, density=True, label=shift)
-        plt.legend()
-    plt.show()
-
-def show_rate_risk():
-    data = load_pra_df("Polyp", "knn", batch_size=1, samples=1000)
-    oods = data[~data["shift"].isin(["ind_val", "ind_test", "train", "noise"])]["shift"].unique()
-    rates = np.linspace(0, 1, 11)
-    dfs = []
-    with tqdm(total=len(oods)*(len(oods)-1)*len(rates)) as pbar:
-        for ood_val_set, ood_test_set, rate in itertools.product(oods, oods, rates):
-            if ood_val_set == ood_test_set:
-                continue
-            sim = UniformBatchSimulator(data, ood_test_shift=ood_test_set, ood_val_shift=ood_val_set, maximum_loss=0.5, estimator=BernoulliEstimator, use_synth=False, dsd_tpr=0.9, dsd_tnr=0.9)
-            results = sim.sim(rate, 600)
-            results["Rate"] = rate
-            results["Risk Error"]=results["Risk Estimate"]-results["True Risk"]
-            dfs.append(results)
-            pbar.update()
-
-    df = pd.concat(dfs)
-    df = df.groupby(["Tree", "Rate"]).mean().reset_index()
-    print(df)
-    ax = sns.lineplot(df, x="Rate", y="Risk Estimate", hue="Tree")
-    for tree in df["Tree"].unique():
-        df_tree = df[df["Tree"]==tree]
-        ax.fill_between(df_tree["Rate"],
-                        df_tree["Risk Estimate"],
-                        df_tree["True Risk"],
-                        alpha=0.2)
-        # plt.plot(df_tree["Rate"], df_tree["True Risk"], label=f"{tree} True Risk", linestyle="dashed")
-    ax.axhline(UNNECESSARY_INTERVENTION, color="red", label="Manual Intervention")
-    plt.legend()
-    plt.savefig("rate_risk.pdf")
-    plt.show()
 
 def cost_benefit_analysis():
 
@@ -563,25 +258,6 @@ def cost_benefit_analysis():
     plt.savefig("cba.pdf")
     plt.show()
 
-def load_polyp_data():
-    dfs = []
-    for dsd_name in ["energy", "knn", "grad_magnitude", "cross_entropy", "mahalanobis"]:
-        for model in ["deeplabv3plus", "unet", "segformer"]:
-            for ood_val in ["CVC-ClinicDB", "EndoCV2020", "EtisLaribDB"]:
-                df = load_pra_df(dataset_name="Polyp", feature_name=dsd_name, model=model, batch_size=1, samples=1000)
-                print(df.head(10))
-                dsd = OODDetector(df, ood_val)
-                df["verdict"] = df.apply(lambda row: dsd.predict(row), axis=1)
-                df["ood_val"] = ood_val
-                df["IoU"] = 1 - df["loss"]
-                df["model"] = model
-                df["feature_name"] = dsd_name
-                dfs.append(df)
-    df = pd.concat(dfs)
-    # df = df[df["shift"] != "train"]
-    print(df.head(10))
-    df.replace(DSD_PRINT_LUT, inplace=True)
-    return df
 
 def get_datasetwise_risk():
     results_list = []
@@ -739,11 +415,14 @@ def verdictwise_proportions(cal_idx=0, batch_size=1):
     plt.show()
 
 def ood_detector_correctness_prediction_accuracy(batch_size):
-    data = load_all(prefix="final_data", batch_size=batch_size)
+    data = load_all(prefix="final_data", batch_size=batch_size, shift="")
+    # if batch_size!=1:
+    #     rabanser_data = load_random_rabanser(batch_size)
+    #     assert data.columns== rabanser_data.columns, print(data.columns, rabanser_data.columns)
+    #     data.append(rabanser_data)
     print(data["shift_intensity"].unique())
     data = data[data["shift_intensity"].isin(["InD", "OoD", "0.30000000000000004"])] #extract only maximum shifts
     data = data[data["fold"]!="train"]
-    data = data[data["shift"]!="noise"]
     # data = data[data["shift"]!="noise"]
     # data["ood"] = data["correct_prediction"]
     dfs = []
@@ -751,16 +430,12 @@ def ood_detector_correctness_prediction_accuracy(batch_size):
         for ood_perf in [True, False]:
             for perf_calibrated in [True, False]:
                 for threshold_method in THRESHOLD_METHODS:
-                    if threshold_method=="density":
-                        continue
                     for dataset in DATASETS:
                         for feature in DSDS:
                             data_dataset = data[(data["Dataset"]==dataset) & (data["feature_name"]==feature)]
-
-
                             for ood_val_fold in data_dataset["shift"].unique():
                                 data_copy = data_dataset.copy()
-                                if ood_val_fold in ["train", "ind_val", "ind_test"] or ood_val_fold in SYNTHETIC_SHIFTS :
+                                if ood_val_fold in ["train", "ind_val", "ind_test"]:
                                     #dont calibrate on ind data or synthetic ood data
                                     continue
                                 if perf_calibrated and not ood_perf:
@@ -794,20 +469,22 @@ def ood_detector_correctness_prediction_accuracy(batch_size):
     # print(data)
     # data = data[data["ood_val_fold"]==data["shift"]]
     data.replace(DSD_PRINT_LUT, inplace=True)
-    tprs = data[~data["shift"].isin(["ind_val", "ind_test"])].groupby(["Dataset", "feature_name","Threshold Method", "OoD==f(x)=y","Performance Calibrated", "shift"])["correct_ood_detection"].mean().reset_index().groupby(["Dataset", "feature_name", "Threshold Method", "OoD==f(x)=y","Performance Calibrated"])["correct_ood_detection"].mean().reset_index()
+    tprs = data[~data["shift"].isin(["ind_val", "ind_test"])].groupby(["Dataset", "feature_name","Threshold Method", "OoD==f(x)=y","Performance Calibrated", "shift"])["correct_ood_detection"].mean().reset_index()
 
-    tnrs = data[data["shift"].isin(["ind_val", "ind_test"])].groupby(["Dataset", "feature_name","Threshold Method", "OoD==f(x)=y","Performance Calibrated", "shift"])["correct_ood_detection"].mean().reset_index().groupby(["Dataset", "feature_name", "Threshold Method", "OoD==f(x)=y", "Performance Calibrated"])["correct_ood_detection"].mean().reset_index()
+    tnrs = data[data["shift"].isin(["ind_val", "ind_test"])].groupby(["Dataset", "feature_name","Threshold Method", "OoD==f(x)=y","Performance Calibrated", "shift"])["correct_ood_detection"].mean().reset_index()
 
-    tprs = tprs.rename(columns={"correct_ood_detection": "TPR"})
-    tnrs = tnrs.rename(columns={"correct_ood_detection": "TNR"})
-    tprs.to_csv(f"ood_detector_data/tprs_{batch_size}.csv", index=False)
+    tprs = tprs.rename(columns={"correct_ood_detection": "TPR", "shift":"OoD Shift"})
+    tnrs = tnrs.rename(columns={"correct_ood_detection": "TNR", "shift":"InD Shift"})
+    tprs.to_csv(f"ood_detector_data/tprs_{batch_size}.csv", index=False, )
     tnrs.to_csv(f"ood_detector_data/tnrs_{batch_size}.csv", index=False)
     # Merge on Dataset and feature_name
-    balanced = pd.merge(tprs.groupby(["Dataset", "feature_name","Threshold Method", "OoD==f(x)=y","Performance Calibrated"])["TPR"].mean(), tnrs.groupby(["Dataset", "feature_name","Threshold Method", "OoD==f(x)=y","Performance Calibrated"])["TNR"].mean(), on=["Dataset", "feature_name", "Threshold Method", "OoD==f(x)=y","Performance Calibrated"])
+    tprs = tprs.groupby(["Dataset", "feature_name","Threshold Method", "OoD==f(x)=y","Performance Calibrated", "OoD Shift"])["TPR"].mean().reset_index()
+    tnrs = tnrs.groupby(["Dataset", "feature_name", "Threshold Method", "OoD==f(x)=y", "Performance Calibrated", "InD Shift"])["TNR"].mean().reset_index()
+
+    balanced = pd.merge(tprs, tnrs, on=["Dataset", "feature_name", "Threshold Method", "OoD==f(x)=y","Performance Calibrated"])
     # Compute balanced accuracy
     balanced["balanced_accuracy"] = (balanced["TPR"] + balanced["TNR"]) / 2
-    print(balanced)
-
+    balanced = balanced.reset_index()
     balanced.reset_index().to_csv(f"ood_detector_data/ood_detector_correctness_{batch_size}.csv", index=False)
     return balanced
     # print(balanced)
@@ -816,47 +493,25 @@ def ood_detector_correctness_prediction_accuracy(batch_size):
     # print(data.groupby(["Dataset", "feature_name", "shift"])["correct_ood_detection"].mean().reset_index().groupby(["Dataset", "feature_name"])["correct_ood_detection"].mean().reset_index())
 
 
-
-
-def iou_distribution():
-
-    df = load_polyp_data()
-    df = df[df["shift"] != "train"]
-    df = df[df["shift"] != "ind_val"]
-    df.replace({"ind_test":"Kvasir"}, inplace=True)
-    palette = sns.color_palette("tab10", n_colors=df["Model"].nunique())
-    g = sns.FacetGrid(df, col="shift", palette=palette)
-    # g = sns.FacetGrid(df, col="shift")
-    g.map_dataframe(sns.kdeplot, x="IoU", hue="Model", clip=(0, 1), fill=True, multiple="stack", common_norm=False)
-    # manually extract legend from one of the axes
-    # g._legend.remove()  # in case it partially shows
-    df.replace({"deeplabv3plus":"DeepLabV3+", "unet":"UNet++", "segformer":"SegFormer"}, inplace=True)
-    model_names = sorted(df["Model"].unique())
-    colors = sns.color_palette("tab10", n_colors=len(model_names))
-    color_dict = dict(zip(model_names, colors))
-    patches = [mpatches.Patch(color=color_dict[m], label=m) for m in model_names]
-    plt.legend(handles=patches, title="Model", frameon=True,
-               loc="best", ncol=1)
-    plt.savefig("IoU_distributions.pdf")
-    plt.show()
-
-# def ood_verdict_accuracy_table(batch_size):
-    results = pd.read_csv(f"ood_detector_data/ood_detector_correctness_{batch_size}.csv")
+def ood_verdict_accuracy_table(batch_size):
+    df = pd.read_csv(f"ood_detector_data/ood_detector_correctness_{batch_size}.csv")
     # print(results)
-    print(results.groupby(["OoD==f(x)=y", "Performance Calibrated", "Threshold Method"])[["balanced_accuracy"]].agg(["min", "mean", "max"]).reset_index())
+    #calibration comparison
+    print(df.columns)
+    print(df[~df["shift_x"].isin(SYNTHETIC_SHIFTS)].groupby(["OoD==f(x)=y", "Performance Calibrated", "Threshold Method"])[["balanced_accuracy"]].agg(["min", "mean", "max"]).reset_index())
 
-    results = results[results["Threshold Method"] == "val_optimal"]
+
+    results = df[df["Threshold Method"] == "val_optimal"]
     regular_ood = results[(results["OoD==f(x)=y"]==False) & (results["Performance Calibrated"]==False)]
     correctness = results[(results["OoD==f(x)=y"]==True) & (results["Performance Calibrated"]==True)]
     regular_ood = regular_ood.groupby(["Dataset", "feature_name"])[["balanced_accuracy"]].mean().reset_index()
-
     regular_ood["correctness_ba"] = correctness.groupby(["Dataset", "feature_name"])[["balanced_accuracy"]].mean().reset_index()["balanced_accuracy"]
     regular_ood["diff"] = regular_ood["balanced_accuracy"]-regular_ood["correctness_ba"]
     print(regular_ood.groupby(["Dataset"])[["balanced_accuracy", "correctness_ba"]].max().reset_index())
-    # df_ood_label = df[df["OoD==f(x)=y"]==True]
-    #
-    # plotter = pd.concat([df[df[]]])
-    # sns.scatterplot(data=results, y="balanced_accuracy", hue="Dataset", style="feature_name", size="balanced_accuracy", sizes=(20, 200), alpha=0.7)
+
+    best_config = df[(df["Threshold Method"] == "ind_span")&(df["Performance Calibrated"])&(df["OoD==f(x)=y"])]
+    print(best_config.groupby(["Dataset", "feature_name", "shift_x"])["balanced_accuracy"].mean())
+
 
 def ood_verdict_plots_batched():
     dfs = []
@@ -876,17 +531,6 @@ def ood_verdict_plots_batched():
 
     g.add_legend(bbox_to_anchor=(0.7, 0.3), loc='center left', title="Feature", ncol=1)
     plt.savefig("batched_ood_verdict_accuracy.pdf")
-    plt.show()
-
-def compare_kdes():
-    df = load_all(prefix="final_data")
-    df = df[df["Dataset"]=="CCT"]
-
-    g = sns.FacetGrid(df, col="feature_name", margin_titles=True, sharex=False, sharey=False)
-    g.map_dataframe(sns.histplot, x="feature", hue="correct_prediction", fill=True, element="step")
-    plt.show()
-    g = sns.FacetGrid(df, col="feature_name", margin_titles=True, sharex=False, sharey=False)
-    g.map_dataframe(sns.histplot, x="feature", hue="fold", fill=True, element="step")
     plt.show()
 
 
@@ -1009,25 +653,6 @@ def bias_correctness_test():
     print(balanced.groupby(["Dataset", "feature_name", "bias"])["balanced_accuracy"].mean().reset_index())
 
 
-def dataset_summaries():
-    data = load_all(1)
-    data = data[data["shift"].isin(["ind_val", "ind_test", "train"])]
-    data = data[data["feature_name"]=="energy"] #random
-    data = data[data["Dataset"]!="Polyp"] #polyp is special
-
-    print(data)
-    g = sns.FacetGrid(data, col="Dataset", height=3, aspect=1.5, sharex=False, sharey=False, col_wrap=2)
-    g.map_dataframe(sns.countplot, x="class")
-    for ax in g.axes.flat:
-        dataset_name_for_ax = ax.get_title().split(" = ")[-1]
-        ax.set_title(dataset_name_for_ax)
-        ax.set_xlabel("Class")
-        ax.set_ylabel("Count")
-        # Set x-ticks to be the class names
-        ax.set_xticklabels([])
-    plt.savefig("class_distribution.pdf")
-    plt.show()
-
 def eval_debiased_ood_detectors(batch_size):
     data = load_all_biased(prefix="debiased_data")
     # print(data["batch_size"].unique())
@@ -1096,142 +721,36 @@ def debiased_plots():
         data = eval_debiased_ood_detectors(batch_size)
         data["Batch Size"] = batch_size
         across_batch_sizes.append(data)
+        table = data.copy()
 
         # g = sns.FacetGrid(table, col="Dataset")
         # g.map_dataframe(sns.boxplot, x="feature_name", y="balanced_accuracy", hue="k", palette=sns.color_palette())
         # plt.legend()
         # plt.show()
         #
-        # g = sns.FacetGrid(table, col="Dataset")
-        # g.map_dataframe(sns.boxplot, x="k", y="balanced_accuracy", hue="k", palette=sns.color_palette())
-        # plt.legend()
-        # plt.show()
-        # table = data.copy()
+        g = sns.FacetGrid(table, col="Dataset")
+        g.map_dataframe(sns.boxplot, x="k", y="balanced_accuracy", hue="k", palette=sns.color_palette())
+        plt.legend()
+        plt.show()
         # table.replace(SAMPLER_LUT, inplace=True)
         #
-        # g = sns.FacetGrid(table, col="Dataset", col_wrap=3, margin_titles=True, sharex=False, sharey=False)
-        # g.map_dataframe(sns.boxplot, x="bias", y="balanced_accuracy", hue="k", palette=sns.color_palette())
-        # g.add_legend(bbox_to_anchor=(0.7, 0.3), loc='center left', title="k", ncol=1)
-        # plt.savefig("debiased_ood_detector_bias_boxplots.pdf")
-        # plt.show()
+        g = sns.FacetGrid(table, col="Dataset", col_wrap=3, margin_titles=True, sharex=False, sharey=False)
+        g.map_dataframe(sns.boxplot, x="bias", y="balanced_accuracy", hue="k", palette=sns.color_palette())
+        g.add_legend(bbox_to_anchor=(0.7, 0.3), loc='center left', title="k", ncol=1)
+        plt.savefig("debiased_ood_detector_bias_boxplots.pdf")
+        plt.show()
         # print(balanced.groupby(["Dataset", "feature_name",  "k", "bias",]).mean())
     data = pd.concat(across_batch_sizes)
     print(data)
-    g = sns.FacetGrid(data, col="Dataset", margin_titles=True, sharex=False, sharey=False, col_wrap=2)
-    g.map_dataframe(sns.boxplot, x="Batch Size", y="balanced_accuracy", hue="bias", palette=sns.color_palette())
-    # g.add_legend(bbox_to_anchor=(0.7, 0.3), loc='center left', title="Bias", ncol=1)
-    plt.show()
-
-
-
-def get_gam_data(load=True):
-    for sample_size in BATCH_SIZES:
-        print("loading")
-        total_df = load_all(batch_size=sample_size, shift="", samples=100)
-        total_df = total_df[total_df["fold"]!="train"] #exclude training data, to not skew results
-        for feature_name in total_df["feature_name"].unique():
-
-            for dataset in total_df["Dataset"].unique():
-                data = []
-                pred_data = []
-                df = total_df[(total_df["Dataset"]==dataset) & (total_df["feature_name"]==feature_name)]
-                assert len(df["Dataset"].unique())==1, "Dataset should be unique in the filtered dataframe"
-                assert len(df["feature_name"].unique())==1, "Feature name should be unique in the filtered dataframe"
-                for shift in df["shift"].unique():
-                    if shift in ["ind_val", "ind_test", "train"]:
-                        continue
-                    train = df[(df["feature_name"]==feature_name) & (df["Dataset"]==dataset) & ((df["shift"]==shift)|(df["shift"]=="ind_val")) ]
-                    test = df[(df["feature_name"]==feature_name) & (df["Dataset"]==dataset) & ((df["shift"]==shift)|(df["shift"]!="ind_val"))]
-                    if train.empty or test.empty:
-                        print("Skipping due to empty train or test set: ")
-                        print("Dataset:", dataset, "Feature:", feature_name, "Shift:", shift)
-
-                        continue
-                    X_train = train['feature']  # Ensure this is adjusted to your dataset
-                    y_train = train['loss']
-                    X_test = test['feature']
-                    y_test = test['loss']#-train["loss"].mean()
-                    # Fit the GAM
-                    # combined_X = np.concatenate((X_train, X_test))
-
-                    print("Feature:", feature_name, "Shift:", shift, "Dataset:", dataset)
-                    print("\tX:", len(X_train.unique()))
-                    print("\tY:", len(y_train.unique()))
-                    assert len(X_train.unique()>1), "Unique values in training set must be greater than 1"
-                    spr = spearmanr(X_train, y_train)[0]
-                    print("\t", spr)
-
-                    if spr < 0:
-                        gam_monotonic = pygam.LinearGAM(fit_intercept=False, constraints="monotonic_dec")
-                        gam_monotonic.fit(X_train, y_train)
-                    else:
-                        gam_monotonic = pygam.LinearGAM(fit_intercept=False, constraints="monotonic_inc")
-                        gam_monotonic.fit(X_train, y_train)
-
-                    XX = gam_monotonic.generate_X_grid(term=0)
-                    monotonic_grid_preds = gam_monotonic.predict(XX)
-                    monotonic_grid_preds_conf = gam_monotonic.prediction_intervals(XX, width=0.95)
-
-                    for i, (x, ym, ym_c) in enumerate(zip(XX, monotonic_grid_preds, monotonic_grid_preds_conf)):
-                        pred_data.append({"feature":x[0],
-                                            "monotonic_pred_loss":ym, "monotonic_pred_loss_lower":ym_c[0], "monotonic_pred_loss_upper":ym_c[1],
-
-                                          "Dataset":dataset, "train_shift":shift, "feature_name":feature_name, "sample_size":sample_size})
-
-                    if spr>0.1:
-                        plt.plot(XX[:, 0], gam_monotonic.predict(X=XX))
-                        plt.scatter(X_train, y_train, c='b', alpha=0.1)
-                        plt.scatter(X_test, y_test, c='r', alpha=0.1)
-                        plt.show()
-                    for test_shift in test["shift"].unique():
-                        test_data = test[test["shift"] == test_shift]
-                        for sev in test_data["shift_intensity"].unique():
-                            test_data_fold = test_data[test_data["shift_intensity"] == sev]
-
-                            preds_monotonic = gam_monotonic.predict(test_data_fold["feature"])
-                            mape_monotonic = np.mean(np.abs(preds_monotonic - test_data_fold["loss"]) / np.abs(
-                                test_data_fold["loss"]))
-                            mae_monotonic = np.mean(np.abs(preds_monotonic - test_data_fold["loss"]))
-
-                            data.append({"Dataset":dataset, "feature_name":feature_name, "train_shift":shift, "test_shift":test_shift, "shift_intensity":sev, "sample_size":sample_size, "monotonic mape": mape_monotonic, "monotonic mae": mae_monotonic})
-
-                    # preds = gam.predict(X_test)
-                    # smape = np.mean(np.abs(preds - y_test) / (np.abs(preds) + np.abs(y_test)))
-                    # print(f"Dataset: {dataset} Feature: {feature_name} Shift: {shift}: {smape*100}")
-                pred_errors = pd.DataFrame(data)
-                pred_df = pd.DataFrame(pred_data)
-                pred_df.to_csv(f"gam_data/gam_fits_{dataset}_{feature_name}_{sample_size}.csv")
-                pred_errors.to_csv(f"gam_data/gam_prediction_errors_{dataset}_{feature_name}_{sample_size}.csv")
-
-
-def regplots(sample_size):
-    def bin_Y(group, bins):
-        group['feature_bin'] = pd.qcut(group['feature'], bins, labels=False, duplicates='drop')
-        return group
-
-    df = load_all(batch_size=sample_size, prefix="final_data", shift="", samples=40)
-    df = df[df["fold"]!="train"] #exclude training data, to not skew results
-    df["ind"]=df["fold"]=="ind"
-    df = df[df["shift"]!="smear"]
-    for shift in df["shift"].unique():
-        if shift not in ["hue", "saltpepper", "noise", "multnoise", "smear", "contrast", "brightness", "ind_val", "ind_test", "train"]:
-            print(shift)
-            df.replace({shift: "Organic Shift"}, inplace=True)
-
-
-    df.replace({"normal":"Organic Shift"}, inplace=True)
-    hues = df["shift"].unique()
-    def plot_threshold(data,color=None, **kwargs):
-        threshold = OODDetector(data, ood_val_shift="Organic Shift", threshold_method="val_optimal").threshold
-        plt.axvline(threshold, color=color, linestyle="--", label="Threshold")
-
-    g = sns.FacetGrid(df, row="Dataset", col="feature_name", margin_titles=True, sharex=False, sharey=False)
-    g.map_dataframe(sns.scatterplot, x="feature", y="loss", hue="shift", hue_order=hues,  alpha=0.5)
-    g.map_dataframe(plot_threshold)
-    g.add_legend()
-    for ax in g.axes.flat:
-        ax.set_yscale("log")
-        ax.set_xscale("log")
+    data = data[data["k"]==-1]
+    data.replace(SAMPLER_LUT, inplace=True)
+    g = sns.FacetGrid(data, col="Dataset", margin_titles=True, sharex=False, sharey=False, col_wrap=3)
+    g.map_dataframe(sns.boxplot, x="Batch Size", y="balanced_accuracy", hue="bias", palette=sns.color_palette(), hue_order = ["Unbiased", "Synthetic", "Temporal", "Class"])
+    g.add_legend(bbox_to_anchor=(0.7, 0.25), loc='center left', title="Bias", ncol=1)
+    plt.tight_layout()
+    plt.savefig("debiased_ood_detector_bias_boxplots.pdf")
+    # for ax in g.axes.flat:
+    #     ax.legend()
     plt.show()
 
 
@@ -1254,95 +773,20 @@ def show_thresholding_problems():
     plt.show()
 
 
-def regplot_by_shift(sample_size, simulate=False):
-
-    df = load_dfs(sample_size=sample_size, simulate=simulate)
-    df["ind"]=df["fold"]=="ind"
-    df["Shift Severity"]=df["fold"].apply(lambda x: round(float(x.split("_")[1]),2) if "_" in x else x)
-    df.rename(columns={"feature_name":"Feature"}, inplace=True)
-    df.replace({"typicality":"Typicality", "cross_entropy":"Cross Entropy", "knn":"KNN", "odin":"ODIN", "grad_magnitude":"GradNorm", "energy":"Energy", "softmax":"Softmax"}, inplace=True)
-    hues = df["Shift Severity"].unique()
-    if simulate:
-        df = df[df["KS"]==False]
-    df.replace({"normal":"Organic Shift"}, inplace=True)
-    g = sns.FacetGrid(df, row="Shift", col="Feature", margin_titles=True, sharex=False, sharey=False)
-    g.map_dataframe(sns.scatterplot, x="feature", y="loss", hue="Shift Severity", hue_order=hues)
-    g.add_legend()
-    plt.show()
-
-
-def plot_variances(df):
-    sampled = load_dfs(10, simulate=True, samples=30)
-    sampled = sampled[(sampled["KS"] == False) & (sampled["Dataset"] == "NICO")]
-    df["Shift Severity"] = df["fold"].apply(
-        lambda x: round(float(x.split("_")[1]), 2) if "_" in x else 0 if "ind" in x else 0.35)
-    sampled["Shift Severity"] = sampled["fold"].apply(
-        lambda x: round(float(x.split("_")[1]), 2) if "_" in x else 0 if "ind" in x else 0.35)
-
-    data_feat = df.groupby(["Dataset", "feature_name", "Shift", "Shift Severity"])["feature"].std().reset_index()
-    data_loss = df.groupby(["Dataset", "feature_name", "Shift", "Shift Severity"])["loss"].std().reset_index()
-    data_mean_feat = df.groupby(["Dataset", "feature_name", "Shift", "Shift Severity"])["feature"].mean().reset_index()
-    data_mean_loss = df.groupby(["Dataset", "feature_name", "Shift", "Shift Severity"])["loss"].mean().reset_index()
-    data_feat.rename(columns={"feature": "Feature Variance"}, inplace=True)
-    data_loss.rename(columns={"loss": "Loss Variance"}, inplace=True)
-    data = pd.merge(data_feat, data_loss, on=["Dataset", "feature_name", "Shift", "Shift Severity"])
-    data = pd.merge(data, data_mean_feat, on=["Dataset", "feature_name", "Shift", "Shift Severity"])
-    data = pd.merge(data, data_mean_loss, on=["Dataset", "feature_name", "Shift", "Shift Severity"])
-    name_map = {"grad_magnitude": "GradNorm", "cross_entropy": "Cross Entropy", "knn": "KNN", "softmax":"Softmax", "typicality":"Typicality", "energy":"Energy"}
-    shift_map = {"normal": "Organic Shift", "noise": "Additive Noise", "multnoise":"Multiplicative Noise", "hue":"Hue Shift", "saltpepper": "Salt & Pepper Noise"}
-    g = sns.FacetGrid(data, row="Dataset", col="feature_name", margin_titles=True, sharex=False, sharey=False)
-    g.map_dataframe(sns.lineplot, x="Shift Severity", y="Feature Variance", hue="Shift", alpha=0.5)
-    g.add_legend()
-    plt.show()
-
-    g = sns.FacetGrid(data, row="Dataset", col="feature_name", margin_titles=True, sharex=False, sharey=False)
-    g.map_dataframe(sns.lineplot, x="Shift Severity", y="Loss Variance", hue="Shift", alpha=0.5)
-    g.add_legend()
-    plt.show()
-    data = data[data["Dataset"] == "NICO"]
-
-    fig, ax = plt.subplots(len(data["Shift"].unique()), len(data["feature_name"].unique()), figsize=(20, 20))
-    color_map = dict(
-        zip(sorted(data["Shift Severity"].unique()), sns.color_palette("magma", len(data["Shift Severity"].unique()))))
-
-    # Add a color column to the sampled DataFrame
-    sampled["color"] = sampled["Shift Severity"].map(color_map)
-
-    for i, sev in enumerate(data["Shift"].unique()):
-        for j, feature in enumerate(data["feature_name"].unique()):
-            subdf = data[(data["Shift"] == sev) & (data["feature_name"] == feature)]
-            sampled_subdf = sampled[(sampled["Shift"] == sev) & (sampled["feature_name"] == feature)]
-
-            # Plot scatter points for the sampled data with a black outline
-            ax[i, j].scatter(sampled_subdf['feature'], sampled_subdf['loss'],
-                             color=sampled_subdf['color'], alpha=0.5,
-                             edgecolors='black', linewidth=1.5)
-
-            for row_n, (_, row) in enumerate(subdf.iterrows()):
-                color = color_map[row['Shift Severity']]
-                ellipse = patches.Ellipse((row['feature'], row['loss']), row['Feature Variance'], row['Loss Variance'],
-                                          color=color, alpha=0.3)
-                ax[i, j].add_patch(ellipse)
-
-            ax[i, j].set_title(f"{shift_map[sev]}|{name_map[feature]}")
+def plot_batching_effect(dataset, feature):
+    df = load_pra_df(dataset, feature, batch_size=1)
+    df_batched = load_pra_df(dataset, feature, batch_size=30)
+    oods = df[(df["ood"])&(~df["correct_prediction"])]
+    inds = df[(~df["ood"])&(df["correct_prediction"])]
+    fig, ax1 = plt.subplots()
+    ax2 = ax1.twinx()  # Create a second y-axis that shares the same x-axis
+    plot_df = pd.concat([oods, inds])
+    sns.kdeplot(plot_df, x="feature", hue="ood", fill=True, common_norm=False,ax=ax1)
+    sns.kdeplot(df_batched, x="feature", hue="ood", fill=False, common_norm=False, ax=ax2, linestyle="--")
     plt.tight_layout()
-    plt.savefig("variance_plot.pdf")
-    plt.show()
-
-
-def compare_gam_errors():
-    df = get_gam_data()
-    df = df[df["KS"]==False]
-    print(df.groupby(["Dataset","train_shift","sample_size", "feature_name"])[[ "regular mape", "monotonic mape"]].mean())
-    plot_df = df[df["train_shift"]=="noise"]
-    plot_df = plot_df[plot_df["KS"]==False]
-    g = sns.FacetGrid(plot_df, col="Dataset", margin_titles=True, sharex=False, sharey=False)
-    g.map_dataframe(sns.lineplot, x="sample_size", y="monotonic mape", hue="feature_name", palette="pastel")
-    for ax in g.axes.flat:
-        ax.set_ylim(0, 1)
-        ax.set_xscale("log")
-    g.add_legend( title="Feature")
-    plt.tight_layout()
+    # plt.yscale("log")
+    plt.xlim(0,2500)
+    plt.savefig(f"{dataset}_{feature}_kdes.pdf")
     plt.show()
 
 if __name__ == '__main__':
@@ -1351,21 +795,22 @@ if __name__ == '__main__':
     #class distribution
     # dataset_summaries()
     # loss_correctness_test()
-    # for batch in BATCH_SIZES:
-    #     ood_detector_correctness_prediction_accuracy(batch)
+    # ood_detector_correctness_prediction_accuracy(64)
+        # ood_verdict_accuracy_table(32)
         # ood_verdict_accuracy_table(batch)
 
 
 
-    # for batch_size in BATCH_SIZES:
-    #     ood_detector_correctness_prediction_accuracy(batch_size)
+    for batch_size in [1, 8, 16]:
+        ood_detector_correctness_prediction_accuracy(batch_size)
 
 
     #runtime verification
+    # plot_batching_effect("NICO", "entropy")
     # bias_correctness_test()
     # eval_debiased_ood_detectors(8)
     # eval_debiased_ood_detectors(8)
-    debiased_plots()
+    # debiased_plots()
 
     #loss regression
     # get_gam_data(load=False)
