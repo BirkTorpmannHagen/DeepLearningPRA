@@ -415,7 +415,7 @@ def verdictwise_proportions(cal_idx=0, batch_size=1):
     plt.show()
 
 def ood_detector_correctness_prediction_accuracy(batch_size):
-    df = load_all(prefix="final_data", batch_size=batch_size, shift="", samples=100)
+    df = load_all(prefix="final_data", batch_size=batch_size, shift="normal", samples=100)
     df = df[df["shift_intensity"].isin(["InD", "OoD", "0.30000000000000004"])] #extract only maximum shifts
     df = df[df["fold"]!="train"]
     # data = data[data["shift"]!="noise"]
