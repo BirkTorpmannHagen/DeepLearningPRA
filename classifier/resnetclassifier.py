@@ -1,4 +1,5 @@
 
+
 import sys
 import warnings
 from pathlib import Path
@@ -43,30 +44,22 @@ class ResNetClassifier(pl.LightningModule):
         linear_size = list(self.resnet_model.children())[-1].in_features
         # replace final layer for fine tuning
         self.resnet_model.fc = nn.Linear(linear_size, num_classes)
+
+        self.latent_dim = self.get_encoding_size(-2)
         self.acc = Accuracy(task="multiclass", num_classes=num_classes, top_k=1)
-        self._encoding = None  # Buffer to store encoding
-
-
-        target_layer = list(self.resnet_model.children())[-2]  # Penultimate layer
-
-        def hook_fn(module, input, output):
-            # Flatten output and store it
-            self._encoding = output.flatten(1)
-
-        target_layer.register_forward_hook(hook_fn)
-        self.latent_dim = self.get_encoding_size()
 
 
     def forward(self, X):
         return self.resnet_model(X)
 
-    def get_encoding_size(self):
+    def get_encoding_size(self, depth):
         dummy = torch.zeros((1,3,512,512))
-        return self.get_encoding(dummy).flatten(1).shape[-1]
+        return torch.nn.Sequential(*list(self.resnet_model.children())[:-1])(dummy).flatten(1).shape[-1]
+    def get_encoding(self, X, depth=-2):
+        return torch.nn.Sequential(*list(self.resnet_model.children())[:-1])(X).flatten(1)
 
-    def get_encoding(self, X):
-        _ = self(X)  # This triggers forward and stores encoding via hook
-        return self._encoding
+    def get_funny(self, X):
+        return torch.nn.Sequential(*list(self.resnet_model.children())[:-1])(X)
 
     def compute_loss(self, x, y):
         return self.criterion(self(x), y)

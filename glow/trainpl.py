@@ -52,9 +52,9 @@ if __name__ == '__main__':
                         transforms.Resize((size,size)),
                         transforms.ToTensor(), ])
 
-    train_set, val_set, test, ood  = build_nico_dataset( "../../Datasets/NICO++",  trans, val_trans, ind_context="dim")
+    # train_set, val_set, test, ood  = build_nico_dataset( "../../Datasets/NICO++",  trans, val_trans, ind_context="dim")
     # train_set, val_set = build_imagenette_dataset("../../Datasets/imagenette2", train_trans=trans, val_trans=val_trans)
-    # train_set, val_set, ood_set = build_officehome_dataset("../../Datasets/OfficeHome", train_transform=trans, val_transform=val_trans )
+    train_set, val_set, test_set, ood_set = build_officehome_dataset("../../Datasets/OfficeHome", train_transform=trans, val_transform=val_trans )
     # train_classifier(train_set, val_set)
 
     # train_set, val_set, ood_set = build_office31_dataset("../../Datasets/office31", train_transform=trans, val_transform=val_trans )
@@ -67,5 +67,5 @@ if __name__ == '__main__':
 
     # train_set, val_set, test_set, _, _, _ = build_polyp_dataset("../../Datasets/Polyps", size)
 
-    train_glow(train_set, val_set, img_size=size)
+    train_glow(train_set, val_set, img_size=size, load_from_checkpoint="glow_logs/OfficeHome/checkpoints/epoch=56-step=12426.ckpt")
 
