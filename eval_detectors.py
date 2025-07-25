@@ -36,6 +36,8 @@ def collect_debiased_data(testbed_constructor, dataset_name, mode="noise", sampl
     #     print(f"No features left to compute for {dataset_name} in {mode} mode with {sampler} sampler and batch size {batch_size} and k={k}")
     #     return
     # features = uncollected_features
+    if k!=-1:
+        features.remove(knn)
     print(f"Collecting data for {dataset_name} in {mode} mode with {sampler} sampler and batch size {batch_size} and k={k}")
     bench = testbed_constructor("classifier", mode=mode, sampler=sampler, batch_size=batch_size)
 
@@ -109,37 +111,39 @@ def collect_bias_data(k):
     for batch_size in [8,16, 32, 64]:
         # for sampler in ["RandomSampler","ClusterSampler",  "ClassOrderSampler"]:
         for sampler in [ "RandomSampler", "SequentialSampler", "ClusterSampler", "ClassOrderSampler"]:
-            if sampler!="ClassOrderSampler":
-                collect_debiased_data(PolypTestBed, "Polyp", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-            collect_debiased_data(CCTTestBed, "CCT", mode="normal",k=k, sampler=sampler, batch_size=batch_size)
+            # if sampler!="ClassOrderSampler":
+            #     collect_debiased_data(PolypTestBed, "Polyp", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+            # collect_debiased_data(CCTTestBed, "CCT", mode="normal",k=k, sampler=sampler, batch_size=batch_size)
+
             collect_debiased_data(OfficeHomeTestBed, "OfficeHome", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-            collect_debiased_data(Office31TestBed, "Office31", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-            collect_debiased_data(NicoTestBed, "NICO", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+            # collect_debiased_data(Office31TestBed, "Office31", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+            # collect_debiased_data(NicoTestBed, "NICO", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
 
             # collect_rabanser_data(CCTTestBed, "CCT", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
             # collect_rabanser_data(OfficeHomeTestBed, "OfficeHome", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-            collect_rabanser_data(Office31TestBed, "Office31", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+            # collect_rabanser_data(Office31TestBed, "Office31", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
             # collect_rabanser_data(NicoTestBed, "NICO", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
             # collect_rabanser_data(OfficeHomeTestBed, "OfficeHome", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
             # collect_rabanser_data(Office31TestBed, "Office31", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
 
-def collect_single_data(testbed, mode="normal"):
-    for modes in SYNTHETIC_SHIFTS+["normal"]:
-        collect_data(OfficeHomeTestBed, "OfficeHome", mode=mode)
-        collect_data(NicoTestBed, "NICO", mode=mode)
-        collect_data(Office31TestBed, "Office31", mode=mode)
-        collect_data(CCTTestBed, "CCT", mode=mode)
-        collect_data(PolypTestBed, "Polyp", mode=mode)
+def collect_single_data(testbed):
+    for mode in ["normal"]:
+        print(testbed.__name__.split("TestBed")[0])
+        collect_data(testbed, testbed.__name__.split("TestBed")[0], mode=mode)
+        # collect_data(NicoTestBed, "NICO", mode=mode)
+        # collect_data(Office31TestBed, "Office31", mode=mode)
+        # collect_data(CCTTestBed, "CCT", mode=mode)
+        # collect_data(PolypTestBed, "Polyp", mode=mode)
 
 
 
 if __name__ == '__main__':
     from features import *
     # torch.multiprocessing.set_start_method('spawn')
-    # collect_bias_data(-1)
-    # collect_bias_data(5)
-    # collect_bias_data(0)
-    # collect_bias_data(1)
+    collect_bias_data(-1)
+    collect_bias_data(5)
+    collect_bias_data(0)
+    collect_bias_data(1)
     # collect_bias_data(10)
 
 
@@ -149,62 +153,7 @@ if __name__ == '__main__':
     # input("next")
     # collect_data(CCTTestBed, "CCT",mode="normal")
     # collect_bias_data(5)
-
-    # collect_data(PolypTestBed, "Polyp", mode="normal")
-    # collect_data(PolypTestBed, "Polyp", mode="noise")
-    # collect_data(PolypTestBed, "Polyp", mode="hue")
-    # collect_data(PolypTestBed, "Polyp", mode="smear")
-    # collect_data(PolypTestBed, "Polyp", mode="saturation")
-    # collect_data(PolypTestBed, "Polyp", mode="brightness")
-    # collect_data(PolypTestBed, "Polyp", mode="contrast")
-    # collect_data(PolypTestBed, "Polyp", mode="multnoise")
-    # collect_data(PolypTestBed, "Polyp", mode="saltpepper")
-    # collect_data(PolypTestBed, "Polyp", mode="fgsm")
-
-
-    # collect_data(CCTTestBed, "CCT", mode="normal")
-    # collect_data(CCTTestBed, "CCT", mode="noise")
-    # collect_data(CCTTestBed, "CCT", mode="hue")
-    # collect_data(CCTTestBed, "CCT", mode="smear")
-    # collect_data(CCTTestBed, "CCT", mode="saturation")
-    # collect_data(CCTTestBed, "CCT", mode="brightness")
-    # collect_data(CCTTestBed, "CCT", mode="contrast")
-    # collect_data(CCTTestBed, "CCT", mode="multnoise")
-    # collect_data(CCTTestBed, "CCT", mode="saltpepper")
-    # collect_data(CCTTestBed, "CCT", mode="fgsm")
-
-    collect_data(OfficeHomeTestBed, "OfficeHome", mode="normal")
-    collect_data(OfficeHomeTestBed, "OfficeHome", mode="noise")
-    collect_data(OfficeHomeTestBed, "OfficeHome", mode="hue")
-    collect_data(OfficeHomeTestBed, "OfficeHome", mode="smear")
-    collect_data(OfficeHomeTestBed, "OfficeHome", mode="saturation")
-    collect_data(OfficeHomeTestBed, "OfficeHome", mode="brightness")
-    collect_data(OfficeHomeTestBed, "OfficeHome", mode="contrast")
-    collect_data(OfficeHomeTestBed, "OfficeHome", mode="multnoise")
-    collect_data(OfficeHomeTestBed, "OfficeHome", mode="saltpepper")
-    collect_data(OfficeHomeTestBed, "OfficeHome", mode="fgsm")
-    # #
-    # collect_data(Office31TestBed, "Office31", mode="normal")
-    # collect_data(Office31TestBed, "Office31", mode="noise")
-    # collect_data(Office31TestBed, "Office31", mode="hue")
-    # collect_data(Office31TestBed, "Office31", mode="smear")
-    # collect_data(Office31TestBed, "Office31", mode="saturation")
-    # collect_data(Office31TestBed, "Office31", mode="brightness")
-    # collect_data(Office31TestBed, "Office31", mode="contrast")
-    # collect_data(Office31TestBed, "Office31", mode="multnoise")
-    # collect_data(Office31TestBed, "Office31", mode="saltpepper")
-    # # collect_data(Office31TestBed, "Office31", mode="fgsm")
-    #
-    # collect_data(NicoTestBed, "NICO", mode="normal")
-    # collect_data(NicoTestBed, "NICO", mode="noise")
-    # collect_data(NicoTestBed, "NICO", mode="hue")
-    # collect_data(NicoTestBed, "NICO", mode="smear")
-    # collect_data(NicoTestBed, "NICO", mode="saturation")
-    # collect_data(NicoTestBed, "NICO", mode="brightness")
-    # collect_data(NicoTestBed, "NICO", mode="contrast")
-    # collect_data(NicoTestBed, "NICO", mode="multnoise")
-    # collect_data(NicoTestBed, "NICO", mode="saltpepper")
-    # collect_data(NicoTestBed, "NICO", mode="fgsm")
+    # collect_single_data(OfficeHomeTestBed)
 
     # bench = NjordTestBed(10)
     # collect_bias_data(5)
