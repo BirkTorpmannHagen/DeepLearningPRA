@@ -49,6 +49,7 @@ def dataset_summaries():
 
 def accuracy_table():
     df = load_all(1, samples=1000, prefix="final_data")
+    print(df["shift"].unique())
     df = df[df["shift"]!="noise"]
     accs = df.groupby(["Dataset", "shift"])["correct_prediction"].mean().reset_index()
     print(accs)

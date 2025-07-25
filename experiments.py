@@ -414,18 +414,16 @@ def verdictwise_proportions(cal_idx=0, batch_size=1):
     plt.savefig("proportions_all.pdf")
     plt.show()
 
-def ood_detector_correctness_prediction_accuracy(batch_size):
-    df = load_all(prefix="final_data", batch_size=batch_size, shift="normal", samples=100)
+def ood_detector_correctness_prediction_accuracy(batch_size, shift="normal"):
+    df = load_all(prefix="final_data", batch_size=batch_size, shift=shift, samples=100)
     df = df[df["shift_intensity"].isin(["InD", "OoD", "0.30000000000000004"])] #extract only maximum shifts
     df = df[df["fold"]!="train"]
     # data = data[data["shift"]!="noise"]
     # data["ood"] = data["correct_prediction"]
     for dataset in DATASETS:
-        if dataset!="OfficeHome":
-            continue
         data_dict = []
         data_dataset = df[df["Dataset"] == dataset]
-        with tqdm(total=len(DSDS) * len(THRESHOLD_METHODS) * 2 * 2*(data_dataset["shift"].nunique()-3)**2, desc=f"Computing for {dataset}") as pbar:
+        with tqdm(total=df["feature_name"].nunique()*2 * 2 * 2*(data_dataset["shift"].nunique()-3)**2, desc=f"Computing for {dataset}") as pbar:
             for feature in DSDS:
                 data_filtered = data_dataset[data_dataset["feature_name"]==feature]
                 if data_filtered.empty:
@@ -446,14 +444,16 @@ def ood_detector_correctness_prediction_accuracy(batch_size):
                                 data_train = data_copy[
                                     (data_copy["shift"] == ood_val_fold) | (data_copy["shift"] == "ind_val")]
                                 dsd = OODDetector(data_train, ood_val_fold, threshold_method=threshold_method)
+                                # dsd.kde()
                                 for ood_test_fold in data_filtered["shift"].unique():
+
                                     if ood_test_fold in ["train", "ind_val", "ind_test"]:
                                         continue
                                     if perf_calibrated:
-                                        data_copy["ood"]=~data_copy["correct_prediction"] #
+                                        data_copy["ood"]=~data_copy["correct_prediction"]
                                     data_test = data_copy[(data_copy["shift"]==ood_test_fold)|(data_copy["shift"]=="ind_test")]
                                     if ood_perf and not perf_calibrated:
-                                        data_copy["ood"]=~data_copy["correct_prediction"] #
+                                        data_copy["ood"]=~data_copy["correct_prediction"]
                                     tpr, tnr, ba = dsd.get_metrics(data_test)
                                     if np.isnan(ba):
                                         continue
@@ -481,8 +481,11 @@ def ood_verdict_accuracy_table(batch_size):
     print(df.groupby(["Threshold Method", "OoD==f(x)=y", "Performance Calibrated"])[["ba"]].agg(["min", "mean", "max"]))
     # print(results)
     #calibration comparison
-    organic_results = df[(~df["Performance Calibrated"])&(df["Threshold Method"]=="val_optimal")&(~df["OoD Val Fold"].isin(SYNTHETIC_SHIFTS))]  # only synthetic shifts
-    print(organic_results.groupby(["Dataset", "feature_name", "OoD==f(x)=y", "OoD Test Fold"])["ba"].agg(["mean"]).reset_index())
+    organic_results = df[(~df["Performance Calibrated"])&(df["Threshold Method"]=="val_optimal")]  # only synthetic shifts
+    # organic_results = organic_results[organic_results["OoD Test Fold"]==organic_results["OoD Val Fold"]]
+
+    print(organic_results.groupby(["Dataset", "feature_name", "OoD==f(x)=y"])["ba"].agg(["mean"]).reset_index())
+
     # print(df.columns)
     # print(df[~df["OoD Shift"].isin(SYNTHETIC_SHIFTS)].groupby(["OoD==f(x)=y", "Performance Calibrated", "Threshold Method"])[["balanced_accuracy"]].agg(["min", "mean", "max"]).reset_index())
     #
@@ -730,7 +733,7 @@ def plot_batching_effect(dataset, feature):
 if __name__ == '__main__':
     #accuracies on each dataset
     from experiments.dataset_analysis import *
-    # accuracy_table()
+    accuracy_table()
     #class distribution
     # dataset_summaries()
     """
@@ -738,14 +741,13 @@ if __name__ == '__main__':
     """
     # loss_correctness_test()
     for batch_size in BATCH_SIZES:
-        if batch_size==1:
-            print(f"Running batch size {batch_size}")
-            ood_detector_correctness_prediction_accuracy(batch_size)
-            ood_verdict_accuracy_table(batch_size)
-            input()
+        print(f"Running batch size {batch_size}")
+        ood_detector_correctness_prediction_accuracy(batch_size, shift="normal")
+        ood_verdict_accuracy_table(batch_size)
+            # input()#&data_copy["ood"] #
 
     #batching
-    # ood_verdict_plots_batched()
+    ood_verdict_plots_batched()
 
 # ood_detector_correctness_prediction_accuracy(64)
         # ood_verdict_accuracy_table(32)

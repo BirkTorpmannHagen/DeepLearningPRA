@@ -80,11 +80,6 @@ class OODDetector:
             lower = self.ind_val["feature"].quantile(0.01)
             upper = self.ind_val["feature"].quantile(0.99)
             self.threshold = [lower,upper]
-        if threshold_method == "density":
-            self.density_model = KernelDensity(kernel='gaussian', bandwidth=0.1)
-            self.density_model.fit(self.ind_val["feature"].values.reshape(-1, 1))
-
-            self.threshold = 0
 
 
 
