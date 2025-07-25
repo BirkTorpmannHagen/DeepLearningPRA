@@ -1,4 +1,4 @@
-from python_utils.time import epoch
+
 from pytorch_lightning import Trainer
 from datasets import *
 
@@ -20,9 +20,9 @@ from classifier.resnetclassifier import ResNetClassifier
 # into a pytorch-lightning module so that we can take advantage of lightning's Trainer object.
 # We aim to make it a little more general by allowing users to define the number of prediction classes.
 
-def train_classifier(train_set, val_set, load_from_checkpoint=None, batch_size=16):
+def train_classifier(train_set, val_set, load_from_checkpoint=None):
     num_classes =  train_set.num_classes
-    model =  ResNetClassifier(num_classes, 101, transfer=False, batch_size=batch_size, lr=1e-3).to("cuda")
+    model =  ResNetClassifier(num_classes, 101, transfer=False, batch_size=32, lr=1e-4).to("cuda")
 
     if load_from_checkpoint:
         model = ResNetClassifier.load_from_checkpoint(load_from_checkpoint, num_classes=num_classes, resnet_version=101)
@@ -32,27 +32,25 @@ def train_classifier(train_set, val_set, load_from_checkpoint=None, batch_size=1
         dirpath=f"train_logs/{type(train_set).__name__}/checkpoints",
         save_top_k=3,
         verbose=True,
-        monitor="val_loss",
-        mode="min"
+        monitor="val_acc",
+        mode="max"
     )
 
     # ResNetClassifier.load_from_checkpoint("Imagenette_logs/checkpoints/epoch=82-step=24568.ckpt", resnet_version=101, nj
     trainer = Trainer(max_epochs=300, logger=tb_logger, accelerator="gpu",callbacks=checkpoint_callback)
-    trainer.fit(model, train_dataloaders=DataLoader(train_set, shuffle=True, batch_size=batch_size, num_workers=8, persistent_workers=True),
-                val_dataloaders=DataLoader(val_set, batch_size=batch_size, shuffle=True, num_workers=8, persistent_workers=True))
+    trainer.fit(model, train_dataloaders=DataLoader(train_set, shuffle=True, batch_size=16, num_workers=24),
+                val_dataloaders=DataLoader(val_set, batch_size=16, shuffle=True, num_workers=24))
 
 
 if __name__ == '__main__':
     #NICO
     size = 512
-    trans = transforms.Compose([                        transforms.Resize((size,size)),
-                        transforms.ToTensor(),
-                            transforms.RandomHorizontalFlip(),
+    trans = transforms.Compose([transforms.RandomHorizontalFlip(),
                         transforms.RandomVerticalFlip(),
                         transforms.RandomRotation(90),
-                        transforms.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1, hue=0.1),
                         # transforms.ElasticTransform(),
-])
+                        transforms.Resize((size,size)),
+                        transforms.ToTensor(), ])
     val_trans = transforms.Compose([
                         transforms.Resize((size,size)),
                         transforms.ToTensor(), ])
@@ -63,11 +61,10 @@ if __name__ == '__main__':
     # train_classifier(train_set, val_set)
 
     # train_set, val_set, test_set, ood_val_set, ood_test_set = build_office31_dataset("../../Datasets/office31", train_transform=trans, val_transform=val_trans )
-    train_classifier(train_set, val_set, load_from_checkpoint="train_logs/OfficeHome/checkpoints/epoch=38-step=8502.ckpt")
+    train_classifier(train_set, val_set, load_from_checkpoint="train_logs/OfficeHome/old_logs/epoch=153-step=33572.ckpt")
     #train_set, val_set, test_set, ood_val_set, ood_test_set = build_cct_dataset("../../Datasets/CCT", trans, val_trans)
    # train_classifier(train_set, val_set, load_from_checkpoint="train_logs/CCT/checkpoints/epoch=60-step=50813.ckpt")
     # train_set, val_set, ood_set = build_officehome_dataset("../../Datasets/OfficeHome", train_transform=trans, val_transform=val_trans)
     # train_set, test_set,val_set, ood_set = get_pneumonia_dataset("../../Datasets/Pneumonia", trans, val_trans)
 
     # CIAR10 and MNIST are already trained :D
-

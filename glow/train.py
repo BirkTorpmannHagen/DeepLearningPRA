@@ -105,7 +105,7 @@ def train(data, model, optimizer, img_size=32):
                 )
 
 
-def train_new(dataset, img_size=32):
+def train_new(dataset, img_size=32, load_from_checkpoint=None):
     model_single = Glow(3, 32, 4)
     # model = nn.DataParallel(model_single)
     model = model_single
@@ -136,7 +136,7 @@ if __name__ == "__main__":
     # train_new(dataset, img_size=32)
 
     dataset, ind_val,_, _, _ = build_cct_dataset("../../Datasets/CCT", train_transform=trans, val_transform=trans)
-    train_new(dataset, img_size=32)
+    train_new(dataset, img_size=32, load_from_checkpoint="glow_logs/OfficeHome/checkpoints/epoch=56-step=12426.ckpt")
 
     # trans = transforms.Compose([transforms.Resize((32,32)), transforms.RandomHorizontalFlip(), transforms.ToTensor()])
     # dataset, _ = build_nico_dataset(1, "../../Datasets/NICO++", 0.2, trans, trans, context="dim", seed=0)
