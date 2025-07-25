@@ -135,7 +135,7 @@ class FeatureSD(BaseSD):
 
     def get_features(self, dataloader):
         features = np.zeros((len(dataloader), self.testbed.batch_size, self.num_features))
-        for i, data in tqdm(enumerate(dataloader), total=len(dataloader)):
+        for i, data in tqdm(enumerate(dataloader), total=len(dataloader), desc="Computing Features"):
             x = data[0].cuda()
             for j, feature_fn in enumerate(self.feature_fns):
                 # print(feature_fn)
@@ -150,7 +150,7 @@ class FeatureSD(BaseSD):
     def get_encodings(self, dataloader):
 
         features = np.zeros((len(dataloader), self.testbed.batch_size, self.rep_model.latent_dim))
-        for i, data in tqdm(enumerate(dataloader), total=len(dataloader)):
+        for i, data in tqdm(enumerate(dataloader), total=len(dataloader), desc="Computing Encodings"):
             x = data[0].cuda()
             with torch.no_grad():
                 out = self.rep_model.get_encoding(x).detach().cpu().numpy()

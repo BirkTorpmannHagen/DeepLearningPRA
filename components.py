@@ -118,15 +118,11 @@ class OODDetector:
 
 
     def get_tpr(self, data):
-        eval_copy = data.copy()
+        return data[data["ood"]].apply(lambda row: self.predict(row), axis=1).mean()
 
-        eval_copy["pred_ood"] = eval_copy.apply(lambda row: self.predict(row), axis=1)
-        return eval_copy[eval_copy["ood"]]["pred_ood"].mean()
 
     def get_tnr(self, data):
-        eval_copy = data.copy()
-        eval_copy["pred_ood"] = eval_copy.apply(lambda row: self.predict(row), axis=1)
-        return 1-eval_copy[~eval_copy["ood"]]["pred_ood"].mean()
+        return 1-data[~data["ood"]].apply(lambda row: self.predict(row), axis=1).mean()
 
     def get_accuracy(self, data):
         return 0.5*(self.get_tpr(data)+self.get_tnr(data))

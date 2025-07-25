@@ -1,7 +1,7 @@
 # from yellowbrick.features import PCA
 
 from testbeds import *
-from utils import load_all, BATCH_SIZES
+from utils import load_all, BATCH_SIZES, DATASETS, SYNTHETIC_SHIFTS
 
 
 def compute_stats(train_features, train_losses, ind_val_features, ind_val_losses, ind_test_features, ind_test_losses, ood_features, ood_losses, fname, feature_names):
@@ -23,9 +23,7 @@ def collect_data(testbed_constructor, dataset_name, mode="noise"):
 
 
 def collect_debiased_data(testbed_constructor, dataset_name, mode="noise", sampler="RandomSampler", k=5, batch_size=8):
-    bench = testbed_constructor("classifier", mode=mode, sampler=sampler, batch_size=batch_size)
-    features = [cross_entropy, energy, softmax, typicality, knn, grad_magnitude]
-
+    features = [cross_entropy, energy, softmax, typicality]
     uncollected_features = features.copy()
     for feature in features:
         print(feature)
@@ -119,20 +117,24 @@ def collect_bias_data(k):
 
             # collect_rabanser_data(CCTTestBed, "CCT", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
             # collect_rabanser_data(OfficeHomeTestBed, "OfficeHome", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-            # collect_rabanser_data(Office31TestBed, "Office31", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+            collect_rabanser_data(Office31TestBed, "Office31", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
             # collect_rabanser_data(NicoTestBed, "NICO", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
             # collect_rabanser_data(OfficeHomeTestBed, "OfficeHome", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
             # collect_rabanser_data(Office31TestBed, "Office31", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+
+def collect_single_data(testbed, mode="normal"):
+    for modes in SYNTHETIC_SHIFTS+["normal"]:
+        collect_data(OfficeHomeTestBed, "OfficeHome", mode=mode)
+        collect_data(NicoTestBed, "NICO", mode=mode)
+        collect_data(Office31TestBed, "Office31", mode=mode)
+        collect_data(CCTTestBed, "CCT", mode=mode)
+        collect_data(PolypTestBed, "Polyp", mode=mode)
+
 
 
 if __name__ == '__main__':
     from features import *
     # torch.multiprocessing.set_start_method('spawn')
-    # collect_bias_data(5)
-    collect_bias_data(-1)
-    collect_bias_data(0)
-    # collect_bias_data(1)
-    # collect_bias_data(10)
 
 
 
@@ -198,4 +200,10 @@ if __name__ == '__main__':
     # collect_data(NicoTestBed, "NICO", mode="fgsm")
 
     # bench = NjordTestBed(10)
+    collect_bias_data(5)
+    collect_bias_data(-1)
+    # collect_bias_data(0)
+    collect_bias_data(1)
+    collect_bias_data(10)
+
     # bench.split_datasets()
