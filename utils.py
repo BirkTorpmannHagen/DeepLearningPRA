@@ -220,7 +220,7 @@ DATASETS = ["CCT", "OfficeHome", "Office31", "NICO", "Polyp"]
 DSDS = ["knn", "grad_magnitude", "cross_entropy", "energy", "typicality", "softmax", "rabanser"]
 # BATCH_SIZES = [32]
 BATCH_SIZES = [1, 8, 16, 32, 64]
-THRESHOLD_METHODS = [ "val_optimal", "ind_span", "density"]
+THRESHOLD_METHODS = [ "val_optimal", "ind_span"]
 DATASETWISE_RANDOM_LOSS = {
     "CCT": -np.log(1/15),
     "OfficeHome": -np.log(1/65),
@@ -229,9 +229,10 @@ DATASETWISE_RANDOM_LOSS = {
     "Polyp": -10 #segmentation task; never incidentally correct
 }
 BIAS_TYPES = ["Unbiased", "Class", "Synthetic", "Temporal"]
+SAMPLERS = ["RandomSampler",  "ClassOrderSampler", "ClusterSampler", "SequentialSampler",]
 SYNTHETIC_SHIFTS = ["noise", "multnoise", "brightness", "contrast", "hue", "saltpepper", "saturation",  "smear"]
 
-SAMPLER_LUT = dict(zip(["RandomSampler",  "ClassOrderSampler", "ClusterSampler", "SequentialSampler",], BIAS_TYPES))
+SAMPLER_LUT = dict(zip(SAMPLERS, BIAS_TYPES))
 # BATCH_SIZES = np.arange(1, 64)
 def load_polyp_data():
     dfs = []

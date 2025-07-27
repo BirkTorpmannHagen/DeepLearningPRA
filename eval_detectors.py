@@ -23,20 +23,22 @@ def collect_data(testbed_constructor, dataset_name, mode="noise"):
 
 
 def collect_debiased_data(testbed_constructor, dataset_name, mode="noise", sampler="RandomSampler", k=5, batch_size=8):
-    features = [cross_entropy, energy, softmax, typicality, knn, grad_magnitude]
-    # uncollected_features = features.copy()
-    #
-    # for feature in features:
-    #     print(feature)
-    #     fname = f"{dataset_name}_{mode}_{sampler}_{batch_size}_k={k}_{feature.__name__}.csv"
-    #     if fname in os.listdir("debiased_data"):
-    #         uncollected_features.remove(feature)
-    #         print(f"{fname} already exists, skipping...")
-    # if (uncollected_features== []):
-    #     print(f"No features left to compute for {dataset_name} in {mode} mode with {sampler} sampler and batch size {batch_size} and k={k}")
-    #     return
-    # features = uncollected_features
+    features = [cross_entropy, energy, softmax, typicality, knn]
     if k!=-1:
+        features.remove(knn)
+    uncollected_features = features.copy()
+
+    for feature in features:
+        print(feature)
+        fname = f"{dataset_name}_{mode}_{sampler}_{batch_size}_k={k}_{feature.__name__}.csv"
+        if fname in os.listdir("debiased_data"):
+            uncollected_features.remove(feature)
+            print(f"{fname} already exists, skipping...")
+    if (uncollected_features== []):
+        print(f"No features left to compute for {dataset_name} in {mode} mode with {sampler} sampler and batch size {batch_size} and k={k}")
+        return
+    features = uncollected_features
+    if k!=-1 and knn in features:
         features.remove(knn)
     print(f"Collecting data for {dataset_name} in {mode} mode with {sampler} sampler and batch size {batch_size} and k={k}")
     bench = testbed_constructor("classifier", mode=mode, sampler=sampler, batch_size=batch_size)
@@ -108,16 +110,16 @@ def collect_model_wise_data(testbed_constructor, dataset_name, mode="noise"):
 
 def collect_bias_data(k):
     # collect_data(PolypTestBed, "Polyp", mode="normal")
-    for batch_size in [8,16, 32, 64]:
+    for batch_size in [8,16, 32]:
         # for sampler in ["RandomSampler","ClusterSampler",  "ClassOrderSampler"]:
         for sampler in [ "RandomSampler", "SequentialSampler", "ClusterSampler", "ClassOrderSampler"]:
-            # if sampler!="ClassOrderSampler":
-            #     collect_debiased_data(PolypTestBed, "Polyp", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+            if sampler!="ClassOrderSampler":
+                collect_debiased_data(PolypTestBed, "Polyp", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
             # collect_debiased_data(CCTTestBed, "CCT", mode="normal",k=k, sampler=sampler, batch_size=batch_size)
 
-            collect_debiased_data(OfficeHomeTestBed, "OfficeHome", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-            # collect_debiased_data(Office31TestBed, "Office31", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-            # collect_debiased_data(NicoTestBed, "NICO", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+            # collect_debiased_data(OfficeHomeTestBed, "OfficeHome", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+            collect_debiased_data(Office31TestBed, "Office31", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+            collect_debiased_data(NicoTestBed, "NICO", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
 
             # collect_rabanser_data(CCTTestBed, "CCT", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
             # collect_rabanser_data(OfficeHomeTestBed, "OfficeHome", mode="normal", k=k, sampler=sampler, batch_size=batch_size)

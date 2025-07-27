@@ -423,19 +423,17 @@ def ood_detector_correctness_prediction_accuracy(batch_size, shift="normal"):
     for dataset in DATASETS:
         data_dict = []
         data_dataset = df[df["Dataset"] == dataset]
-        with tqdm(total=df["feature_name"].nunique()*2 * 2 * 2*(data_dataset["shift"].nunique()-3)**2, desc=f"Computing for {dataset}") as pbar:
+        with tqdm(total=df["feature_name"].nunique()*2 * 2, desc=f"Computing for {dataset}") as pbar:
             for feature in DSDS:
                 data_filtered = data_dataset[data_dataset["feature_name"]==feature]
                 if data_filtered.empty:
-                    # print(f"No data for {dataset} {feature}")
+                    print(f"No data for {dataset} {feature}")
                     continue
                 for ood_perf in [True, False]:
                     for perf_calibrated in [True, False]:
                         if perf_calibrated and not ood_perf:
                             continue  # unimportant
                         for threshold_method in THRESHOLD_METHODS:
-                            if threshold_method == "density":
-                                continue
                             for ood_val_fold in data_filtered["shift"].unique():
                                 data_copy = data_filtered.copy()
                                 if ood_val_fold in ["train", "ind_val", "ind_test"]:
@@ -446,7 +444,6 @@ def ood_detector_correctness_prediction_accuracy(batch_size, shift="normal"):
                                 dsd = OODDetector(data_train, ood_val_fold, threshold_method=threshold_method)
                                 # dsd.kde()
                                 for ood_test_fold in data_filtered["shift"].unique():
-
                                     if ood_test_fold in ["train", "ind_val", "ind_test"]:
                                         continue
                                     if perf_calibrated:
@@ -465,7 +462,7 @@ def ood_detector_correctness_prediction_accuracy(batch_size, shift="normal"):
                                     pbar.set_description(f"Computing for {dataset}, {feature} {ood_perf} {ood_test_fold}; current ba: {ba}")
 
                                 # data_copy = data_copy[data_copy["ood_val_fold"]!=data_copy["shift"]]
-                                    pbar.update(1)
+                        pbar.update(1)
 
             data = pd.DataFrame(data_dict)
             data.replace(DSD_PRINT_LUT, inplace=True)
@@ -478,14 +475,19 @@ def ood_verdict_accuracy_table(batch_size):
     for dataset, feature in itertools.product(DATASETS, DSDS):
         dfs.append(pd.read_csv(f"ood_detector_data/ood_detector_correctness_{dataset}_{batch_size}.csv"))
     df = pd.concat(dfs)
+    df["Organic"]=(~df["OoD Test Fold"].isin(SYNTHETIC_SHIFTS))&(~df["OoD Val Fold"].isin(SYNTHETIC_SHIFTS))
+    df = df[~df["OoD Val Fold"].isin(SYNTHETIC_SHIFTS)]
     print(df.groupby(["Threshold Method", "OoD==f(x)=y", "Performance Calibrated"])[["ba"]].agg(["min", "mean", "max"]))
     # print(results)
+    df = df[(~df["Performance Calibrated"])&(df["Threshold Method"]=="val_optimal")]
     #calibration comparison
-    organic_results = df[(~df["Performance Calibrated"])&(df["Threshold Method"]=="val_optimal")]  # only synthetic shifts
+    organic_results = df[df["Organic"]
+                            ]  # only synthetic shifts
     # organic_results = organic_results[organic_results["OoD Test Fold"]==organic_results["OoD Val Fold"]]
 
-    print(organic_results.groupby(["Dataset", "feature_name", "OoD==f(x)=y"])["ba"].agg(["mean"]).reset_index())
-
+    # print(organic_results.groupby(["Dataset", "feature_name", "OoD==f(x)=y"])["ba"].agg(["mean"]).reset_index())
+    batched_consistency = df.groupby(["Dataset", "feature_name", "OoD==f(x)=y", "Organic" ])[["ba"]].agg(["mean"]).reset_index()
+    print(batched_consistency)
     # print(df.columns)
     # print(df[~df["OoD Shift"].isin(SYNTHETIC_SHIFTS)].groupby(["OoD==f(x)=y", "Performance Calibrated", "Threshold Method"])[["balanced_accuracy"]].agg(["min", "mean", "max"]).reset_index())
     #
@@ -598,60 +600,58 @@ def eval_debiased_ood_detectors(batch_size):
     data = load_all_biased(prefix="debiased_data", filter_batch=batch_size)
     # print(data["batch_size"].unique())
     data = data[data["fold"] != "train"]
-    dfs = []
-    with tqdm(total=len(DATASETS) * len(DSDS)*3) as pbar:
-        for dataset in DATASETS:
+    data_dict = []
+
+    for dataset in DATASETS:
+        with tqdm(len(DSDS) * 3) as pbar:
             for feature in DSDS:
-                # if feature=="softmax":
-                #     continue
-                # for k in data["k"].unique():
                 for k in [-1, 0, 5]:
                     data_dataset = data[(data["Dataset"] == dataset) & (data["feature_name"] == feature) & (data["k"]==k)]
                     if data_dataset.empty:
-
                         continue
                     for ood_val_fold in data_dataset["shift"].unique():
-                        data_copy = data_dataset.copy()
-                        data_copy["ood"] = ~data_copy["correct_prediction"]  # OOD is the opposite of correct prediction
-
                         if ood_val_fold in ["train", "ind_val", "ind_test"]:
                             continue
+                        data_copy = data_dataset.copy()
                         data_train = data_copy[
                             ((data_copy["shift"] == ood_val_fold) | (data_copy["shift"] == "ind_val"))]
-                        data_train = data_train[data_train["bias"]=="RandomSampler"]
-
+                        data_train = data_train[data_train["bias"] == "RandomSampler"]
                         if data_train.empty:
                             continue
-                        # dsd = DebiasedOODDetector(data_train, ood_val_fold, k=5, batch_size=32)
-                        dsd = OODDetector(data_train, ood_val_fold, threshold_method="ind_span")
-                        # dsd.plot_hist() # for debugging
-                        data_copy["Verdict"] =  data_copy.apply(lambda row: dsd.predict(row), axis=1)
-                        data_copy["ood_val_fold"] = ood_val_fold
+                        dsd = OODDetector(data_train, ood_val_fold, threshold_method="val_optimal")
+                        for ood_test_fold in data_dataset["shift"].unique():
+                            if ood_test_fold in ["train", "ind_val", "ind_test"]:
+                                continue
+                            for bias in SAMPLERS:
+                                data_test = data_copy[data_copy["bias"]==bias]
+                                if data_test.empty:
+                                    print(f"No data found for {dataset} and {feature}_k={k} with bias = {bias}")
+                                    continue
+                                data_test = data_copy[(data_copy["shift"] == ood_test_fold) | (data_copy["shift"]=="ind_test")&(data_copy["bias"]==bias)]
+                                data_copy["ood"] = ~data_copy["correct_prediction"]  # OOD is the opposite of correct prediction
+                                tpr, tnr, ba = dsd.get_metrics(data_test)
+                                if np.isnan(ba):
+                                    continue
+                                data_dict.append(
+                                    {"Dataset": dataset, "feature_name": feature,
+                                     "OoD Val Fold": ood_val_fold, "OoD Test Fold": ood_test_fold, "tpr": tpr, "tnr": tnr,
+                                     "ba": ba, "bias": bias, "k":k}
+                                )
+
                         # data_copy["ood"] = ~data_copy["correct_prediction"]  #
 
-                        data_copy["correct_ood_detection"] = data_copy["Verdict"] == data_copy["ood"]
-                        data_copy = data_copy[data_copy["ood_val_fold"] != data_copy["shift"]]
-                        dfs.append(data_copy)
                     pbar.update(1)
-    data = pd.concat(dfs)
-    tprs = data[~data["shift"].isin(["ind_val", "ind_test"])].groupby(["Dataset", "feature_name", "shift", "bias", "k"])[
-        "correct_ood_detection"].mean().reset_index().groupby(["Dataset", "feature_name", "bias", "k"])[
-        "correct_ood_detection"].mean().reset_index()
 
-    tnrs = data[data["shift"].isin(["ind_val", "ind_test"])].groupby(["Dataset", "feature_name", "shift", "bias", "k"])[
-        "correct_ood_detection"].mean().reset_index().groupby(["Dataset", "feature_name", "bias", "k"])[
-        "correct_ood_detection"].mean().reset_index()
+    data = pd.DataFrame(data_dict)
+    data.replace(DSD_PRINT_LUT, inplace=True)
+    data.replace(SAMPLER_LUT)
+    data.to_csv(f"ood_detector_data/debisaed_ood_detector_correctness_{dataset}_{batch_size}.csv", index=False)
 
-    tprs = tprs.rename(columns={"correct_ood_detection": "TPR"})
-    tnrs = tnrs.rename(columns={"correct_ood_detection": "TNR"})
-    balanced = pd.merge(tprs, tnrs,
-                        on=["Dataset", "feature_name", "bias", "k"])
-
-    balanced["balanced_accuracy"] = (balanced["TPR"] + balanced["TNR"]) / 2
-    balanced.replace(DSD_PRINT_LUT, inplace=True)
-
-    table = balanced.groupby(["Dataset", "feature_name", "k", "bias"]).mean(numeric_only=True).reset_index()
-    return table
+    g = sns.FacetGrid(data, col="Dataset")
+    g.map_dataframe(sns.boxplot, x="bias", y="ba", hue="k", palette=sns.color_palette())
+    g.add_legend()
+    plt.show()
+    return data
 
 
 def debiased_plots():
@@ -740,14 +740,15 @@ if __name__ == '__main__':
         Runtime Verification
     """
     # loss_correctness_test()
-    for batch_size in BATCH_SIZES:
-        print(f"Running batch size {batch_size}")
-        ood_detector_correctness_prediction_accuracy(batch_size, shift="normal")
-        ood_verdict_accuracy_table(batch_size)
+    # for batch_size in BATCH_SIZES:
+    #     print(f"Running batch size {batch_size}")
+    #     ood_detector_correctness_prediction_accuracy(batch_size, shift="")
+        # ood_verdict_accuracy_table(batch_size)
+    #     input()
             # input()#&data_copy["ood"] #
 
     #batching
-    ood_verdict_plots_batched()
+    # ood_verdict_plots_batched()
 
 # ood_detector_correctness_prediction_accuracy(64)
         # ood_verdict_accuracy_table(32)
@@ -761,7 +762,7 @@ if __name__ == '__main__':
 
     #runtime verification
     # plot_batching_effect("NICO", "entropy")
-    # eval_debiased_ood_detectors(8)
+    eval_debiased_ood_detectors(16)
     # eval_debiased_ood_detectors(8)
     # debiased_plots()
 
