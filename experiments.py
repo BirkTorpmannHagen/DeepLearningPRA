@@ -605,9 +605,12 @@ def eval_debiased_ood_detectors(batch_size):
     for dataset in DATASETS:
         with tqdm(len(DSDS) * 3) as pbar:
             for feature in DSDS:
-                for k in [-1, 0, 5]:
+                if feature!="rabanser":
+                    continue
+                for k in [0,5]:
                     data_dataset = data[(data["Dataset"] == dataset) & (data["feature_name"] == feature) & (data["k"]==k)]
                     if data_dataset.empty:
+                        print(f"No data for {dataset}-{feature}-{k}")
                         continue
                     for ood_val_fold in data_dataset["shift"].unique():
                         if ood_val_fold in ["train", "ind_val", "ind_test"]:
@@ -619,16 +622,16 @@ def eval_debiased_ood_detectors(batch_size):
                         if data_train.empty:
                             continue
                         dsd = OODDetector(data_train, ood_val_fold, threshold_method="val_optimal")
+                        dsd.kde()
                         for ood_test_fold in data_dataset["shift"].unique():
                             if ood_test_fold in ["train", "ind_val", "ind_test"]:
                                 continue
                             for bias in SAMPLERS:
                                 data_test = data_copy[data_copy["bias"]==bias]
                                 if data_test.empty:
-                                    print(f"No data found for {dataset} and {feature}_k={k} with bias = {bias}")
                                     continue
                                 data_test = data_copy[(data_copy["shift"] == ood_test_fold) | (data_copy["shift"]=="ind_test")&(data_copy["bias"]==bias)]
-                                data_copy["ood"] = ~data_copy["correct_prediction"]  # OOD is the opposite of correct prediction
+                                # data_copy["ood"] = ~data_copy["correct_prediction"]  # OOD is the opposite of correct prediction
                                 tpr, tnr, ba = dsd.get_metrics(data_test)
                                 if np.isnan(ba):
                                     continue
@@ -643,14 +646,17 @@ def eval_debiased_ood_detectors(batch_size):
                     pbar.update(1)
 
     data = pd.DataFrame(data_dict)
+    print(data.head(10))
     data.replace(DSD_PRINT_LUT, inplace=True)
-    data.replace(SAMPLER_LUT)
-    data.to_csv(f"ood_detector_data/debisaed_ood_detector_correctness_{dataset}_{batch_size}.csv", index=False)
-
-    g = sns.FacetGrid(data, col="Dataset")
-    g.map_dataframe(sns.boxplot, x="bias", y="ba", hue="k", palette=sns.color_palette())
-    g.add_legend()
-    plt.show()
+    data.replace(SAMPLER_LUT, inplace=True)
+    data.to_csv(f"ood_detector_data/debiased_ood_detector_correctness_{dataset}_{batch_size}.csv", index=False)
+    print(data.columns)
+    data = data.groupby(["Dataset", "feature_name", "bias", "k"])["ba"].mean().reset_index()
+    print(data)
+    # g = sns.FacetGrid(data, col="Dataset")
+    # g.map_dataframe(sns.barplot, x="bias", y="ba", hue="k", palette=sns.color_palette())
+    # g.add_legend()
+    # plt.show()
     return data
 
 
