@@ -19,7 +19,11 @@ def l2_distance(a, b):
     return np.linalg.norm(a - b)
 
 def ks_distance(a, b):
-    return ks_2samp(a, b)[0]
+
+    try:
+        return ks_2samp(a[a!=0], b[b!=0]).statistic
+    except ValueError:
+        return -1
 
 
 

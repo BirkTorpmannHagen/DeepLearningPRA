@@ -6,6 +6,7 @@ from pathlib import Path
 from argparse import ArgumentParser
 
 import matplotlib.pyplot as plt
+import numpy as np
 
 warnings.filterwarnings('ignore')
 
@@ -53,13 +54,14 @@ class ResNetClassifier(pl.LightningModule):
         return self.resnet_model(X)
 
     def get_encoding_size(self, depth):
-        dummy = torch.zeros((1,3,512,512))
-        return torch.nn.Sequential(*list(self.resnet_model.children())[:-1])(dummy).flatten(1).shape[-1]
+        dummy = torch.randn((1,3,512,512))
+        return self.get_encoding(dummy).shape[-1]
     def get_encoding(self, X, depth=-2):
-        return torch.nn.Sequential(*list(self.resnet_model.children())[:-1])(X).flatten(1)
+        encoding =  torch.nn.Sequential(*list(self.resnet_model.children())[:-1])(X).flatten(1)
+        return encoding
 
-    def get_funny(self, X):
-        return torch.nn.Sequential(*list(self.resnet_model.children())[:-1])(X)
+    # def get_funny(self, X):
+    #     return torch.nn.Sequential(*list(self.resnet_model.children())[:-1])(X)
 
     def compute_loss(self, x, y):
         return self.criterion(self(x), y)

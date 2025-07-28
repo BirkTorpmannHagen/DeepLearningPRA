@@ -143,19 +143,20 @@ class FeatureSD(BaseSD):
                     if feature_fn.__name__=="typicality":
                         features[i,:, j]=feature_fn(self.testbed.glow, x, self.train_test_encodings).detach().cpu().numpy()
                     else:
-                        features[i,:, j]=feature_fn(self.rep_model, x, self.train_test_encodings).cpu().numpy()
+                        features[i,:, j]=feature_fn(self.testbed.classifier, x, self.train_test_encodings).cpu().numpy()
         features = features.reshape((len(dataloader)*self.testbed.batch_size, self.num_features))
         return features
 
     def get_encodings(self, dataloader):
 
-        features = np.zeros((len(dataloader), self.testbed.batch_size, self.rep_model.latent_dim))
+        features = np.zeros((len(dataloader), self.testbed.batch_size, self.testbed.classifier.latent_dim))
         for i, data in tqdm(enumerate(dataloader), total=len(dataloader), desc="Computing Encodings"):
             x = data[0].cuda()
             with torch.no_grad():
-                out = self.rep_model.get_encoding(x).detach().cpu().numpy()
+                out = self.testbed.classifier.get_encoding(x).detach().cpu().numpy()
             features[i]=out
         features = features.reshape((len(dataloader)*self.testbed.batch_size, self.rep_model.latent_dim))
+        # print(features)
         return features
 
 
@@ -305,7 +306,7 @@ class RabanserSD(FeatureSD):
         features = np.zeros(len(dataloader))
         # self.train_test_encodings = np.reshape(self.train_test_encodings, (len(self.train_test_encodings)*self.testbed.batch_size, self.rep_model.latent_dim))
 
-        with Pool(20) as pool:
+        with Pool(1) as pool:
             for i, data in tqdm(enumerate(dataloader), total=len(dataloader), desc="Computing Features"):
                 x = data[0].cuda()
                 with torch.no_grad():
@@ -313,14 +314,17 @@ class RabanserSD(FeatureSD):
                 enc_dim = range(x_encodings.shape[-1])
                 if self.k==0:
                     results = pool.starmap(ks_distance,
-                                           [(x_encodings[:, i], self.train_test_encodings[:, i]) for i in enc_dim])
-                    features[i] = np.min(results)
+                                           [(x_encodings[:, z], self.train_test_encodings[:, z]) for z in enc_dim])
+                    results = np.array(results)
+                    features[i] = np.mean(results[results!=-1])
                 else:
 
                     k_nearest_idx = get_debiased_samples(self.train_test_encodings, x_encodings, k=self.k)
-                    iterable = [(x_encodings[:, j], self.train_test_encodings[k_nearest_idx, j]) for j in enc_dim]
+                    iterable = [(x_encodings[:, z], self.train_test_encodings[k_nearest_idx, z]) for z in enc_dim]
                     results = pool.starmap(ks_distance, iterable)
-                    features[i] = np.median(results)
+                    results = np.array(results)
+
+                    features[i] = np.mean(results[results!=-1])
         return features
 
 class KNNFeaturewiseSD(FeatureSD):
