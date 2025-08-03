@@ -1,5 +1,4 @@
 ,fold,feature_name,feature,loss,acc,idx,class
-,fold,feature_name,feature,loss,acc,idx,class
 0,train,rabanser,0.0,0.000120632525,1.0,3793.0,2.0
 1,train,rabanser,0.0,0.1313211,1.0,12810.0,1.0
 2,train,rabanser,0.0,0.15656999,1.0,12279.0,0.0
