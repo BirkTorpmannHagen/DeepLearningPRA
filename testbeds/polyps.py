@@ -58,16 +58,19 @@ class PolypTestBed(BaseTestBed):
                 "CVC-ClinicDB":self.dl(self.cvc),
                 "EndoCV2020":self.dl(self.endo)}
 
-    def compute_losses(self, loader):
-        losses = np.zeros((len(loader), self.batch_size, 3))
-        print("computing losses")
+    def compute_losses(self, loader, reduce=False):
+        if reduce:
+            losses = np.zeros((len(loader), 3))
+        else:
+            losses = np.zeros((len(loader), self.batch_size, 3))
         with torch.no_grad():
             for i, data in tqdm(enumerate(loader), total=len(loader)):
                 with torch.no_grad():
                     x = data[0].to("cuda")
                     y = data[1].to("cuda")
                     idx = data[2]
-                    loss=self.classifier.compute_loss(x,y, reduce=False).cpu().unsqueeze(1)
-                    losses[i] = torch.cat([loss, 1-loss, idx.unsqueeze(1)], dim=1).cpu()
-
+                    loss=self.classifier.compute_loss(x,y, reduce=reduce).cpu().unsqueeze(1)
+                    losses[i] = torch.cat([loss, 1-loss, idx.unsqueeze(1).mean()]).cpu()
+        if reduce:
+            return losses
         return losses.reshape(-1, 3)
