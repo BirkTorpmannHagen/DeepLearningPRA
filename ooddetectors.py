@@ -77,12 +77,12 @@ def convert_to_pandas_df(train_features, train_losses,
         for fold, features in features_dict.items():
             losses = losses_dict[fold]
             print(losses.shape)
-            print(losses)
+            print(features.shape)
+
             assert len(losses)==len(features)
             label = fold_label_override if fold_label_override else fold
             for i in range(features.shape[0]):
                 try:
-
                     dataset.append({
                         "fold": label,
                         "feature_name": feature_name,
@@ -304,7 +304,7 @@ class RabanserSD(FeatureSD):
         features = np.zeros(len(dataloader))
         # self.train_test_encodings = np.reshape(self.train_test_encodings, (len(self.train_test_encodings)*self.testbed.batch_size, self.rep_model.latent_dim))
 
-        with Pool(1) as pool:
+        with Pool(20) as pool:
             for i, data in tqdm(enumerate(dataloader), total=len(dataloader), desc="Computing Features"):
                 x = data[0].cuda()
                 with torch.no_grad():

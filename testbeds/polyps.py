@@ -1,3 +1,4 @@
+import numpy as np
 import torch.nn
 from torch.utils.data import ConcatDataset
 
@@ -69,8 +70,13 @@ class PolypTestBed(BaseTestBed):
                     x = data[0].to("cuda")
                     y = data[1].to("cuda")
                     idx = data[2]
-                    loss=self.classifier.compute_loss(x,y, reduce=reduce).cpu().unsqueeze(1)
-                    losses[i] = torch.cat([loss, 1-loss, idx.unsqueeze(1).mean()]).cpu()
+                    if reduce:
+                        loss = self.classifier.compute_loss(x, y, reduce=reduce).cpu()
+                        losses[i] = np.array([loss, 1-loss, idx.numpy().mean()])
+                    else:
+                        loss = self.classifier.compute_loss(x, y, reduce=reduce).cpu().unsqueeze(1)
+
+                        losses[i] = torch.cat([loss, 1-loss, idx.unsqueeze(1)], dim=1).cpu()
         if reduce:
             return losses
         return losses.reshape(-1, 3)
