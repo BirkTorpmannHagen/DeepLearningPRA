@@ -76,9 +76,13 @@ def convert_to_pandas_df(train_features, train_losses,
     def add_entries(dataset, features_dict, losses_dict, fold_label_override=None):
         for fold, features in features_dict.items():
             losses = losses_dict[fold]
+            print(losses.shape)
+            print(losses)
+            assert len(losses)==len(features)
             label = fold_label_override if fold_label_override else fold
             for i in range(features.shape[0]):
                 try:
+
                     dataset.append({
                         "fold": label,
                         "feature_name": feature_name,
@@ -202,17 +206,6 @@ class BatchedFeatureSD(FeatureSD):
         self.k = k
 
     def compute_pvals_and_loss(self):
-        """
-
-        :param sample_size: sample size for the tests
-        :return: ind_p_values: p-values for ind fold for each sampler
-        :return ood_p_values: p-values for ood fold for each sampler
-        :return ind_sample_losses: losses for each sampler on ind fold, in correct order
-        :return ood_sample_losses: losses for each sampler on ood fold, in correct order
-        """
-
-        #these features are necessary to compute before-hand in order to compute knn and typicality
-        #mysteriously, a super call is ne
         loader = self.testbed.ind_loader()["ind_train"]
 
         self.train_test_encodings = super(BatchedFeatureSD, self).get_encodings(self.testbed.ind_loader()["ind_train"]).reshape((len(self.testbed.ind_loader()["ind_train"])*self.testbed.batch_size, self.rep_model.latent_dim))
@@ -242,6 +235,14 @@ class BatchedFeatureSD(FeatureSD):
             for i, data in tqdm(enumerate(dataloader), total=len(dataloader), desc="Computing Features"):
                 x = data[0].cuda()
                 features_batch = np.zeros((self.num_features, self.testbed.batch_size))
+                for j, feature_fn in enumerate(self.feature_fns):
+                    if feature_fn.__name__ == "typicality":
+                        features_batch[j] = feature_fn(self.testbed.glow, x,
+                                                       self.train_test_encodings).detach().cpu().numpy()
+                    else:
+                        features_batch[j] = feature_fn(self.rep_model, x,
+                                                       self.train_test_encodings).detach().cpu().numpy()
+
                 if self.k>0:
                     k_nearest_ind_features = np.zeros((self.num_features, self.testbed.batch_size * self.k))
                     for j, feature_fn in enumerate(self.feature_fns):
@@ -249,14 +250,8 @@ class BatchedFeatureSD(FeatureSD):
                         x_encodings = self.rep_model.get_encoding(x).detach().cpu().numpy()
                         k_nearest_indeces = get_debiased_samples(self.train_test_encodings, x_encodings,
                                                                  k=self.k)  # batch size x k samples
-
                         k_nearest_ind_features[j] = self.train_features["ind_train"][:, j][k_nearest_indeces]  # 5
-                        if feature_fn.__name__ == "typicality":
-                            features_batch[j] = feature_fn(self.testbed.glow, x,
-                                                           self.train_test_encodings).detach().cpu().numpy()
-                        else:
-                            features_batch[j] = feature_fn(self.rep_model, x,
-                                                       self.train_test_encodings).detach().cpu().numpy()
+
 
                         pool = Pool(len(self.feature_fns))
                         results = pool.starmap(ks_distance, zip([features_batch[k] for k in range(self.num_features)],
@@ -264,14 +259,6 @@ class BatchedFeatureSD(FeatureSD):
                                                                      range(self.num_features)]))
                         pool.close()
                 else:
-                    for j, feature_fn in enumerate(self.feature_fns):
-                        if feature_fn.__name__ == "typicality":
-                            features_batch[j] = feature_fn(self.testbed.glow, x,
-                                                           self.train_test_encodings).cpu().numpy()
-                        else:
-                            features_batch[j] = feature_fn(self.rep_model, x,
-                                                           self.train_test_encodings).cpu().numpy()
-
                     if self.k == 0:
                         with Pool(self.num_features) as pool:
                             results = pool.starmap(ks_distance, zip([features_batch[k] for k in range(self.num_features)],
@@ -279,10 +266,21 @@ class BatchedFeatureSD(FeatureSD):
                                                                  range(self.num_features)]))
                     else:
                         results = features_batch.mean(axis=1)
-
                 features[i]=results
-        features = features.reshape((len(dataloader), self.num_features))
         return features
+
+    def compute_features_and_loss_for_loaders(self, dataloaders):
+
+        losses = dict(
+            zip(dataloaders.keys(),
+                [self.testbed.compute_losses(loader, reduce=True) for fold_name, loader in dataloaders.items()]))
+        features = dict(
+            zip(dataloaders.keys(),
+                          [self.get_features(loader)
+                           for fold_name, loader in dataloaders.items()]))
+
+
+        return features, losses
 
     def get_encodings(self, dataloader):
 

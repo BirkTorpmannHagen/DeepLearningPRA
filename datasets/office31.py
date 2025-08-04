@@ -47,6 +47,7 @@ class Office31Dataset(Dataset):
             self.dataset.transform = val_transform
 
     def __len__(self):
+        # return 64 #debug
         return len(self.dataset)
 
     def __getitem__(self, index):

@@ -142,24 +142,31 @@ def load_all_biased(prefix="debiased_data", filter_batch=False):
                         except FileNotFoundError:
                             # print(f"No data found for {prefix}/{dataset}_normal_{sampler}_{batch_size}_k={k}_{feature}.csv")
                             continue
-                        df["bias"] = sampler
-                        df["feature_name"]=feature
-                        df["k"]=k
-                        df["Dataset"] = dataset
-                        df["batch_size"] = batch_size
-                        if dataset == "Polyp":
-                           df["correct_prediction"] = df["loss"] < df[df["fold"] == "ind_val"][
-                            "loss"].max()  # maximum observed val mean jaccard
-                        else:
-                            df["correct_prediction"] = df["loss"] < df[df["fold"] == "ind_val"]["loss"].quantile(
-                                0.95)  # losswise definition
-                            # df["correct_prediction"] = df["acc"]>=ind_val_acc   #accuracywise definition
-                        df["shift"] = df["fold"].apply(
-                            lambda x: x.split("_")[0] if "_0." in x else x)  # what kind of shift has occured?
-                        df["shift_intensity"] = df["fold"].apply(
-                            lambda x: x.split("_")[1] if "_" in x else x)  # what intensity?
-                        df["ood"] = ~df["fold"].isin(["train", "ind_val", "ind_test"])
-                        dfs.append(df)
+                        try:
+
+                            df["bias"] = sampler
+                            df["feature_name"]=feature
+                            df["k"]=k
+                            df["Dataset"] = dataset
+                            df["batch_size"] = batch_size
+                            if dataset == "Polyp":
+                               df["correct_prediction"] = df["loss"] < df[df["fold"] == "ind_val"][
+                                "loss"].max()  # maximum observed val mean jaccard
+                            else:
+                                df["correct_prediction"] = df["loss"] < df[df["fold"] == "ind_val"]["loss"].quantile(
+                                    0.95)  # losswise definition
+                                # df["correct_prediction"] = df["acc"]>=ind_val_acc   #accuracywise definition
+
+                                df["shift"] = df["fold"].apply(
+                                lambda x: x.split("_")[0] if "_0." in x else x)  # what kind of shift has occured?
+
+
+                            df["shift_intensity"] = df["fold"].apply(
+                                lambda x: x.split("_")[1] if "_" in x else x)  # what intensity?
+                            df["ood"] = ~df["fold"].isin(["train", "ind_val", "ind_test"])
+                            dfs.append(df)
+                        except TypeError:
+                            print(f"{dataset}_normal_{sampler}_{batch_size}_k={k}_{feature}.csv")
     return pd.concat(dfs)
 
 

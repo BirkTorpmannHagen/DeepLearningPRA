@@ -29,7 +29,7 @@ class BaseTestBed:
     """
     Abstract class for testbeds; feel free to override for your own datasets!
     """
-    def __init__(self, num_workers=5, mode="normal", sampler="RandomSampler", batch_size=16):
+    def __init__(self, batch_size, num_workers=5, mode="normal", sampler="RandomSampler"):
         self.mode=mode
         self.num_workers=5
         self.noise_range = np.arange(0.0, 0.35, 0.05)[1:]
@@ -105,20 +105,29 @@ class BaseTestBed:
 
 
 
-    def compute_losses(self, loader):
-        losses = torch.zeros((len(loader), self.batch_size, 4)) # loss, acc, class, index
-        criterion = nn.CrossEntropyLoss(reduction="none")  # still computing loss for each sample, just batched
-        # criterion = Accuracy(task="multiclass", num_classes=self.num_classes, top_k=1).cuda()
+    def compute_losses(self, loader, reduce=False):
+        if reduce:
+            losses = torch.zeros((len(loader), 4))  # loss, acc, class, index
+        else:
+            losses = torch.zeros((len(loader), self.batch_size, 4)) # loss, acc, class, index
+
+        loss_fn = nn.CrossEntropyLoss(reduction="none")  # still computing loss for each sample, just batched
 
         for i, data in tqdm(enumerate(loader), total=len(loader)):
             with (torch.no_grad()):
                 x = data[0].to("cuda")
                 y = data[1].to("cuda")
                 yhat = self.classifier(x)
-                acc = (torch.argmax(yhat, dim=1)==y).cpu().int()
-                loss = criterion(yhat, y).cpu()
+                acc = (torch.argmax(yhat, dim=1)==y).float().cpu()
+                loss = loss_fn(yhat, y).cpu()
                 idx = data[2]
-                losses[i] = torch.stack([loss, acc, idx, y.cpu()], dim=1)
-                # losses[i]=vec
-        return losses.flatten(0,1).numpy()
 
+                if reduce:
+                    losses[i] = torch.stack([loss.mean(), acc.mean(), idx.float().mean(), y.float().cpu().mean()])
+                else:
+                    losses[i] = torch.stack([loss, acc, idx, y.cpu()], dim=1)
+                # losses[i]=vec
+        if reduce:
+            return losses.numpy()
+
+        return losses.flatten(0, 1).numpy()

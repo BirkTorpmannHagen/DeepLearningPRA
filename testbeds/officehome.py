@@ -3,7 +3,7 @@ from testbeds.base import *
 
 class OfficeHomeTestBed(BaseTestBed):
     def __init__(self, sample_size, rep_model="vae", mode="severity", sampler="RandomSampler", batch_size=16):
-        super().__init__(sample_size, mode, sampler, batch_size=16)
+        super().__init__( mode=mode, sampler=sampler, batch_size=batch_size)
         self.trans = transforms.Compose([
             transforms.Resize((512, 512)),
             transforms.ToTensor(), ])

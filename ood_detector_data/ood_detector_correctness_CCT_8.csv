@@ -1,0 +1,2341 @@
+Dataset,feature_name,Threshold Method,OoD==f(x)=y,Performance Calibrated,OoD Val Fold,OoD Test Fold,tpr,tnr,ba
+CCT,kNN,val_optimal,True,True,OoD Test,OoD Test,1.0,0.5714285714285714,0.7857142857142857
+CCT,kNN,val_optimal,True,True,OoD Test,OoD Val,1.0,0.5555555555555556,0.7777777777777778
+CCT,kNN,val_optimal,True,True,OoD Test,hue,0.8103448275862069,0.7464788732394366,0.7784118504128217
+CCT,kNN,val_optimal,True,True,OoD Test,multnoise,1.0,0.8130081300813008,0.9065040650406504
+CCT,kNN,val_optimal,True,True,OoD Test,noise,1.0,1.0,1.0
+CCT,kNN,val_optimal,True,True,OoD Test,saltpepper,1.0,0.9900990099009901,0.995049504950495
+CCT,kNN,val_optimal,True,True,OoD Val,OoD Test,1.0,0.5714285714285714,0.7857142857142857
+CCT,kNN,val_optimal,True,True,OoD Val,OoD Val,1.0,0.5555555555555556,0.7777777777777778
+CCT,kNN,val_optimal,True,True,OoD Val,hue,0.8103448275862069,0.7464788732394366,0.7784118504128217
+CCT,kNN,val_optimal,True,True,OoD Val,multnoise,1.0,0.8130081300813008,0.9065040650406504
+CCT,kNN,val_optimal,True,True,OoD Val,noise,1.0,1.0,1.0
+CCT,kNN,val_optimal,True,True,OoD Val,saltpepper,1.0,0.9900990099009901,0.995049504950495
+CCT,kNN,val_optimal,True,True,brightness,OoD Test,1.0,0.5485714285714286,0.7742857142857142
+CCT,kNN,val_optimal,True,True,brightness,OoD Val,1.0,0.5333333333333333,0.7666666666666666
+CCT,kNN,val_optimal,True,True,brightness,hue,0.9482758620689655,0.6971830985915493,0.8227294803302574
+CCT,kNN,val_optimal,True,True,brightness,multnoise,1.0,0.7804878048780488,0.8902439024390244
+CCT,kNN,val_optimal,True,True,brightness,noise,1.0,0.96,0.98
+CCT,kNN,val_optimal,True,True,brightness,saltpepper,1.0,0.9504950495049505,0.9752475247524752
+CCT,kNN,val_optimal,True,True,contrast,OoD Test,1.0,0.2571428571428571,0.6285714285714286
+CCT,kNN,val_optimal,True,True,contrast,OoD Val,1.0,0.25,0.625
+CCT,kNN,val_optimal,True,True,contrast,hue,0.9827586206896551,0.33098591549295775,0.6568722680913064
+CCT,kNN,val_optimal,True,True,contrast,multnoise,1.0,0.36585365853658536,0.6829268292682926
+CCT,kNN,val_optimal,True,True,contrast,noise,1.0,0.44999999999999996,0.725
+CCT,kNN,val_optimal,True,True,contrast,saltpepper,1.0,0.4455445544554455,0.7227722772277227
+CCT,kNN,val_optimal,True,True,hue,OoD Test,1.0,0.5485714285714286,0.7742857142857142
+CCT,kNN,val_optimal,True,True,hue,OoD Val,1.0,0.5333333333333333,0.7666666666666666
+CCT,kNN,val_optimal,True,True,hue,hue,0.9482758620689655,0.6971830985915493,0.8227294803302574
+CCT,kNN,val_optimal,True,True,hue,multnoise,1.0,0.7804878048780488,0.8902439024390244
+CCT,kNN,val_optimal,True,True,hue,noise,1.0,0.96,0.98
+CCT,kNN,val_optimal,True,True,hue,saltpepper,1.0,0.9504950495049505,0.9752475247524752
+CCT,kNN,val_optimal,True,True,multnoise,OoD Test,0.04,0.9714285714285714,0.5057142857142857
+CCT,kNN,val_optimal,True,True,multnoise,OoD Val,0.0,0.9833333333333333,0.49166666666666664
+CCT,kNN,val_optimal,True,True,multnoise,hue,0.3620689655172414,0.852112676056338,0.6070908207867897
+CCT,kNN,val_optimal,True,True,multnoise,multnoise,1.0,0.8130081300813008,0.9065040650406504
+CCT,kNN,val_optimal,True,True,multnoise,noise,1.0,1.0,1.0
+CCT,kNN,val_optimal,True,True,multnoise,saltpepper,0.98989898989899,0.9900990099009901,0.9899989998999901
+CCT,kNN,val_optimal,True,True,noise,OoD Test,0.08,0.9657142857142857,0.5228571428571429
+CCT,kNN,val_optimal,True,True,noise,OoD Val,0.0,0.9833333333333333,0.49166666666666664
+CCT,kNN,val_optimal,True,True,noise,hue,0.3620689655172414,0.8450704225352113,0.6035696940262263
+CCT,kNN,val_optimal,True,True,noise,multnoise,1.0,0.8130081300813008,0.9065040650406504
+CCT,kNN,val_optimal,True,True,noise,noise,1.0,1.0,1.0
+CCT,kNN,val_optimal,True,True,noise,saltpepper,0.98989898989899,0.9900990099009901,0.9899989998999901
+CCT,kNN,val_optimal,True,True,saltpepper,OoD Test,0.12,0.9485714285714286,0.5342857142857143
+CCT,kNN,val_optimal,True,True,saltpepper,OoD Val,0.05,0.9611111111111111,0.5055555555555555
+CCT,kNN,val_optimal,True,True,saltpepper,hue,0.43103448275862066,0.8309859154929577,0.6310101991257893
+CCT,kNN,val_optimal,True,True,saltpepper,multnoise,1.0,0.8130081300813008,0.9065040650406504
+CCT,kNN,val_optimal,True,True,saltpepper,noise,1.0,1.0,1.0
+CCT,kNN,val_optimal,True,True,saltpepper,saltpepper,1.0,0.9900990099009901,0.995049504950495
+CCT,kNN,val_optimal,True,True,smear,OoD Test,1.0,0.5371428571428571,0.7685714285714286
+CCT,kNN,val_optimal,True,True,smear,OoD Val,1.0,0.5222222222222221,0.7611111111111111
+CCT,kNN,val_optimal,True,True,smear,hue,0.9482758620689655,0.676056338028169,0.8121661000485673
+CCT,kNN,val_optimal,True,True,smear,multnoise,1.0,0.7642276422764227,0.8821138211382114
+CCT,kNN,val_optimal,True,True,smear,noise,1.0,0.94,0.97
+CCT,kNN,val_optimal,True,True,smear,saltpepper,1.0,0.9306930693069306,0.9653465346534653
+CCT,kNN,ind_span,True,True,OoD Test,OoD Test,0.24,0.8914285714285715,0.5657142857142857
+CCT,kNN,ind_span,True,True,OoD Test,OoD Val,0.2,0.8444444444444444,0.5222222222222223
+CCT,kNN,ind_span,True,True,OoD Test,hue,0.5172413793103449,0.7887323943661972,0.6529868868382711
+CCT,kNN,ind_span,True,True,OoD Test,multnoise,1.0,0.8130081300813008,0.9065040650406504
+CCT,kNN,ind_span,True,True,OoD Test,noise,1.0,1.0,1.0
+CCT,kNN,ind_span,True,True,OoD Test,saltpepper,1.0,0.9900990099009901,0.995049504950495
+CCT,kNN,ind_span,True,True,OoD Val,OoD Test,0.24,0.8914285714285715,0.5657142857142857
+CCT,kNN,ind_span,True,True,OoD Val,OoD Val,0.2,0.8444444444444444,0.5222222222222223
+CCT,kNN,ind_span,True,True,OoD Val,hue,0.5172413793103449,0.7887323943661972,0.6529868868382711
+CCT,kNN,ind_span,True,True,OoD Val,multnoise,1.0,0.8130081300813008,0.9065040650406504
+CCT,kNN,ind_span,True,True,OoD Val,noise,1.0,1.0,1.0
+CCT,kNN,ind_span,True,True,OoD Val,saltpepper,1.0,0.9900990099009901,0.995049504950495
+CCT,kNN,ind_span,True,True,brightness,OoD Test,0.24,0.8914285714285715,0.5657142857142857
+CCT,kNN,ind_span,True,True,brightness,OoD Val,0.2,0.8444444444444444,0.5222222222222223
+CCT,kNN,ind_span,True,True,brightness,hue,0.5172413793103449,0.7887323943661972,0.6529868868382711
+CCT,kNN,ind_span,True,True,brightness,multnoise,1.0,0.8130081300813008,0.9065040650406504
+CCT,kNN,ind_span,True,True,brightness,noise,1.0,1.0,1.0
+CCT,kNN,ind_span,True,True,brightness,saltpepper,1.0,0.9900990099009901,0.995049504950495
+CCT,kNN,ind_span,True,True,contrast,OoD Test,0.24,0.8914285714285715,0.5657142857142857
+CCT,kNN,ind_span,True,True,contrast,OoD Val,0.2,0.8444444444444444,0.5222222222222223
+CCT,kNN,ind_span,True,True,contrast,hue,0.5172413793103449,0.7887323943661972,0.6529868868382711
+CCT,kNN,ind_span,True,True,contrast,multnoise,1.0,0.8130081300813008,0.9065040650406504
+CCT,kNN,ind_span,True,True,contrast,noise,1.0,1.0,1.0
+CCT,kNN,ind_span,True,True,contrast,saltpepper,1.0,0.9900990099009901,0.995049504950495
+CCT,kNN,ind_span,True,True,hue,OoD Test,0.24,0.8914285714285715,0.5657142857142857
+CCT,kNN,ind_span,True,True,hue,OoD Val,0.2,0.8444444444444444,0.5222222222222223
+CCT,kNN,ind_span,True,True,hue,hue,0.5172413793103449,0.7887323943661972,0.6529868868382711
+CCT,kNN,ind_span,True,True,hue,multnoise,1.0,0.8130081300813008,0.9065040650406504
+CCT,kNN,ind_span,True,True,hue,noise,1.0,1.0,1.0
+CCT,kNN,ind_span,True,True,hue,saltpepper,1.0,0.9900990099009901,0.995049504950495
+CCT,kNN,ind_span,True,True,multnoise,OoD Test,0.24,0.8914285714285715,0.5657142857142857
+CCT,kNN,ind_span,True,True,multnoise,OoD Val,0.2,0.8444444444444444,0.5222222222222223
+CCT,kNN,ind_span,True,True,multnoise,hue,0.5172413793103449,0.7887323943661972,0.6529868868382711
+CCT,kNN,ind_span,True,True,multnoise,multnoise,1.0,0.8130081300813008,0.9065040650406504
+CCT,kNN,ind_span,True,True,multnoise,noise,1.0,1.0,1.0
+CCT,kNN,ind_span,True,True,multnoise,saltpepper,1.0,0.9900990099009901,0.995049504950495
+CCT,kNN,ind_span,True,True,noise,OoD Test,0.24,0.8914285714285715,0.5657142857142857
+CCT,kNN,ind_span,True,True,noise,OoD Val,0.2,0.8444444444444444,0.5222222222222223
+CCT,kNN,ind_span,True,True,noise,hue,0.5172413793103449,0.7887323943661972,0.6529868868382711
+CCT,kNN,ind_span,True,True,noise,multnoise,1.0,0.8130081300813008,0.9065040650406504
+CCT,kNN,ind_span,True,True,noise,noise,1.0,1.0,1.0
+CCT,kNN,ind_span,True,True,noise,saltpepper,1.0,0.9900990099009901,0.995049504950495
+CCT,kNN,ind_span,True,True,saltpepper,OoD Test,0.24,0.8914285714285715,0.5657142857142857
+CCT,kNN,ind_span,True,True,saltpepper,OoD Val,0.2,0.8444444444444444,0.5222222222222223
+CCT,kNN,ind_span,True,True,saltpepper,hue,0.5172413793103449,0.7887323943661972,0.6529868868382711
+CCT,kNN,ind_span,True,True,saltpepper,multnoise,1.0,0.8130081300813008,0.9065040650406504
+CCT,kNN,ind_span,True,True,saltpepper,noise,1.0,1.0,1.0
+CCT,kNN,ind_span,True,True,saltpepper,saltpepper,1.0,0.9900990099009901,0.995049504950495
+CCT,kNN,ind_span,True,True,smear,OoD Test,0.24,0.8914285714285715,0.5657142857142857
+CCT,kNN,ind_span,True,True,smear,OoD Val,0.2,0.8444444444444444,0.5222222222222223
+CCT,kNN,ind_span,True,True,smear,hue,0.5172413793103449,0.7887323943661972,0.6529868868382711
+CCT,kNN,ind_span,True,True,smear,multnoise,1.0,0.8130081300813008,0.9065040650406504
+CCT,kNN,ind_span,True,True,smear,noise,1.0,1.0,1.0
+CCT,kNN,ind_span,True,True,smear,saltpepper,1.0,0.9900990099009901,0.995049504950495
+CCT,kNN,val_optimal,True,False,OoD Test,OoD Test,1.0,1.0,1.0
+CCT,kNN,val_optimal,True,False,OoD Test,OoD Val,1.0,0.5555555555555556,0.7777777777777778
+CCT,kNN,val_optimal,True,False,OoD Test,hue,0.8103448275862069,0.7464788732394366,0.7784118504128217
+CCT,kNN,val_optimal,True,False,OoD Test,multnoise,1.0,0.8130081300813008,0.9065040650406504
+CCT,kNN,val_optimal,True,False,OoD Test,noise,1.0,1.0,1.0
+CCT,kNN,val_optimal,True,False,OoD Test,saltpepper,1.0,0.9900990099009901,0.995049504950495
+CCT,kNN,val_optimal,True,False,OoD Val,OoD Test,1.0,1.0,1.0
+CCT,kNN,val_optimal,True,False,OoD Val,OoD Val,1.0,0.5555555555555556,0.7777777777777778
+CCT,kNN,val_optimal,True,False,OoD Val,hue,0.8103448275862069,0.7464788732394366,0.7784118504128217
+CCT,kNN,val_optimal,True,False,OoD Val,multnoise,1.0,0.8130081300813008,0.9065040650406504
+CCT,kNN,val_optimal,True,False,OoD Val,noise,1.0,1.0,1.0
+CCT,kNN,val_optimal,True,False,OoD Val,saltpepper,1.0,0.9900990099009901,0.995049504950495
+CCT,kNN,val_optimal,True,False,brightness,OoD Test,1.0,0.96,0.98
+CCT,kNN,val_optimal,True,False,brightness,OoD Val,1.0,0.5333333333333333,0.7666666666666666
+CCT,kNN,val_optimal,True,False,brightness,hue,0.9482758620689655,0.6971830985915493,0.8227294803302574
+CCT,kNN,val_optimal,True,False,brightness,multnoise,1.0,0.7804878048780488,0.8902439024390244
+CCT,kNN,val_optimal,True,False,brightness,noise,1.0,0.96,0.98
+CCT,kNN,val_optimal,True,False,brightness,saltpepper,1.0,0.9504950495049505,0.9752475247524752
+CCT,kNN,val_optimal,True,False,contrast,OoD Test,1.0,0.44999999999999996,0.725
+CCT,kNN,val_optimal,True,False,contrast,OoD Val,1.0,0.25,0.625
+CCT,kNN,val_optimal,True,False,contrast,hue,0.9827586206896551,0.33098591549295775,0.6568722680913064
+CCT,kNN,val_optimal,True,False,contrast,multnoise,1.0,0.36585365853658536,0.6829268292682926
+CCT,kNN,val_optimal,True,False,contrast,noise,1.0,0.44999999999999996,0.725
+CCT,kNN,val_optimal,True,False,contrast,saltpepper,1.0,0.4455445544554455,0.7227722772277227
+CCT,kNN,val_optimal,True,False,hue,OoD Test,1.0,0.96,0.98
+CCT,kNN,val_optimal,True,False,hue,OoD Val,1.0,0.5333333333333333,0.7666666666666666
+CCT,kNN,val_optimal,True,False,hue,hue,0.9482758620689655,0.6971830985915493,0.8227294803302574
+CCT,kNN,val_optimal,True,False,hue,multnoise,1.0,0.7804878048780488,0.8902439024390244
+CCT,kNN,val_optimal,True,False,hue,noise,1.0,0.96,0.98
+CCT,kNN,val_optimal,True,False,hue,saltpepper,1.0,0.9504950495049505,0.9752475247524752
+CCT,kNN,val_optimal,True,False,multnoise,OoD Test,0.06,1.0,0.53
+CCT,kNN,val_optimal,True,False,multnoise,OoD Val,0.0,0.9833333333333333,0.49166666666666664
+CCT,kNN,val_optimal,True,False,multnoise,hue,0.3620689655172414,0.852112676056338,0.6070908207867897
+CCT,kNN,val_optimal,True,False,multnoise,multnoise,1.0,0.8130081300813008,0.9065040650406504
+CCT,kNN,val_optimal,True,False,multnoise,noise,1.0,1.0,1.0
+CCT,kNN,val_optimal,True,False,multnoise,saltpepper,0.98989898989899,0.9900990099009901,0.9899989998999901
+CCT,kNN,val_optimal,True,False,noise,OoD Test,0.08,1.0,0.54
+CCT,kNN,val_optimal,True,False,noise,OoD Val,0.0,0.9833333333333333,0.49166666666666664
+CCT,kNN,val_optimal,True,False,noise,hue,0.3620689655172414,0.8450704225352113,0.6035696940262263
+CCT,kNN,val_optimal,True,False,noise,multnoise,1.0,0.8130081300813008,0.9065040650406504
+CCT,kNN,val_optimal,True,False,noise,noise,1.0,1.0,1.0
+CCT,kNN,val_optimal,True,False,noise,saltpepper,0.98989898989899,0.9900990099009901,0.9899989998999901
+CCT,kNN,val_optimal,True,False,saltpepper,OoD Test,0.12,1.0,0.56
+CCT,kNN,val_optimal,True,False,saltpepper,OoD Val,0.05,0.9611111111111111,0.5055555555555555
+CCT,kNN,val_optimal,True,False,saltpepper,hue,0.43103448275862066,0.8309859154929577,0.6310101991257893
+CCT,kNN,val_optimal,True,False,saltpepper,multnoise,1.0,0.8130081300813008,0.9065040650406504
+CCT,kNN,val_optimal,True,False,saltpepper,noise,1.0,1.0,1.0
+CCT,kNN,val_optimal,True,False,saltpepper,saltpepper,1.0,0.9900990099009901,0.995049504950495
+CCT,kNN,val_optimal,True,False,smear,OoD Test,1.0,0.94,0.97
+CCT,kNN,val_optimal,True,False,smear,OoD Val,1.0,0.5222222222222221,0.7611111111111111
+CCT,kNN,val_optimal,True,False,smear,hue,0.9482758620689655,0.676056338028169,0.8121661000485673
+CCT,kNN,val_optimal,True,False,smear,multnoise,1.0,0.7642276422764227,0.8821138211382114
+CCT,kNN,val_optimal,True,False,smear,noise,1.0,0.94,0.97
+CCT,kNN,val_optimal,True,False,smear,saltpepper,1.0,0.9306930693069306,0.9653465346534653
+CCT,kNN,ind_span,True,False,OoD Test,OoD Test,0.25,1.0,0.625
+CCT,kNN,ind_span,True,False,OoD Test,OoD Val,0.2,0.8444444444444444,0.5222222222222223
+CCT,kNN,ind_span,True,False,OoD Test,hue,0.5172413793103449,0.7887323943661972,0.6529868868382711
+CCT,kNN,ind_span,True,False,OoD Test,multnoise,1.0,0.8130081300813008,0.9065040650406504
+CCT,kNN,ind_span,True,False,OoD Test,noise,1.0,1.0,1.0
+CCT,kNN,ind_span,True,False,OoD Test,saltpepper,1.0,0.9900990099009901,0.995049504950495
+CCT,kNN,ind_span,True,False,OoD Val,OoD Test,0.25,1.0,0.625
+CCT,kNN,ind_span,True,False,OoD Val,OoD Val,0.2,0.8444444444444444,0.5222222222222223
+CCT,kNN,ind_span,True,False,OoD Val,hue,0.5172413793103449,0.7887323943661972,0.6529868868382711
+CCT,kNN,ind_span,True,False,OoD Val,multnoise,1.0,0.8130081300813008,0.9065040650406504
+CCT,kNN,ind_span,True,False,OoD Val,noise,1.0,1.0,1.0
+CCT,kNN,ind_span,True,False,OoD Val,saltpepper,1.0,0.9900990099009901,0.995049504950495
+CCT,kNN,ind_span,True,False,brightness,OoD Test,0.25,1.0,0.625
+CCT,kNN,ind_span,True,False,brightness,OoD Val,0.2,0.8444444444444444,0.5222222222222223
+CCT,kNN,ind_span,True,False,brightness,hue,0.5172413793103449,0.7887323943661972,0.6529868868382711
+CCT,kNN,ind_span,True,False,brightness,multnoise,1.0,0.8130081300813008,0.9065040650406504
+CCT,kNN,ind_span,True,False,brightness,noise,1.0,1.0,1.0
+CCT,kNN,ind_span,True,False,brightness,saltpepper,1.0,0.9900990099009901,0.995049504950495
+CCT,kNN,ind_span,True,False,contrast,OoD Test,0.25,1.0,0.625
+CCT,kNN,ind_span,True,False,contrast,OoD Val,0.2,0.8444444444444444,0.5222222222222223
+CCT,kNN,ind_span,True,False,contrast,hue,0.5172413793103449,0.7887323943661972,0.6529868868382711
+CCT,kNN,ind_span,True,False,contrast,multnoise,1.0,0.8130081300813008,0.9065040650406504
+CCT,kNN,ind_span,True,False,contrast,noise,1.0,1.0,1.0
+CCT,kNN,ind_span,True,False,contrast,saltpepper,1.0,0.9900990099009901,0.995049504950495
+CCT,kNN,ind_span,True,False,hue,OoD Test,0.25,1.0,0.625
+CCT,kNN,ind_span,True,False,hue,OoD Val,0.2,0.8444444444444444,0.5222222222222223
+CCT,kNN,ind_span,True,False,hue,hue,0.5172413793103449,0.7887323943661972,0.6529868868382711
+CCT,kNN,ind_span,True,False,hue,multnoise,1.0,0.8130081300813008,0.9065040650406504
+CCT,kNN,ind_span,True,False,hue,noise,1.0,1.0,1.0
+CCT,kNN,ind_span,True,False,hue,saltpepper,1.0,0.9900990099009901,0.995049504950495
+CCT,kNN,ind_span,True,False,multnoise,OoD Test,0.25,1.0,0.625
+CCT,kNN,ind_span,True,False,multnoise,OoD Val,0.2,0.8444444444444444,0.5222222222222223
+CCT,kNN,ind_span,True,False,multnoise,hue,0.5172413793103449,0.7887323943661972,0.6529868868382711
+CCT,kNN,ind_span,True,False,multnoise,multnoise,1.0,0.8130081300813008,0.9065040650406504
+CCT,kNN,ind_span,True,False,multnoise,noise,1.0,1.0,1.0
+CCT,kNN,ind_span,True,False,multnoise,saltpepper,1.0,0.9900990099009901,0.995049504950495
+CCT,kNN,ind_span,True,False,noise,OoD Test,0.25,1.0,0.625
+CCT,kNN,ind_span,True,False,noise,OoD Val,0.2,0.8444444444444444,0.5222222222222223
+CCT,kNN,ind_span,True,False,noise,hue,0.5172413793103449,0.7887323943661972,0.6529868868382711
+CCT,kNN,ind_span,True,False,noise,multnoise,1.0,0.8130081300813008,0.9065040650406504
+CCT,kNN,ind_span,True,False,noise,noise,1.0,1.0,1.0
+CCT,kNN,ind_span,True,False,noise,saltpepper,1.0,0.9900990099009901,0.995049504950495
+CCT,kNN,ind_span,True,False,saltpepper,OoD Test,0.25,1.0,0.625
+CCT,kNN,ind_span,True,False,saltpepper,OoD Val,0.2,0.8444444444444444,0.5222222222222223
+CCT,kNN,ind_span,True,False,saltpepper,hue,0.5172413793103449,0.7887323943661972,0.6529868868382711
+CCT,kNN,ind_span,True,False,saltpepper,multnoise,1.0,0.8130081300813008,0.9065040650406504
+CCT,kNN,ind_span,True,False,saltpepper,noise,1.0,1.0,1.0
+CCT,kNN,ind_span,True,False,saltpepper,saltpepper,1.0,0.9900990099009901,0.995049504950495
+CCT,kNN,ind_span,True,False,smear,OoD Test,0.25,1.0,0.625
+CCT,kNN,ind_span,True,False,smear,OoD Val,0.2,0.8444444444444444,0.5222222222222223
+CCT,kNN,ind_span,True,False,smear,hue,0.5172413793103449,0.7887323943661972,0.6529868868382711
+CCT,kNN,ind_span,True,False,smear,multnoise,1.0,0.8130081300813008,0.9065040650406504
+CCT,kNN,ind_span,True,False,smear,noise,1.0,1.0,1.0
+CCT,kNN,ind_span,True,False,smear,saltpepper,1.0,0.9900990099009901,0.995049504950495
+CCT,kNN,val_optimal,False,False,OoD Test,OoD Test,1.0,1.0,1.0
+CCT,kNN,val_optimal,False,False,OoD Test,OoD Val,1.0,1.0,1.0
+CCT,kNN,val_optimal,False,False,OoD Test,brightness,0.84,1.0,0.9199999999999999
+CCT,kNN,val_optimal,False,False,OoD Test,contrast,0.0,1.0,0.5
+CCT,kNN,val_optimal,False,False,OoD Test,hue,0.83,1.0,0.915
+CCT,kNN,val_optimal,False,False,OoD Test,multnoise,1.0,1.0,1.0
+CCT,kNN,val_optimal,False,False,OoD Test,noise,1.0,1.0,1.0
+CCT,kNN,val_optimal,False,False,OoD Test,saltpepper,1.0,1.0,1.0
+CCT,kNN,val_optimal,False,False,OoD Test,smear,0.15,1.0,0.575
+CCT,kNN,val_optimal,False,False,OoD Val,OoD Test,1.0,1.0,1.0
+CCT,kNN,val_optimal,False,False,OoD Val,OoD Val,1.0,1.0,1.0
+CCT,kNN,val_optimal,False,False,OoD Val,brightness,0.86,1.0,0.9299999999999999
+CCT,kNN,val_optimal,False,False,OoD Val,contrast,0.0,1.0,0.5
+CCT,kNN,val_optimal,False,False,OoD Val,hue,0.83,1.0,0.915
+CCT,kNN,val_optimal,False,False,OoD Val,multnoise,1.0,1.0,1.0
+CCT,kNN,val_optimal,False,False,OoD Val,noise,1.0,1.0,1.0
+CCT,kNN,val_optimal,False,False,OoD Val,saltpepper,1.0,1.0,1.0
+CCT,kNN,val_optimal,False,False,OoD Val,smear,0.17,1.0,0.585
+CCT,kNN,val_optimal,False,False,brightness,OoD Test,1.0,0.96,0.98
+CCT,kNN,val_optimal,False,False,brightness,OoD Val,1.0,0.96,0.98
+CCT,kNN,val_optimal,False,False,brightness,brightness,1.0,0.96,0.98
+CCT,kNN,val_optimal,False,False,brightness,contrast,0.08,0.96,0.52
+CCT,kNN,val_optimal,False,False,brightness,hue,0.94,0.96,0.95
+CCT,kNN,val_optimal,False,False,brightness,multnoise,1.0,0.96,0.98
+CCT,kNN,val_optimal,False,False,brightness,noise,1.0,0.96,0.98
+CCT,kNN,val_optimal,False,False,brightness,saltpepper,1.0,0.96,0.98
+CCT,kNN,val_optimal,False,False,brightness,smear,0.92,0.96,0.94
+CCT,kNN,val_optimal,False,False,contrast,OoD Test,1.0,0.44999999999999996,0.725
+CCT,kNN,val_optimal,False,False,contrast,OoD Val,1.0,0.44999999999999996,0.725
+CCT,kNN,val_optimal,False,False,contrast,brightness,1.0,0.44999999999999996,0.725
+CCT,kNN,val_optimal,False,False,contrast,contrast,0.71,0.44999999999999996,0.58
+CCT,kNN,val_optimal,False,False,contrast,hue,0.97,0.44999999999999996,0.71
+CCT,kNN,val_optimal,False,False,contrast,multnoise,1.0,0.44999999999999996,0.725
+CCT,kNN,val_optimal,False,False,contrast,noise,1.0,0.44999999999999996,0.725
+CCT,kNN,val_optimal,False,False,contrast,saltpepper,1.0,0.44999999999999996,0.725
+CCT,kNN,val_optimal,False,False,contrast,smear,1.0,0.44999999999999996,0.725
+CCT,kNN,val_optimal,False,False,hue,OoD Test,1.0,0.96,0.98
+CCT,kNN,val_optimal,False,False,hue,OoD Val,1.0,0.96,0.98
+CCT,kNN,val_optimal,False,False,hue,brightness,1.0,0.96,0.98
+CCT,kNN,val_optimal,False,False,hue,contrast,0.07,0.96,0.515
+CCT,kNN,val_optimal,False,False,hue,hue,0.94,0.96,0.95
+CCT,kNN,val_optimal,False,False,hue,multnoise,1.0,0.96,0.98
+CCT,kNN,val_optimal,False,False,hue,noise,1.0,0.96,0.98
+CCT,kNN,val_optimal,False,False,hue,saltpepper,1.0,0.96,0.98
+CCT,kNN,val_optimal,False,False,hue,smear,0.92,0.96,0.94
+CCT,kNN,val_optimal,False,False,multnoise,OoD Test,0.06,1.0,0.53
+CCT,kNN,val_optimal,False,False,multnoise,OoD Val,0.03,1.0,0.515
+CCT,kNN,val_optimal,False,False,multnoise,brightness,0.02,1.0,0.51
+CCT,kNN,val_optimal,False,False,multnoise,contrast,0.0,1.0,0.5
+CCT,kNN,val_optimal,False,False,multnoise,hue,0.42,1.0,0.71
+CCT,kNN,val_optimal,False,False,multnoise,multnoise,1.0,1.0,1.0
+CCT,kNN,val_optimal,False,False,multnoise,noise,1.0,1.0,1.0
+CCT,kNN,val_optimal,False,False,multnoise,saltpepper,0.99,1.0,0.995
+CCT,kNN,val_optimal,False,False,multnoise,smear,0.0,1.0,0.5
+CCT,kNN,val_optimal,False,False,noise,OoD Test,0.08,1.0,0.54
+CCT,kNN,val_optimal,False,False,noise,OoD Val,0.03,1.0,0.515
+CCT,kNN,val_optimal,False,False,noise,brightness,0.03,1.0,0.515
+CCT,kNN,val_optimal,False,False,noise,contrast,0.0,1.0,0.5
+CCT,kNN,val_optimal,False,False,noise,hue,0.43,1.0,0.715
+CCT,kNN,val_optimal,False,False,noise,multnoise,1.0,1.0,1.0
+CCT,kNN,val_optimal,False,False,noise,noise,1.0,1.0,1.0
+CCT,kNN,val_optimal,False,False,noise,saltpepper,0.99,1.0,0.995
+CCT,kNN,val_optimal,False,False,noise,smear,0.0,1.0,0.5
+CCT,kNN,val_optimal,False,False,saltpepper,OoD Test,0.12,1.0,0.56
+CCT,kNN,val_optimal,False,False,saltpepper,OoD Val,0.08,1.0,0.54
+CCT,kNN,val_optimal,False,False,saltpepper,brightness,0.08,1.0,0.54
+CCT,kNN,val_optimal,False,False,saltpepper,contrast,0.0,1.0,0.5
+CCT,kNN,val_optimal,False,False,saltpepper,hue,0.49,1.0,0.745
+CCT,kNN,val_optimal,False,False,saltpepper,multnoise,1.0,1.0,1.0
+CCT,kNN,val_optimal,False,False,saltpepper,noise,1.0,1.0,1.0
+CCT,kNN,val_optimal,False,False,saltpepper,saltpepper,1.0,1.0,1.0
+CCT,kNN,val_optimal,False,False,saltpepper,smear,0.0,1.0,0.5
+CCT,kNN,val_optimal,False,False,smear,OoD Test,1.0,0.94,0.97
+CCT,kNN,val_optimal,False,False,smear,OoD Val,1.0,0.94,0.97
+CCT,kNN,val_optimal,False,False,smear,brightness,1.0,0.94,0.97
+CCT,kNN,val_optimal,False,False,smear,contrast,0.16,0.94,0.5499999999999999
+CCT,kNN,val_optimal,False,False,smear,hue,0.95,0.94,0.945
+CCT,kNN,val_optimal,False,False,smear,multnoise,1.0,0.94,0.97
+CCT,kNN,val_optimal,False,False,smear,noise,1.0,0.94,0.97
+CCT,kNN,val_optimal,False,False,smear,saltpepper,1.0,0.94,0.97
+CCT,kNN,val_optimal,False,False,smear,smear,0.97,0.94,0.955
+CCT,kNN,ind_span,False,False,OoD Test,OoD Test,0.25,1.0,0.625
+CCT,kNN,ind_span,False,False,OoD Test,OoD Val,0.32,1.0,0.66
+CCT,kNN,ind_span,False,False,OoD Test,brightness,0.16,1.0,0.58
+CCT,kNN,ind_span,False,False,OoD Test,contrast,0.0,1.0,0.5
+CCT,kNN,ind_span,False,False,OoD Test,hue,0.6,1.0,0.8
+CCT,kNN,ind_span,False,False,OoD Test,multnoise,1.0,1.0,1.0
+CCT,kNN,ind_span,False,False,OoD Test,noise,1.0,1.0,1.0
+CCT,kNN,ind_span,False,False,OoD Test,saltpepper,1.0,1.0,1.0
+CCT,kNN,ind_span,False,False,OoD Test,smear,0.0,1.0,0.5
+CCT,kNN,ind_span,False,False,OoD Val,OoD Test,0.25,1.0,0.625
+CCT,kNN,ind_span,False,False,OoD Val,OoD Val,0.32,1.0,0.66
+CCT,kNN,ind_span,False,False,OoD Val,brightness,0.16,1.0,0.58
+CCT,kNN,ind_span,False,False,OoD Val,contrast,0.0,1.0,0.5
+CCT,kNN,ind_span,False,False,OoD Val,hue,0.6,1.0,0.8
+CCT,kNN,ind_span,False,False,OoD Val,multnoise,1.0,1.0,1.0
+CCT,kNN,ind_span,False,False,OoD Val,noise,1.0,1.0,1.0
+CCT,kNN,ind_span,False,False,OoD Val,saltpepper,1.0,1.0,1.0
+CCT,kNN,ind_span,False,False,OoD Val,smear,0.0,1.0,0.5
+CCT,kNN,ind_span,False,False,brightness,OoD Test,0.25,1.0,0.625
+CCT,kNN,ind_span,False,False,brightness,OoD Val,0.32,1.0,0.66
+CCT,kNN,ind_span,False,False,brightness,brightness,0.16,1.0,0.58
+CCT,kNN,ind_span,False,False,brightness,contrast,0.0,1.0,0.5
+CCT,kNN,ind_span,False,False,brightness,hue,0.6,1.0,0.8
+CCT,kNN,ind_span,False,False,brightness,multnoise,1.0,1.0,1.0
+CCT,kNN,ind_span,False,False,brightness,noise,1.0,1.0,1.0
+CCT,kNN,ind_span,False,False,brightness,saltpepper,1.0,1.0,1.0
+CCT,kNN,ind_span,False,False,brightness,smear,0.0,1.0,0.5
+CCT,kNN,ind_span,False,False,contrast,OoD Test,0.25,1.0,0.625
+CCT,kNN,ind_span,False,False,contrast,OoD Val,0.32,1.0,0.66
+CCT,kNN,ind_span,False,False,contrast,brightness,0.16,1.0,0.58
+CCT,kNN,ind_span,False,False,contrast,contrast,0.0,1.0,0.5
+CCT,kNN,ind_span,False,False,contrast,hue,0.6,1.0,0.8
+CCT,kNN,ind_span,False,False,contrast,multnoise,1.0,1.0,1.0
+CCT,kNN,ind_span,False,False,contrast,noise,1.0,1.0,1.0
+CCT,kNN,ind_span,False,False,contrast,saltpepper,1.0,1.0,1.0
+CCT,kNN,ind_span,False,False,contrast,smear,0.0,1.0,0.5
+CCT,kNN,ind_span,False,False,hue,OoD Test,0.25,1.0,0.625
+CCT,kNN,ind_span,False,False,hue,OoD Val,0.32,1.0,0.66
+CCT,kNN,ind_span,False,False,hue,brightness,0.16,1.0,0.58
+CCT,kNN,ind_span,False,False,hue,contrast,0.0,1.0,0.5
+CCT,kNN,ind_span,False,False,hue,hue,0.6,1.0,0.8
+CCT,kNN,ind_span,False,False,hue,multnoise,1.0,1.0,1.0
+CCT,kNN,ind_span,False,False,hue,noise,1.0,1.0,1.0
+CCT,kNN,ind_span,False,False,hue,saltpepper,1.0,1.0,1.0
+CCT,kNN,ind_span,False,False,hue,smear,0.0,1.0,0.5
+CCT,kNN,ind_span,False,False,multnoise,OoD Test,0.25,1.0,0.625
+CCT,kNN,ind_span,False,False,multnoise,OoD Val,0.32,1.0,0.66
+CCT,kNN,ind_span,False,False,multnoise,brightness,0.16,1.0,0.58
+CCT,kNN,ind_span,False,False,multnoise,contrast,0.0,1.0,0.5
+CCT,kNN,ind_span,False,False,multnoise,hue,0.6,1.0,0.8
+CCT,kNN,ind_span,False,False,multnoise,multnoise,1.0,1.0,1.0
+CCT,kNN,ind_span,False,False,multnoise,noise,1.0,1.0,1.0
+CCT,kNN,ind_span,False,False,multnoise,saltpepper,1.0,1.0,1.0
+CCT,kNN,ind_span,False,False,multnoise,smear,0.0,1.0,0.5
+CCT,kNN,ind_span,False,False,noise,OoD Test,0.25,1.0,0.625
+CCT,kNN,ind_span,False,False,noise,OoD Val,0.32,1.0,0.66
+CCT,kNN,ind_span,False,False,noise,brightness,0.16,1.0,0.58
+CCT,kNN,ind_span,False,False,noise,contrast,0.0,1.0,0.5
+CCT,kNN,ind_span,False,False,noise,hue,0.6,1.0,0.8
+CCT,kNN,ind_span,False,False,noise,multnoise,1.0,1.0,1.0
+CCT,kNN,ind_span,False,False,noise,noise,1.0,1.0,1.0
+CCT,kNN,ind_span,False,False,noise,saltpepper,1.0,1.0,1.0
+CCT,kNN,ind_span,False,False,noise,smear,0.0,1.0,0.5
+CCT,kNN,ind_span,False,False,saltpepper,OoD Test,0.25,1.0,0.625
+CCT,kNN,ind_span,False,False,saltpepper,OoD Val,0.32,1.0,0.66
+CCT,kNN,ind_span,False,False,saltpepper,brightness,0.16,1.0,0.58
+CCT,kNN,ind_span,False,False,saltpepper,contrast,0.0,1.0,0.5
+CCT,kNN,ind_span,False,False,saltpepper,hue,0.6,1.0,0.8
+CCT,kNN,ind_span,False,False,saltpepper,multnoise,1.0,1.0,1.0
+CCT,kNN,ind_span,False,False,saltpepper,noise,1.0,1.0,1.0
+CCT,kNN,ind_span,False,False,saltpepper,saltpepper,1.0,1.0,1.0
+CCT,kNN,ind_span,False,False,saltpepper,smear,0.0,1.0,0.5
+CCT,kNN,ind_span,False,False,smear,OoD Test,0.25,1.0,0.625
+CCT,kNN,ind_span,False,False,smear,OoD Val,0.32,1.0,0.66
+CCT,kNN,ind_span,False,False,smear,brightness,0.16,1.0,0.58
+CCT,kNN,ind_span,False,False,smear,contrast,0.0,1.0,0.5
+CCT,kNN,ind_span,False,False,smear,hue,0.6,1.0,0.8
+CCT,kNN,ind_span,False,False,smear,multnoise,1.0,1.0,1.0
+CCT,kNN,ind_span,False,False,smear,noise,1.0,1.0,1.0
+CCT,kNN,ind_span,False,False,smear,saltpepper,1.0,1.0,1.0
+CCT,kNN,ind_span,False,False,smear,smear,0.0,1.0,0.5
+CCT,GradNorm,val_optimal,True,True,OoD Test,OoD Test,0.7,0.3388888888888889,0.5194444444444444
+CCT,GradNorm,val_optimal,True,True,OoD Test,OoD Val,0.625,0.375,0.5
+CCT,GradNorm,val_optimal,True,True,OoD Test,hue,0.3191489361702128,0.5294117647058824,0.42428035043804757
+CCT,GradNorm,val_optimal,True,True,OoD Test,multnoise,1.0,0.3464566929133859,0.6732283464566929
+CCT,GradNorm,val_optimal,True,True,OoD Test,noise,0.76,0.43999999999999995,0.6
+CCT,GradNorm,val_optimal,True,True,OoD Test,saltpepper,1.0,0.4271844660194175,0.7135922330097088
+CCT,GradNorm,val_optimal,True,True,OoD Val,OoD Test,0.5,0.4388888888888889,0.46944444444444444
+CCT,GradNorm,val_optimal,True,True,OoD Val,OoD Val,0.625,0.44791666666666663,0.5364583333333333
+CCT,GradNorm,val_optimal,True,True,OoD Val,hue,0.3191489361702128,0.6405228758169934,0.4798359059936031
+CCT,GradNorm,val_optimal,True,True,OoD Val,multnoise,1.0,0.4409448818897638,0.7204724409448819
+CCT,GradNorm,val_optimal,True,True,OoD Val,noise,0.7,0.56,0.63
+CCT,GradNorm,val_optimal,True,True,OoD Val,saltpepper,1.0,0.5436893203883495,0.7718446601941747
+CCT,GradNorm,val_optimal,True,True,brightness,OoD Test,0.25,0.6555555555555556,0.4527777777777778
+CCT,GradNorm,val_optimal,True,True,brightness,OoD Val,0.25,0.671875,0.4609375
+CCT,GradNorm,val_optimal,True,True,brightness,hue,0.14893617021276595,0.7843137254901961,0.466624947851481
+CCT,GradNorm,val_optimal,True,True,brightness,multnoise,1.0,0.5826771653543308,0.7913385826771654
+CCT,GradNorm,val_optimal,True,True,brightness,noise,0.49,0.74,0.615
+CCT,GradNorm,val_optimal,True,True,brightness,saltpepper,1.0,0.7184466019417476,0.8592233009708738
+CCT,GradNorm,val_optimal,True,True,contrast,OoD Test,0.5,0.6,0.55
+CCT,GradNorm,val_optimal,True,True,contrast,OoD Val,0.375,0.625,0.5
+CCT,GradNorm,val_optimal,True,True,contrast,hue,0.1702127659574468,0.7516339869281046,0.4609233764427757
+CCT,GradNorm,val_optimal,True,True,contrast,multnoise,1.0,0.5511811023622047,0.7755905511811023
+CCT,GradNorm,val_optimal,True,True,contrast,noise,0.56,0.7,0.63
+CCT,GradNorm,val_optimal,True,True,contrast,saltpepper,1.0,0.6796116504854368,0.8398058252427184
+CCT,GradNorm,val_optimal,True,True,hue,OoD Test,0.0,0.9333333333333333,0.4666666666666667
+CCT,GradNorm,val_optimal,True,True,hue,OoD Val,0.0,0.921875,0.4609375
+CCT,GradNorm,val_optimal,True,True,hue,hue,0.2765957446808511,0.8300653594771241,0.5533305520789876
+CCT,GradNorm,val_optimal,True,True,hue,multnoise,0.0,0.937007874015748,0.468503937007874
+CCT,GradNorm,val_optimal,True,True,hue,noise,0.07,0.92,0.495
+CCT,GradNorm,val_optimal,True,True,hue,saltpepper,0.0,0.9223300970873787,0.46116504854368934
+CCT,GradNorm,val_optimal,True,True,multnoise,OoD Test,0.1,0.8833333333333333,0.49166666666666664
+CCT,GradNorm,val_optimal,True,True,multnoise,OoD Val,0.125,0.8645833333333334,0.4947916666666667
+CCT,GradNorm,val_optimal,True,True,multnoise,hue,0.02127659574468085,0.9150326797385621,0.46815463774162147
+CCT,GradNorm,val_optimal,True,True,multnoise,multnoise,0.9726027397260274,0.7086614173228347,0.840632078524431
+CCT,GradNorm,val_optimal,True,True,multnoise,noise,0.27,0.9,0.585
+CCT,GradNorm,val_optimal,True,True,multnoise,saltpepper,1.0,0.8737864077669903,0.9368932038834952
+CCT,GradNorm,val_optimal,True,True,noise,OoD Test,0.5,0.5888888888888889,0.5444444444444445
+CCT,GradNorm,val_optimal,True,True,noise,OoD Val,0.5,0.6041666666666667,0.5520833333333334
+CCT,GradNorm,val_optimal,True,True,noise,hue,0.19148936170212766,0.738562091503268,0.4650257266026978
+CCT,GradNorm,val_optimal,True,True,noise,multnoise,1.0,0.5354330708661417,0.7677165354330708
+CCT,GradNorm,val_optimal,True,True,noise,noise,0.59,0.6799999999999999,0.635
+CCT,GradNorm,val_optimal,True,True,noise,saltpepper,1.0,0.6601941747572815,0.8300970873786407
+CCT,GradNorm,val_optimal,True,True,saltpepper,OoD Test,0.2,0.7777777777777778,0.48888888888888893
+CCT,GradNorm,val_optimal,True,True,saltpepper,OoD Val,0.25,0.7760416666666666,0.5130208333333333
+CCT,GradNorm,val_optimal,True,True,saltpepper,hue,0.02127659574468085,0.8758169934640523,0.4485467946043666
+CCT,GradNorm,val_optimal,True,True,saltpepper,multnoise,1.0,0.6771653543307087,0.8385826771653544
+CCT,GradNorm,val_optimal,True,True,saltpepper,noise,0.39,0.86,0.625
+CCT,GradNorm,val_optimal,True,True,saltpepper,saltpepper,1.0,0.8349514563106796,0.9174757281553398
+CCT,GradNorm,val_optimal,True,True,smear,OoD Test,0.5,0.5777777777777777,0.5388888888888889
+CCT,GradNorm,val_optimal,True,True,smear,OoD Val,0.625,0.5885416666666667,0.6067708333333334
+CCT,GradNorm,val_optimal,True,True,smear,hue,0.2127659574468085,0.7320261437908497,0.4723960506188291
+CCT,GradNorm,val_optimal,True,True,smear,multnoise,1.0,0.5275590551181102,0.7637795275590551
+CCT,GradNorm,val_optimal,True,True,smear,noise,0.6,0.6699999999999999,0.635
+CCT,GradNorm,val_optimal,True,True,smear,saltpepper,1.0,0.6504854368932038,0.8252427184466019
+CCT,GradNorm,ind_span,True,True,OoD Test,OoD Test,0.0,0.9388888888888889,0.46944444444444444
+CCT,GradNorm,ind_span,True,True,OoD Test,OoD Val,0.125,0.9322916666666666,0.5286458333333333
+CCT,GradNorm,ind_span,True,True,OoD Test,hue,0.14893617021276595,0.8954248366013072,0.5221805034070366
+CCT,GradNorm,ind_span,True,True,OoD Test,multnoise,0.9726027397260274,0.7559055118110236,0.8642541257685254
+CCT,GradNorm,ind_span,True,True,OoD Test,noise,0.19,0.95,0.57
+CCT,GradNorm,ind_span,True,True,OoD Test,saltpepper,1.0,0.9223300970873787,0.9611650485436893
+CCT,GradNorm,ind_span,True,True,OoD Val,OoD Test,0.0,0.9388888888888889,0.46944444444444444
+CCT,GradNorm,ind_span,True,True,OoD Val,OoD Val,0.125,0.9322916666666666,0.5286458333333333
+CCT,GradNorm,ind_span,True,True,OoD Val,hue,0.14893617021276595,0.8954248366013072,0.5221805034070366
+CCT,GradNorm,ind_span,True,True,OoD Val,multnoise,0.9726027397260274,0.7559055118110236,0.8642541257685254
+CCT,GradNorm,ind_span,True,True,OoD Val,noise,0.19,0.95,0.57
+CCT,GradNorm,ind_span,True,True,OoD Val,saltpepper,1.0,0.9223300970873787,0.9611650485436893
+CCT,GradNorm,ind_span,True,True,brightness,OoD Test,0.0,0.9388888888888889,0.46944444444444444
+CCT,GradNorm,ind_span,True,True,brightness,OoD Val,0.125,0.9322916666666666,0.5286458333333333
+CCT,GradNorm,ind_span,True,True,brightness,hue,0.14893617021276595,0.8954248366013072,0.5221805034070366
+CCT,GradNorm,ind_span,True,True,brightness,multnoise,0.9726027397260274,0.7559055118110236,0.8642541257685254
+CCT,GradNorm,ind_span,True,True,brightness,noise,0.19,0.95,0.57
+CCT,GradNorm,ind_span,True,True,brightness,saltpepper,1.0,0.9223300970873787,0.9611650485436893
+CCT,GradNorm,ind_span,True,True,contrast,OoD Test,0.0,0.9388888888888889,0.46944444444444444
+CCT,GradNorm,ind_span,True,True,contrast,OoD Val,0.125,0.9322916666666666,0.5286458333333333
+CCT,GradNorm,ind_span,True,True,contrast,hue,0.14893617021276595,0.8954248366013072,0.5221805034070366
+CCT,GradNorm,ind_span,True,True,contrast,multnoise,0.9726027397260274,0.7559055118110236,0.8642541257685254
+CCT,GradNorm,ind_span,True,True,contrast,noise,0.19,0.95,0.57
+CCT,GradNorm,ind_span,True,True,contrast,saltpepper,1.0,0.9223300970873787,0.9611650485436893
+CCT,GradNorm,ind_span,True,True,hue,OoD Test,0.0,0.9388888888888889,0.46944444444444444
+CCT,GradNorm,ind_span,True,True,hue,OoD Val,0.125,0.9322916666666666,0.5286458333333333
+CCT,GradNorm,ind_span,True,True,hue,hue,0.14893617021276595,0.8954248366013072,0.5221805034070366
+CCT,GradNorm,ind_span,True,True,hue,multnoise,0.9726027397260274,0.7559055118110236,0.8642541257685254
+CCT,GradNorm,ind_span,True,True,hue,noise,0.19,0.95,0.57
+CCT,GradNorm,ind_span,True,True,hue,saltpepper,1.0,0.9223300970873787,0.9611650485436893
+CCT,GradNorm,ind_span,True,True,multnoise,OoD Test,0.0,0.9388888888888889,0.46944444444444444
+CCT,GradNorm,ind_span,True,True,multnoise,OoD Val,0.125,0.9322916666666666,0.5286458333333333
+CCT,GradNorm,ind_span,True,True,multnoise,hue,0.14893617021276595,0.8954248366013072,0.5221805034070366
+CCT,GradNorm,ind_span,True,True,multnoise,multnoise,0.9726027397260274,0.7559055118110236,0.8642541257685254
+CCT,GradNorm,ind_span,True,True,multnoise,noise,0.19,0.95,0.57
+CCT,GradNorm,ind_span,True,True,multnoise,saltpepper,1.0,0.9223300970873787,0.9611650485436893
+CCT,GradNorm,ind_span,True,True,noise,OoD Test,0.0,0.9388888888888889,0.46944444444444444
+CCT,GradNorm,ind_span,True,True,noise,OoD Val,0.125,0.9322916666666666,0.5286458333333333
+CCT,GradNorm,ind_span,True,True,noise,hue,0.14893617021276595,0.8954248366013072,0.5221805034070366
+CCT,GradNorm,ind_span,True,True,noise,multnoise,0.9726027397260274,0.7559055118110236,0.8642541257685254
+CCT,GradNorm,ind_span,True,True,noise,noise,0.19,0.95,0.57
+CCT,GradNorm,ind_span,True,True,noise,saltpepper,1.0,0.9223300970873787,0.9611650485436893
+CCT,GradNorm,ind_span,True,True,saltpepper,OoD Test,0.0,0.9388888888888889,0.46944444444444444
+CCT,GradNorm,ind_span,True,True,saltpepper,OoD Val,0.125,0.9322916666666666,0.5286458333333333
+CCT,GradNorm,ind_span,True,True,saltpepper,hue,0.14893617021276595,0.8954248366013072,0.5221805034070366
+CCT,GradNorm,ind_span,True,True,saltpepper,multnoise,0.9726027397260274,0.7559055118110236,0.8642541257685254
+CCT,GradNorm,ind_span,True,True,saltpepper,noise,0.19,0.95,0.57
+CCT,GradNorm,ind_span,True,True,saltpepper,saltpepper,1.0,0.9223300970873787,0.9611650485436893
+CCT,GradNorm,ind_span,True,True,smear,OoD Test,0.0,0.9388888888888889,0.46944444444444444
+CCT,GradNorm,ind_span,True,True,smear,OoD Val,0.125,0.9322916666666666,0.5286458333333333
+CCT,GradNorm,ind_span,True,True,smear,hue,0.14893617021276595,0.8954248366013072,0.5221805034070366
+CCT,GradNorm,ind_span,True,True,smear,multnoise,0.9726027397260274,0.7559055118110236,0.8642541257685254
+CCT,GradNorm,ind_span,True,True,smear,noise,0.19,0.95,0.57
+CCT,GradNorm,ind_span,True,True,smear,saltpepper,1.0,0.9223300970873787,0.9611650485436893
+CCT,GradNorm,val_optimal,True,False,OoD Test,OoD Test,0.77,0.43999999999999995,0.605
+CCT,GradNorm,val_optimal,True,False,OoD Test,OoD Val,0.625,0.375,0.5
+CCT,GradNorm,val_optimal,True,False,OoD Test,hue,0.3191489361702128,0.5294117647058824,0.42428035043804757
+CCT,GradNorm,val_optimal,True,False,OoD Test,multnoise,1.0,0.3464566929133859,0.6732283464566929
+CCT,GradNorm,val_optimal,True,False,OoD Test,noise,0.76,0.43999999999999995,0.6
+CCT,GradNorm,val_optimal,True,False,OoD Test,saltpepper,1.0,0.4271844660194175,0.7135922330097088
+CCT,GradNorm,val_optimal,True,False,OoD Val,OoD Test,0.67,0.56,0.615
+CCT,GradNorm,val_optimal,True,False,OoD Val,OoD Val,0.625,0.44791666666666663,0.5364583333333333
+CCT,GradNorm,val_optimal,True,False,OoD Val,hue,0.3191489361702128,0.6405228758169934,0.4798359059936031
+CCT,GradNorm,val_optimal,True,False,OoD Val,multnoise,1.0,0.4409448818897638,0.7204724409448819
+CCT,GradNorm,val_optimal,True,False,OoD Val,noise,0.7,0.56,0.63
+CCT,GradNorm,val_optimal,True,False,OoD Val,saltpepper,1.0,0.5436893203883495,0.7718446601941747
+CCT,GradNorm,val_optimal,True,False,brightness,OoD Test,0.41,0.74,0.575
+CCT,GradNorm,val_optimal,True,False,brightness,OoD Val,0.25,0.671875,0.4609375
+CCT,GradNorm,val_optimal,True,False,brightness,hue,0.14893617021276595,0.7843137254901961,0.466624947851481
+CCT,GradNorm,val_optimal,True,False,brightness,multnoise,1.0,0.5826771653543308,0.7913385826771654
+CCT,GradNorm,val_optimal,True,False,brightness,noise,0.49,0.74,0.615
+CCT,GradNorm,val_optimal,True,False,brightness,saltpepper,1.0,0.7184466019417476,0.8592233009708738
+CCT,GradNorm,val_optimal,True,False,contrast,OoD Test,0.52,0.7,0.61
+CCT,GradNorm,val_optimal,True,False,contrast,OoD Val,0.375,0.625,0.5
+CCT,GradNorm,val_optimal,True,False,contrast,hue,0.1702127659574468,0.7516339869281046,0.4609233764427757
+CCT,GradNorm,val_optimal,True,False,contrast,multnoise,1.0,0.5511811023622047,0.7755905511811023
+CCT,GradNorm,val_optimal,True,False,contrast,noise,0.56,0.7,0.63
+CCT,GradNorm,val_optimal,True,False,contrast,saltpepper,1.0,0.6796116504854368,0.8398058252427184
+CCT,GradNorm,val_optimal,True,False,hue,OoD Test,0.04,0.92,0.48000000000000004
+CCT,GradNorm,val_optimal,True,False,hue,OoD Val,0.0,0.921875,0.4609375
+CCT,GradNorm,val_optimal,True,False,hue,hue,0.2765957446808511,0.8300653594771241,0.5533305520789876
+CCT,GradNorm,val_optimal,True,False,hue,multnoise,0.0,0.937007874015748,0.468503937007874
+CCT,GradNorm,val_optimal,True,False,hue,noise,0.07,0.92,0.495
+CCT,GradNorm,val_optimal,True,False,hue,saltpepper,0.0,0.9223300970873787,0.46116504854368934
+CCT,GradNorm,val_optimal,True,False,multnoise,OoD Test,0.13,0.9,0.515
+CCT,GradNorm,val_optimal,True,False,multnoise,OoD Val,0.125,0.8645833333333334,0.4947916666666667
+CCT,GradNorm,val_optimal,True,False,multnoise,hue,0.02127659574468085,0.9150326797385621,0.46815463774162147
+CCT,GradNorm,val_optimal,True,False,multnoise,multnoise,0.9726027397260274,0.7086614173228347,0.840632078524431
+CCT,GradNorm,val_optimal,True,False,multnoise,noise,0.27,0.9,0.585
+CCT,GradNorm,val_optimal,True,False,multnoise,saltpepper,1.0,0.8737864077669903,0.9368932038834952
+CCT,GradNorm,val_optimal,True,False,noise,OoD Test,0.52,0.6799999999999999,0.6
+CCT,GradNorm,val_optimal,True,False,noise,OoD Val,0.5,0.6041666666666667,0.5520833333333334
+CCT,GradNorm,val_optimal,True,False,noise,hue,0.19148936170212766,0.738562091503268,0.4650257266026978
+CCT,GradNorm,val_optimal,True,False,noise,multnoise,1.0,0.5354330708661417,0.7677165354330708
+CCT,GradNorm,val_optimal,True,False,noise,noise,0.59,0.6799999999999999,0.635
+CCT,GradNorm,val_optimal,True,False,noise,saltpepper,1.0,0.6601941747572815,0.8300970873786407
+CCT,GradNorm,val_optimal,True,False,saltpepper,OoD Test,0.3,0.86,0.58
+CCT,GradNorm,val_optimal,True,False,saltpepper,OoD Val,0.25,0.7760416666666666,0.5130208333333333
+CCT,GradNorm,val_optimal,True,False,saltpepper,hue,0.02127659574468085,0.8758169934640523,0.4485467946043666
+CCT,GradNorm,val_optimal,True,False,saltpepper,multnoise,1.0,0.6771653543307087,0.8385826771653544
+CCT,GradNorm,val_optimal,True,False,saltpepper,noise,0.39,0.86,0.625
+CCT,GradNorm,val_optimal,True,False,saltpepper,saltpepper,1.0,0.8349514563106796,0.9174757281553398
+CCT,GradNorm,val_optimal,True,False,smear,OoD Test,0.53,0.6699999999999999,0.6
+CCT,GradNorm,val_optimal,True,False,smear,OoD Val,0.625,0.5885416666666667,0.6067708333333334
+CCT,GradNorm,val_optimal,True,False,smear,hue,0.2127659574468085,0.7320261437908497,0.4723960506188291
+CCT,GradNorm,val_optimal,True,False,smear,multnoise,1.0,0.5275590551181102,0.7637795275590551
+CCT,GradNorm,val_optimal,True,False,smear,noise,0.6,0.6699999999999999,0.635
+CCT,GradNorm,val_optimal,True,False,smear,saltpepper,1.0,0.6504854368932038,0.8252427184466019
+CCT,GradNorm,ind_span,True,False,OoD Test,OoD Test,0.06,0.95,0.505
+CCT,GradNorm,ind_span,True,False,OoD Test,OoD Val,0.125,0.9322916666666666,0.5286458333333333
+CCT,GradNorm,ind_span,True,False,OoD Test,hue,0.14893617021276595,0.8954248366013072,0.5221805034070366
+CCT,GradNorm,ind_span,True,False,OoD Test,multnoise,0.9726027397260274,0.7559055118110236,0.8642541257685254
+CCT,GradNorm,ind_span,True,False,OoD Test,noise,0.19,0.95,0.57
+CCT,GradNorm,ind_span,True,False,OoD Test,saltpepper,1.0,0.9223300970873787,0.9611650485436893
+CCT,GradNorm,ind_span,True,False,OoD Val,OoD Test,0.06,0.95,0.505
+CCT,GradNorm,ind_span,True,False,OoD Val,OoD Val,0.125,0.9322916666666666,0.5286458333333333
+CCT,GradNorm,ind_span,True,False,OoD Val,hue,0.14893617021276595,0.8954248366013072,0.5221805034070366
+CCT,GradNorm,ind_span,True,False,OoD Val,multnoise,0.9726027397260274,0.7559055118110236,0.8642541257685254
+CCT,GradNorm,ind_span,True,False,OoD Val,noise,0.19,0.95,0.57
+CCT,GradNorm,ind_span,True,False,OoD Val,saltpepper,1.0,0.9223300970873787,0.9611650485436893
+CCT,GradNorm,ind_span,True,False,brightness,OoD Test,0.06,0.95,0.505
+CCT,GradNorm,ind_span,True,False,brightness,OoD Val,0.125,0.9322916666666666,0.5286458333333333
+CCT,GradNorm,ind_span,True,False,brightness,hue,0.14893617021276595,0.8954248366013072,0.5221805034070366
+CCT,GradNorm,ind_span,True,False,brightness,multnoise,0.9726027397260274,0.7559055118110236,0.8642541257685254
+CCT,GradNorm,ind_span,True,False,brightness,noise,0.19,0.95,0.57
+CCT,GradNorm,ind_span,True,False,brightness,saltpepper,1.0,0.9223300970873787,0.9611650485436893
+CCT,GradNorm,ind_span,True,False,contrast,OoD Test,0.06,0.95,0.505
+CCT,GradNorm,ind_span,True,False,contrast,OoD Val,0.125,0.9322916666666666,0.5286458333333333
+CCT,GradNorm,ind_span,True,False,contrast,hue,0.14893617021276595,0.8954248366013072,0.5221805034070366
+CCT,GradNorm,ind_span,True,False,contrast,multnoise,0.9726027397260274,0.7559055118110236,0.8642541257685254
+CCT,GradNorm,ind_span,True,False,contrast,noise,0.19,0.95,0.57
+CCT,GradNorm,ind_span,True,False,contrast,saltpepper,1.0,0.9223300970873787,0.9611650485436893
+CCT,GradNorm,ind_span,True,False,hue,OoD Test,0.06,0.95,0.505
+CCT,GradNorm,ind_span,True,False,hue,OoD Val,0.125,0.9322916666666666,0.5286458333333333
+CCT,GradNorm,ind_span,True,False,hue,hue,0.14893617021276595,0.8954248366013072,0.5221805034070366
+CCT,GradNorm,ind_span,True,False,hue,multnoise,0.9726027397260274,0.7559055118110236,0.8642541257685254
+CCT,GradNorm,ind_span,True,False,hue,noise,0.19,0.95,0.57
+CCT,GradNorm,ind_span,True,False,hue,saltpepper,1.0,0.9223300970873787,0.9611650485436893
+CCT,GradNorm,ind_span,True,False,multnoise,OoD Test,0.06,0.95,0.505
+CCT,GradNorm,ind_span,True,False,multnoise,OoD Val,0.125,0.9322916666666666,0.5286458333333333
+CCT,GradNorm,ind_span,True,False,multnoise,hue,0.14893617021276595,0.8954248366013072,0.5221805034070366
+CCT,GradNorm,ind_span,True,False,multnoise,multnoise,0.9726027397260274,0.7559055118110236,0.8642541257685254
+CCT,GradNorm,ind_span,True,False,multnoise,noise,0.19,0.95,0.57
+CCT,GradNorm,ind_span,True,False,multnoise,saltpepper,1.0,0.9223300970873787,0.9611650485436893
+CCT,GradNorm,ind_span,True,False,noise,OoD Test,0.06,0.95,0.505
+CCT,GradNorm,ind_span,True,False,noise,OoD Val,0.125,0.9322916666666666,0.5286458333333333
+CCT,GradNorm,ind_span,True,False,noise,hue,0.14893617021276595,0.8954248366013072,0.5221805034070366
+CCT,GradNorm,ind_span,True,False,noise,multnoise,0.9726027397260274,0.7559055118110236,0.8642541257685254
+CCT,GradNorm,ind_span,True,False,noise,noise,0.19,0.95,0.57
+CCT,GradNorm,ind_span,True,False,noise,saltpepper,1.0,0.9223300970873787,0.9611650485436893
+CCT,GradNorm,ind_span,True,False,saltpepper,OoD Test,0.06,0.95,0.505
+CCT,GradNorm,ind_span,True,False,saltpepper,OoD Val,0.125,0.9322916666666666,0.5286458333333333
+CCT,GradNorm,ind_span,True,False,saltpepper,hue,0.14893617021276595,0.8954248366013072,0.5221805034070366
+CCT,GradNorm,ind_span,True,False,saltpepper,multnoise,0.9726027397260274,0.7559055118110236,0.8642541257685254
+CCT,GradNorm,ind_span,True,False,saltpepper,noise,0.19,0.95,0.57
+CCT,GradNorm,ind_span,True,False,saltpepper,saltpepper,1.0,0.9223300970873787,0.9611650485436893
+CCT,GradNorm,ind_span,True,False,smear,OoD Test,0.06,0.95,0.505
+CCT,GradNorm,ind_span,True,False,smear,OoD Val,0.125,0.9322916666666666,0.5286458333333333
+CCT,GradNorm,ind_span,True,False,smear,hue,0.14893617021276595,0.8954248366013072,0.5221805034070366
+CCT,GradNorm,ind_span,True,False,smear,multnoise,0.9726027397260274,0.7559055118110236,0.8642541257685254
+CCT,GradNorm,ind_span,True,False,smear,noise,0.19,0.95,0.57
+CCT,GradNorm,ind_span,True,False,smear,saltpepper,1.0,0.9223300970873787,0.9611650485436893
+CCT,GradNorm,val_optimal,False,False,OoD Test,OoD Test,0.77,0.43999999999999995,0.605
+CCT,GradNorm,val_optimal,False,False,OoD Test,OoD Val,0.69,0.43999999999999995,0.565
+CCT,GradNorm,val_optimal,False,False,OoD Test,brightness,0.53,0.43999999999999995,0.485
+CCT,GradNorm,val_optimal,False,False,OoD Test,contrast,0.52,0.43999999999999995,0.48
+CCT,GradNorm,val_optimal,False,False,OoD Test,hue,0.31,0.43999999999999995,0.375
+CCT,GradNorm,val_optimal,False,False,OoD Test,multnoise,1.0,0.43999999999999995,0.72
+CCT,GradNorm,val_optimal,False,False,OoD Test,noise,0.76,0.43999999999999995,0.6
+CCT,GradNorm,val_optimal,False,False,OoD Test,saltpepper,1.0,0.43999999999999995,0.72
+CCT,GradNorm,val_optimal,False,False,OoD Test,smear,0.56,0.43999999999999995,0.5
+CCT,GradNorm,val_optimal,False,False,OoD Val,OoD Test,0.67,0.56,0.615
+CCT,GradNorm,val_optimal,False,False,OoD Val,OoD Val,0.67,0.56,0.615
+CCT,GradNorm,val_optimal,False,False,OoD Val,brightness,0.48,0.56,0.52
+CCT,GradNorm,val_optimal,False,False,OoD Val,contrast,0.48,0.56,0.52
+CCT,GradNorm,val_optimal,False,False,OoD Val,hue,0.26,0.56,0.41000000000000003
+CCT,GradNorm,val_optimal,False,False,OoD Val,multnoise,1.0,0.56,0.78
+CCT,GradNorm,val_optimal,False,False,OoD Val,noise,0.7,0.56,0.63
+CCT,GradNorm,val_optimal,False,False,OoD Val,saltpepper,1.0,0.56,0.78
+CCT,GradNorm,val_optimal,False,False,OoD Val,smear,0.49,0.56,0.525
+CCT,GradNorm,val_optimal,False,False,brightness,OoD Test,0.41,0.74,0.575
+CCT,GradNorm,val_optimal,False,False,brightness,OoD Val,0.39,0.74,0.565
+CCT,GradNorm,val_optimal,False,False,brightness,brightness,0.31,0.74,0.525
+CCT,GradNorm,val_optimal,False,False,brightness,contrast,0.23,0.74,0.485
+CCT,GradNorm,val_optimal,False,False,brightness,hue,0.14,0.74,0.44
+CCT,GradNorm,val_optimal,False,False,brightness,multnoise,1.0,0.74,0.87
+CCT,GradNorm,val_optimal,False,False,brightness,noise,0.49,0.74,0.615
+CCT,GradNorm,val_optimal,False,False,brightness,saltpepper,1.0,0.74,0.87
+CCT,GradNorm,val_optimal,False,False,brightness,smear,0.25,0.74,0.495
+CCT,GradNorm,val_optimal,False,False,contrast,OoD Test,0.52,0.7,0.61
+CCT,GradNorm,val_optimal,False,False,contrast,OoD Val,0.45,0.7,0.575
+CCT,GradNorm,val_optimal,False,False,contrast,brightness,0.32,0.7,0.51
+CCT,GradNorm,val_optimal,False,False,contrast,contrast,0.34,0.7,0.52
+CCT,GradNorm,val_optimal,False,False,contrast,hue,0.16,0.7,0.43
+CCT,GradNorm,val_optimal,False,False,contrast,multnoise,1.0,0.7,0.85
+CCT,GradNorm,val_optimal,False,False,contrast,noise,0.56,0.7,0.63
+CCT,GradNorm,val_optimal,False,False,contrast,saltpepper,1.0,0.7,0.85
+CCT,GradNorm,val_optimal,False,False,contrast,smear,0.33,0.7,0.515
+CCT,GradNorm,val_optimal,False,False,hue,OoD Test,0.04,0.92,0.48000000000000004
+CCT,GradNorm,val_optimal,False,False,hue,OoD Val,0.07,0.92,0.495
+CCT,GradNorm,val_optimal,False,False,hue,brightness,0.06,0.92,0.49
+CCT,GradNorm,val_optimal,False,False,hue,contrast,0.1,0.92,0.51
+CCT,GradNorm,val_optimal,False,False,hue,hue,0.31,0.92,0.615
+CCT,GradNorm,val_optimal,False,False,hue,multnoise,0.0,0.92,0.46
+CCT,GradNorm,val_optimal,False,False,hue,noise,0.07,0.92,0.495
+CCT,GradNorm,val_optimal,False,False,hue,saltpepper,0.0,0.92,0.46
+CCT,GradNorm,val_optimal,False,False,hue,smear,0.08,0.92,0.5
+CCT,GradNorm,val_optimal,False,False,multnoise,OoD Test,0.13,0.9,0.515
+CCT,GradNorm,val_optimal,False,False,multnoise,OoD Val,0.17,0.9,0.535
+CCT,GradNorm,val_optimal,False,False,multnoise,brightness,0.14,0.9,0.52
+CCT,GradNorm,val_optimal,False,False,multnoise,contrast,0.12,0.9,0.51
+CCT,GradNorm,val_optimal,False,False,multnoise,hue,0.04,0.9,0.47000000000000003
+CCT,GradNorm,val_optimal,False,False,multnoise,multnoise,0.98,0.9,0.94
+CCT,GradNorm,val_optimal,False,False,multnoise,noise,0.27,0.9,0.585
+CCT,GradNorm,val_optimal,False,False,multnoise,saltpepper,1.0,0.9,0.95
+CCT,GradNorm,val_optimal,False,False,multnoise,smear,0.02,0.9,0.46
+CCT,GradNorm,val_optimal,False,False,noise,OoD Test,0.52,0.6799999999999999,0.6
+CCT,GradNorm,val_optimal,False,False,noise,OoD Val,0.48,0.6799999999999999,0.58
+CCT,GradNorm,val_optimal,False,False,noise,brightness,0.34,0.6799999999999999,0.51
+CCT,GradNorm,val_optimal,False,False,noise,contrast,0.35,0.6799999999999999,0.5149999999999999
+CCT,GradNorm,val_optimal,False,False,noise,hue,0.17,0.6799999999999999,0.425
+CCT,GradNorm,val_optimal,False,False,noise,multnoise,1.0,0.6799999999999999,0.84
+CCT,GradNorm,val_optimal,False,False,noise,noise,0.59,0.6799999999999999,0.635
+CCT,GradNorm,val_optimal,False,False,noise,saltpepper,1.0,0.6799999999999999,0.84
+CCT,GradNorm,val_optimal,False,False,noise,smear,0.35,0.6799999999999999,0.5149999999999999
+CCT,GradNorm,val_optimal,False,False,saltpepper,OoD Test,0.3,0.86,0.58
+CCT,GradNorm,val_optimal,False,False,saltpepper,OoD Val,0.31,0.86,0.585
+CCT,GradNorm,val_optimal,False,False,saltpepper,brightness,0.22,0.86,0.54
+CCT,GradNorm,val_optimal,False,False,saltpepper,contrast,0.17,0.86,0.515
+CCT,GradNorm,val_optimal,False,False,saltpepper,hue,0.06,0.86,0.45999999999999996
+CCT,GradNorm,val_optimal,False,False,saltpepper,multnoise,1.0,0.86,0.9299999999999999
+CCT,GradNorm,val_optimal,False,False,saltpepper,noise,0.39,0.86,0.625
+CCT,GradNorm,val_optimal,False,False,saltpepper,saltpepper,1.0,0.86,0.9299999999999999
+CCT,GradNorm,val_optimal,False,False,saltpepper,smear,0.1,0.86,0.48
+CCT,GradNorm,val_optimal,False,False,smear,OoD Test,0.53,0.6699999999999999,0.6
+CCT,GradNorm,val_optimal,False,False,smear,OoD Val,0.51,0.6699999999999999,0.59
+CCT,GradNorm,val_optimal,False,False,smear,brightness,0.36,0.6699999999999999,0.5149999999999999
+CCT,GradNorm,val_optimal,False,False,smear,contrast,0.35,0.6699999999999999,0.51
+CCT,GradNorm,val_optimal,False,False,smear,hue,0.18,0.6699999999999999,0.42499999999999993
+CCT,GradNorm,val_optimal,False,False,smear,multnoise,1.0,0.6699999999999999,0.835
+CCT,GradNorm,val_optimal,False,False,smear,noise,0.6,0.6699999999999999,0.635
+CCT,GradNorm,val_optimal,False,False,smear,saltpepper,1.0,0.6699999999999999,0.835
+CCT,GradNorm,val_optimal,False,False,smear,smear,0.37,0.6699999999999999,0.52
+CCT,GradNorm,ind_span,False,False,OoD Test,OoD Test,0.06,0.95,0.505
+CCT,GradNorm,ind_span,False,False,OoD Test,OoD Val,0.09,0.95,0.52
+CCT,GradNorm,ind_span,False,False,OoD Test,brightness,0.06,0.95,0.505
+CCT,GradNorm,ind_span,False,False,OoD Test,contrast,0.08,0.95,0.515
+CCT,GradNorm,ind_span,False,False,OoD Test,hue,0.18,0.95,0.565
+CCT,GradNorm,ind_span,False,False,OoD Test,multnoise,0.97,0.95,0.96
+CCT,GradNorm,ind_span,False,False,OoD Test,noise,0.19,0.95,0.57
+CCT,GradNorm,ind_span,False,False,OoD Test,saltpepper,1.0,0.95,0.975
+CCT,GradNorm,ind_span,False,False,OoD Test,smear,0.03,0.95,0.49
+CCT,GradNorm,ind_span,False,False,OoD Val,OoD Test,0.06,0.95,0.505
+CCT,GradNorm,ind_span,False,False,OoD Val,OoD Val,0.09,0.95,0.52
+CCT,GradNorm,ind_span,False,False,OoD Val,brightness,0.06,0.95,0.505
+CCT,GradNorm,ind_span,False,False,OoD Val,contrast,0.08,0.95,0.515
+CCT,GradNorm,ind_span,False,False,OoD Val,hue,0.18,0.95,0.565
+CCT,GradNorm,ind_span,False,False,OoD Val,multnoise,0.97,0.95,0.96
+CCT,GradNorm,ind_span,False,False,OoD Val,noise,0.19,0.95,0.57
+CCT,GradNorm,ind_span,False,False,OoD Val,saltpepper,1.0,0.95,0.975
+CCT,GradNorm,ind_span,False,False,OoD Val,smear,0.03,0.95,0.49
+CCT,GradNorm,ind_span,False,False,brightness,OoD Test,0.06,0.95,0.505
+CCT,GradNorm,ind_span,False,False,brightness,OoD Val,0.09,0.95,0.52
+CCT,GradNorm,ind_span,False,False,brightness,brightness,0.06,0.95,0.505
+CCT,GradNorm,ind_span,False,False,brightness,contrast,0.08,0.95,0.515
+CCT,GradNorm,ind_span,False,False,brightness,hue,0.18,0.95,0.565
+CCT,GradNorm,ind_span,False,False,brightness,multnoise,0.97,0.95,0.96
+CCT,GradNorm,ind_span,False,False,brightness,noise,0.19,0.95,0.57
+CCT,GradNorm,ind_span,False,False,brightness,saltpepper,1.0,0.95,0.975
+CCT,GradNorm,ind_span,False,False,brightness,smear,0.03,0.95,0.49
+CCT,GradNorm,ind_span,False,False,contrast,OoD Test,0.06,0.95,0.505
+CCT,GradNorm,ind_span,False,False,contrast,OoD Val,0.09,0.95,0.52
+CCT,GradNorm,ind_span,False,False,contrast,brightness,0.06,0.95,0.505
+CCT,GradNorm,ind_span,False,False,contrast,contrast,0.08,0.95,0.515
+CCT,GradNorm,ind_span,False,False,contrast,hue,0.18,0.95,0.565
+CCT,GradNorm,ind_span,False,False,contrast,multnoise,0.97,0.95,0.96
+CCT,GradNorm,ind_span,False,False,contrast,noise,0.19,0.95,0.57
+CCT,GradNorm,ind_span,False,False,contrast,saltpepper,1.0,0.95,0.975
+CCT,GradNorm,ind_span,False,False,contrast,smear,0.03,0.95,0.49
+CCT,GradNorm,ind_span,False,False,hue,OoD Test,0.06,0.95,0.505
+CCT,GradNorm,ind_span,False,False,hue,OoD Val,0.09,0.95,0.52
+CCT,GradNorm,ind_span,False,False,hue,brightness,0.06,0.95,0.505
+CCT,GradNorm,ind_span,False,False,hue,contrast,0.08,0.95,0.515
+CCT,GradNorm,ind_span,False,False,hue,hue,0.18,0.95,0.565
+CCT,GradNorm,ind_span,False,False,hue,multnoise,0.97,0.95,0.96
+CCT,GradNorm,ind_span,False,False,hue,noise,0.19,0.95,0.57
+CCT,GradNorm,ind_span,False,False,hue,saltpepper,1.0,0.95,0.975
+CCT,GradNorm,ind_span,False,False,hue,smear,0.03,0.95,0.49
+CCT,GradNorm,ind_span,False,False,multnoise,OoD Test,0.06,0.95,0.505
+CCT,GradNorm,ind_span,False,False,multnoise,OoD Val,0.09,0.95,0.52
+CCT,GradNorm,ind_span,False,False,multnoise,brightness,0.06,0.95,0.505
+CCT,GradNorm,ind_span,False,False,multnoise,contrast,0.08,0.95,0.515
+CCT,GradNorm,ind_span,False,False,multnoise,hue,0.18,0.95,0.565
+CCT,GradNorm,ind_span,False,False,multnoise,multnoise,0.97,0.95,0.96
+CCT,GradNorm,ind_span,False,False,multnoise,noise,0.19,0.95,0.57
+CCT,GradNorm,ind_span,False,False,multnoise,saltpepper,1.0,0.95,0.975
+CCT,GradNorm,ind_span,False,False,multnoise,smear,0.03,0.95,0.49
+CCT,GradNorm,ind_span,False,False,noise,OoD Test,0.06,0.95,0.505
+CCT,GradNorm,ind_span,False,False,noise,OoD Val,0.09,0.95,0.52
+CCT,GradNorm,ind_span,False,False,noise,brightness,0.06,0.95,0.505
+CCT,GradNorm,ind_span,False,False,noise,contrast,0.08,0.95,0.515
+CCT,GradNorm,ind_span,False,False,noise,hue,0.18,0.95,0.565
+CCT,GradNorm,ind_span,False,False,noise,multnoise,0.97,0.95,0.96
+CCT,GradNorm,ind_span,False,False,noise,noise,0.19,0.95,0.57
+CCT,GradNorm,ind_span,False,False,noise,saltpepper,1.0,0.95,0.975
+CCT,GradNorm,ind_span,False,False,noise,smear,0.03,0.95,0.49
+CCT,GradNorm,ind_span,False,False,saltpepper,OoD Test,0.06,0.95,0.505
+CCT,GradNorm,ind_span,False,False,saltpepper,OoD Val,0.09,0.95,0.52
+CCT,GradNorm,ind_span,False,False,saltpepper,brightness,0.06,0.95,0.505
+CCT,GradNorm,ind_span,False,False,saltpepper,contrast,0.08,0.95,0.515
+CCT,GradNorm,ind_span,False,False,saltpepper,hue,0.18,0.95,0.565
+CCT,GradNorm,ind_span,False,False,saltpepper,multnoise,0.97,0.95,0.96
+CCT,GradNorm,ind_span,False,False,saltpepper,noise,0.19,0.95,0.57
+CCT,GradNorm,ind_span,False,False,saltpepper,saltpepper,1.0,0.95,0.975
+CCT,GradNorm,ind_span,False,False,saltpepper,smear,0.03,0.95,0.49
+CCT,GradNorm,ind_span,False,False,smear,OoD Test,0.06,0.95,0.505
+CCT,GradNorm,ind_span,False,False,smear,OoD Val,0.09,0.95,0.52
+CCT,GradNorm,ind_span,False,False,smear,brightness,0.06,0.95,0.505
+CCT,GradNorm,ind_span,False,False,smear,contrast,0.08,0.95,0.515
+CCT,GradNorm,ind_span,False,False,smear,hue,0.18,0.95,0.565
+CCT,GradNorm,ind_span,False,False,smear,multnoise,0.97,0.95,0.96
+CCT,GradNorm,ind_span,False,False,smear,noise,0.19,0.95,0.57
+CCT,GradNorm,ind_span,False,False,smear,saltpepper,1.0,0.95,0.975
+CCT,GradNorm,ind_span,False,False,smear,smear,0.03,0.95,0.49
+CCT,Entropy,val_optimal,True,True,OoD Test,OoD Test,1.0,0.5303030303030303,0.7651515151515151
+CCT,Entropy,val_optimal,True,True,OoD Test,OoD Val,0.6666666666666666,0.5532994923857868,0.6099830795262267
+CCT,Entropy,val_optimal,True,True,OoD Test,hue,0.0,0.8536585365853658,0.4268292682926829
+CCT,Entropy,val_optimal,True,True,OoD Test,multnoise,0.029411764705882353,0.8554216867469879,0.44241672572643514
+CCT,Entropy,val_optimal,True,True,OoD Test,noise,0.0,0.7961165048543689,0.39805825242718446
+CCT,Entropy,val_optimal,True,True,OoD Test,saltpepper,0.022727272727272728,0.8125,0.41761363636363635
+CCT,Entropy,val_optimal,True,True,OoD Val,OoD Test,1.0,0.6363636363636364,0.8181818181818181
+CCT,Entropy,val_optimal,True,True,OoD Val,OoD Val,0.6666666666666666,0.649746192893401,0.6582064297800339
+CCT,Entropy,val_optimal,True,True,OoD Val,hue,0.0,0.9085365853658537,0.45426829268292684
+CCT,Entropy,val_optimal,True,True,OoD Val,multnoise,0.029411764705882353,0.9156626506024097,0.47253720765414603
+CCT,Entropy,val_optimal,True,True,OoD Val,noise,0.0,0.883495145631068,0.441747572815534
+CCT,Entropy,val_optimal,True,True,OoD Val,saltpepper,0.011363636363636364,0.8928571428571429,0.45211038961038963
+CCT,Entropy,val_optimal,True,True,brightness,OoD Test,1.0,0.5202020202020202,0.7601010101010102
+CCT,Entropy,val_optimal,True,True,brightness,OoD Val,0.6666666666666666,0.5482233502538071,0.6074450084602369
+CCT,Entropy,val_optimal,True,True,brightness,hue,0.0,0.8475609756097561,0.42378048780487804
+CCT,Entropy,val_optimal,True,True,brightness,multnoise,0.029411764705882353,0.8493975903614458,0.4394046775336641
+CCT,Entropy,val_optimal,True,True,brightness,noise,0.0,0.7864077669902912,0.3932038834951456
+CCT,Entropy,val_optimal,True,True,brightness,saltpepper,0.022727272727272728,0.8035714285714286,0.41314935064935066
+CCT,Entropy,val_optimal,True,True,contrast,OoD Test,1.0,0.05555555555555558,0.5277777777777778
+CCT,Entropy,val_optimal,True,True,contrast,OoD Val,1.0,0.060913705583756306,0.5304568527918782
+CCT,Entropy,val_optimal,True,True,contrast,hue,0.25,0.3292682926829268,0.2896341463414634
+CCT,Entropy,val_optimal,True,True,contrast,multnoise,0.5882352941176471,0.2349397590361446,0.41158752657689585
+CCT,Entropy,val_optimal,True,True,contrast,noise,0.0,0.11650485436893199,0.058252427184465994
+CCT,Entropy,val_optimal,True,True,contrast,saltpepper,0.7159090909090909,0.1071428571428571,0.411525974025974
+CCT,Entropy,val_optimal,True,True,hue,OoD Test,0.0,0.9343434343434344,0.4671717171717172
+CCT,Entropy,val_optimal,True,True,hue,OoD Val,0.0,0.9238578680203046,0.4619289340101523
+CCT,Entropy,val_optimal,True,True,hue,hue,0.8055555555555556,0.6463414634146342,0.7259485094850948
+CCT,Entropy,val_optimal,True,True,hue,multnoise,0.4411764705882353,0.7469879518072289,0.5940822111977321
+CCT,Entropy,val_optimal,True,True,hue,noise,1.0,0.8640776699029127,0.9320388349514563
+CCT,Entropy,val_optimal,True,True,hue,saltpepper,0.32954545454545453,0.875,0.6022727272727273
+CCT,Entropy,val_optimal,True,True,multnoise,OoD Test,0.0,0.8080808080808081,0.40404040404040403
+CCT,Entropy,val_optimal,True,True,multnoise,OoD Val,0.0,0.7969543147208122,0.3984771573604061
+CCT,Entropy,val_optimal,True,True,multnoise,hue,0.9166666666666666,0.46341463414634143,0.690040650406504
+CCT,Entropy,val_optimal,True,True,multnoise,multnoise,0.8235294117647058,0.5,0.6617647058823529
+CCT,Entropy,val_optimal,True,True,multnoise,noise,1.0,0.6504854368932038,0.8252427184466019
+CCT,Entropy,val_optimal,True,True,multnoise,saltpepper,0.7613636363636364,0.6339285714285714,0.6976461038961039
+CCT,Entropy,val_optimal,True,True,noise,OoD Test,0.0,0.9797979797979798,0.4898989898989899
+CCT,Entropy,val_optimal,True,True,noise,OoD Val,0.0,0.9796954314720813,0.48984771573604063
+CCT,Entropy,val_optimal,True,True,noise,hue,0.6388888888888888,0.7195121951219512,0.67920054200542
+CCT,Entropy,val_optimal,True,True,noise,multnoise,0.20588235294117646,0.9036144578313253,0.5547484053862509
+CCT,Entropy,val_optimal,True,True,noise,noise,1.0,0.9320388349514563,0.9660194174757282
+CCT,Entropy,val_optimal,True,True,noise,saltpepper,0.09090909090909091,0.9464285714285714,0.5186688311688311
+CCT,Entropy,val_optimal,True,True,saltpepper,OoD Test,0.0,0.8686868686868687,0.43434343434343436
+CCT,Entropy,val_optimal,True,True,saltpepper,OoD Val,0.0,0.8629441624365483,0.43147208121827413
+CCT,Entropy,val_optimal,True,True,saltpepper,hue,0.8611111111111112,0.5426829268292683,0.7018970189701897
+CCT,Entropy,val_optimal,True,True,saltpepper,multnoise,0.7058823529411765,0.5963855421686747,0.6511339475549256
+CCT,Entropy,val_optimal,True,True,saltpepper,noise,1.0,0.7669902912621359,0.883495145631068
+CCT,Entropy,val_optimal,True,True,saltpepper,saltpepper,0.7159090909090909,0.7410714285714286,0.7284902597402598
+CCT,Entropy,val_optimal,True,True,smear,OoD Test,1.0,0.11111111111111116,0.5555555555555556
+CCT,Entropy,val_optimal,True,True,smear,OoD Val,1.0,0.12690355329949243,0.5634517766497462
+CCT,Entropy,val_optimal,True,True,smear,hue,0.1388888888888889,0.4390243902439024,0.2889566395663956
+CCT,Entropy,val_optimal,True,True,smear,multnoise,0.29411764705882354,0.3674698795180723,0.3307937632884479
+CCT,Entropy,val_optimal,True,True,smear,noise,0.0,0.21359223300970875,0.10679611650485438
+CCT,Entropy,val_optimal,True,True,smear,saltpepper,0.3409090909090909,0.2410714285714286,0.2909902597402597
+CCT,Entropy,ind_span,True,True,OoD Test,OoD Test,0.0,0.8787878787878788,0.4393939393939394
+CCT,Entropy,ind_span,True,True,OoD Test,OoD Val,0.0,0.9137055837563451,0.45685279187817257
+CCT,Entropy,ind_span,True,True,OoD Test,hue,0.05555555555555555,0.9634146341463414,0.5094850948509485
+CCT,Entropy,ind_span,True,True,OoD Test,multnoise,0.0,0.9939759036144579,0.49698795180722893
+CCT,Entropy,ind_span,True,True,OoD Test,noise,0.0,0.9902912621359223,0.49514563106796117
+CCT,Entropy,ind_span,True,True,OoD Test,saltpepper,0.0,0.9910714285714286,0.4955357142857143
+CCT,Entropy,ind_span,True,True,OoD Val,OoD Test,0.0,0.8787878787878788,0.4393939393939394
+CCT,Entropy,ind_span,True,True,OoD Val,OoD Val,0.0,0.9137055837563451,0.45685279187817257
+CCT,Entropy,ind_span,True,True,OoD Val,hue,0.05555555555555555,0.9634146341463414,0.5094850948509485
+CCT,Entropy,ind_span,True,True,OoD Val,multnoise,0.0,0.9939759036144579,0.49698795180722893
+CCT,Entropy,ind_span,True,True,OoD Val,noise,0.0,0.9902912621359223,0.49514563106796117
+CCT,Entropy,ind_span,True,True,OoD Val,saltpepper,0.0,0.9910714285714286,0.4955357142857143
+CCT,Entropy,ind_span,True,True,brightness,OoD Test,0.0,0.8787878787878788,0.4393939393939394
+CCT,Entropy,ind_span,True,True,brightness,OoD Val,0.0,0.9137055837563451,0.45685279187817257
+CCT,Entropy,ind_span,True,True,brightness,hue,0.05555555555555555,0.9634146341463414,0.5094850948509485
+CCT,Entropy,ind_span,True,True,brightness,multnoise,0.0,0.9939759036144579,0.49698795180722893
+CCT,Entropy,ind_span,True,True,brightness,noise,0.0,0.9902912621359223,0.49514563106796117
+CCT,Entropy,ind_span,True,True,brightness,saltpepper,0.0,0.9910714285714286,0.4955357142857143
+CCT,Entropy,ind_span,True,True,contrast,OoD Test,0.0,0.8787878787878788,0.4393939393939394
+CCT,Entropy,ind_span,True,True,contrast,OoD Val,0.0,0.9137055837563451,0.45685279187817257
+CCT,Entropy,ind_span,True,True,contrast,hue,0.05555555555555555,0.9634146341463414,0.5094850948509485
+CCT,Entropy,ind_span,True,True,contrast,multnoise,0.0,0.9939759036144579,0.49698795180722893
+CCT,Entropy,ind_span,True,True,contrast,noise,0.0,0.9902912621359223,0.49514563106796117
+CCT,Entropy,ind_span,True,True,contrast,saltpepper,0.0,0.9910714285714286,0.4955357142857143
+CCT,Entropy,ind_span,True,True,hue,OoD Test,0.0,0.8787878787878788,0.4393939393939394
+CCT,Entropy,ind_span,True,True,hue,OoD Val,0.0,0.9137055837563451,0.45685279187817257
+CCT,Entropy,ind_span,True,True,hue,hue,0.05555555555555555,0.9634146341463414,0.5094850948509485
+CCT,Entropy,ind_span,True,True,hue,multnoise,0.0,0.9939759036144579,0.49698795180722893
+CCT,Entropy,ind_span,True,True,hue,noise,0.0,0.9902912621359223,0.49514563106796117
+CCT,Entropy,ind_span,True,True,hue,saltpepper,0.0,0.9910714285714286,0.4955357142857143
+CCT,Entropy,ind_span,True,True,multnoise,OoD Test,0.0,0.8787878787878788,0.4393939393939394
+CCT,Entropy,ind_span,True,True,multnoise,OoD Val,0.0,0.9137055837563451,0.45685279187817257
+CCT,Entropy,ind_span,True,True,multnoise,hue,0.05555555555555555,0.9634146341463414,0.5094850948509485
+CCT,Entropy,ind_span,True,True,multnoise,multnoise,0.0,0.9939759036144579,0.49698795180722893
+CCT,Entropy,ind_span,True,True,multnoise,noise,0.0,0.9902912621359223,0.49514563106796117
+CCT,Entropy,ind_span,True,True,multnoise,saltpepper,0.0,0.9910714285714286,0.4955357142857143
+CCT,Entropy,ind_span,True,True,noise,OoD Test,0.0,0.8787878787878788,0.4393939393939394
+CCT,Entropy,ind_span,True,True,noise,OoD Val,0.0,0.9137055837563451,0.45685279187817257
+CCT,Entropy,ind_span,True,True,noise,hue,0.05555555555555555,0.9634146341463414,0.5094850948509485
+CCT,Entropy,ind_span,True,True,noise,multnoise,0.0,0.9939759036144579,0.49698795180722893
+CCT,Entropy,ind_span,True,True,noise,noise,0.0,0.9902912621359223,0.49514563106796117
+CCT,Entropy,ind_span,True,True,noise,saltpepper,0.0,0.9910714285714286,0.4955357142857143
+CCT,Entropy,ind_span,True,True,saltpepper,OoD Test,0.0,0.8787878787878788,0.4393939393939394
+CCT,Entropy,ind_span,True,True,saltpepper,OoD Val,0.0,0.9137055837563451,0.45685279187817257
+CCT,Entropy,ind_span,True,True,saltpepper,hue,0.05555555555555555,0.9634146341463414,0.5094850948509485
+CCT,Entropy,ind_span,True,True,saltpepper,multnoise,0.0,0.9939759036144579,0.49698795180722893
+CCT,Entropy,ind_span,True,True,saltpepper,noise,0.0,0.9902912621359223,0.49514563106796117
+CCT,Entropy,ind_span,True,True,saltpepper,saltpepper,0.0,0.9910714285714286,0.4955357142857143
+CCT,Entropy,ind_span,True,True,smear,OoD Test,0.0,0.8787878787878788,0.4393939393939394
+CCT,Entropy,ind_span,True,True,smear,OoD Val,0.0,0.9137055837563451,0.45685279187817257
+CCT,Entropy,ind_span,True,True,smear,hue,0.05555555555555555,0.9634146341463414,0.5094850948509485
+CCT,Entropy,ind_span,True,True,smear,multnoise,0.0,0.9939759036144579,0.49698795180722893
+CCT,Entropy,ind_span,True,True,smear,noise,0.0,0.9902912621359223,0.49514563106796117
+CCT,Entropy,ind_span,True,True,smear,saltpepper,0.0,0.9910714285714286,0.4955357142857143
+CCT,Entropy,val_optimal,True,False,OoD Test,OoD Test,0.74,0.79,0.765
+CCT,Entropy,val_optimal,True,False,OoD Test,OoD Val,0.6666666666666666,0.5532994923857868,0.6099830795262267
+CCT,Entropy,val_optimal,True,False,OoD Test,hue,0.0,0.8536585365853658,0.4268292682926829
+CCT,Entropy,val_optimal,True,False,OoD Test,multnoise,0.029411764705882353,0.8554216867469879,0.44241672572643514
+CCT,Entropy,val_optimal,True,False,OoD Test,noise,0.0,0.7961165048543689,0.39805825242718446
+CCT,Entropy,val_optimal,True,False,OoD Test,saltpepper,0.022727272727272728,0.8125,0.41761363636363635
+CCT,Entropy,val_optimal,True,False,OoD Val,OoD Test,0.62,0.88,0.75
+CCT,Entropy,val_optimal,True,False,OoD Val,OoD Val,0.6666666666666666,0.649746192893401,0.6582064297800339
+CCT,Entropy,val_optimal,True,False,OoD Val,hue,0.0,0.9085365853658537,0.45426829268292684
+CCT,Entropy,val_optimal,True,False,OoD Val,multnoise,0.029411764705882353,0.9156626506024097,0.47253720765414603
+CCT,Entropy,val_optimal,True,False,OoD Val,noise,0.0,0.883495145631068,0.441747572815534
+CCT,Entropy,val_optimal,True,False,OoD Val,saltpepper,0.011363636363636364,0.8928571428571429,0.45211038961038963
+CCT,Entropy,val_optimal,True,False,brightness,OoD Test,0.75,0.78,0.765
+CCT,Entropy,val_optimal,True,False,brightness,OoD Val,0.6666666666666666,0.5482233502538071,0.6074450084602369
+CCT,Entropy,val_optimal,True,False,brightness,hue,0.0,0.8475609756097561,0.42378048780487804
+CCT,Entropy,val_optimal,True,False,brightness,multnoise,0.029411764705882353,0.8493975903614458,0.4394046775336641
+CCT,Entropy,val_optimal,True,False,brightness,noise,0.0,0.7864077669902912,0.3932038834951456
+CCT,Entropy,val_optimal,True,False,brightness,saltpepper,0.022727272727272728,0.8035714285714286,0.41314935064935066
+CCT,Entropy,val_optimal,True,False,contrast,OoD Test,0.98,0.08999999999999997,0.5349999999999999
+CCT,Entropy,val_optimal,True,False,contrast,OoD Val,1.0,0.060913705583756306,0.5304568527918782
+CCT,Entropy,val_optimal,True,False,contrast,hue,0.25,0.3292682926829268,0.2896341463414634
+CCT,Entropy,val_optimal,True,False,contrast,multnoise,0.5882352941176471,0.2349397590361446,0.41158752657689585
+CCT,Entropy,val_optimal,True,False,contrast,noise,0.0,0.11650485436893199,0.058252427184465994
+CCT,Entropy,val_optimal,True,False,contrast,saltpepper,0.7159090909090909,0.1071428571428571,0.411525974025974
+CCT,Entropy,val_optimal,True,False,hue,OoD Test,0.02,0.89,0.455
+CCT,Entropy,val_optimal,True,False,hue,OoD Val,0.0,0.9238578680203046,0.4619289340101523
+CCT,Entropy,val_optimal,True,False,hue,hue,0.8055555555555556,0.6463414634146342,0.7259485094850948
+CCT,Entropy,val_optimal,True,False,hue,multnoise,0.4411764705882353,0.7469879518072289,0.5940822111977321
+CCT,Entropy,val_optimal,True,False,hue,noise,1.0,0.8640776699029127,0.9320388349514563
+CCT,Entropy,val_optimal,True,False,hue,saltpepper,0.32954545454545453,0.875,0.6022727272727273
+CCT,Entropy,val_optimal,True,False,multnoise,OoD Test,0.05,0.6699999999999999,0.36
+CCT,Entropy,val_optimal,True,False,multnoise,OoD Val,0.0,0.7969543147208122,0.3984771573604061
+CCT,Entropy,val_optimal,True,False,multnoise,hue,0.9166666666666666,0.46341463414634143,0.690040650406504
+CCT,Entropy,val_optimal,True,False,multnoise,multnoise,0.8235294117647058,0.5,0.6617647058823529
+CCT,Entropy,val_optimal,True,False,multnoise,noise,1.0,0.6504854368932038,0.8252427184466019
+CCT,Entropy,val_optimal,True,False,multnoise,saltpepper,0.7613636363636364,0.6339285714285714,0.6976461038961039
+CCT,Entropy,val_optimal,True,False,noise,OoD Test,0.0,0.96,0.48
+CCT,Entropy,val_optimal,True,False,noise,OoD Val,0.0,0.9796954314720813,0.48984771573604063
+CCT,Entropy,val_optimal,True,False,noise,hue,0.6388888888888888,0.7195121951219512,0.67920054200542
+CCT,Entropy,val_optimal,True,False,noise,multnoise,0.20588235294117646,0.9036144578313253,0.5547484053862509
+CCT,Entropy,val_optimal,True,False,noise,noise,1.0,0.9320388349514563,0.9660194174757282
+CCT,Entropy,val_optimal,True,False,noise,saltpepper,0.09090909090909091,0.9464285714285714,0.5186688311688311
+CCT,Entropy,val_optimal,True,False,saltpepper,OoD Test,0.05,0.79,0.42000000000000004
+CCT,Entropy,val_optimal,True,False,saltpepper,OoD Val,0.0,0.8629441624365483,0.43147208121827413
+CCT,Entropy,val_optimal,True,False,saltpepper,hue,0.8611111111111112,0.5426829268292683,0.7018970189701897
+CCT,Entropy,val_optimal,True,False,saltpepper,multnoise,0.7058823529411765,0.5963855421686747,0.6511339475549256
+CCT,Entropy,val_optimal,True,False,saltpepper,noise,1.0,0.7669902912621359,0.883495145631068
+CCT,Entropy,val_optimal,True,False,saltpepper,saltpepper,0.7159090909090909,0.7410714285714286,0.7284902597402598
+CCT,Entropy,val_optimal,True,False,smear,OoD Test,0.97,0.18999999999999995,0.58
+CCT,Entropy,val_optimal,True,False,smear,OoD Val,1.0,0.12690355329949243,0.5634517766497462
+CCT,Entropy,val_optimal,True,False,smear,hue,0.1388888888888889,0.4390243902439024,0.2889566395663956
+CCT,Entropy,val_optimal,True,False,smear,multnoise,0.29411764705882354,0.3674698795180723,0.3307937632884479
+CCT,Entropy,val_optimal,True,False,smear,noise,0.0,0.21359223300970875,0.10679611650485438
+CCT,Entropy,val_optimal,True,False,smear,saltpepper,0.3409090909090909,0.2410714285714286,0.2909902597402597
+CCT,Entropy,ind_span,True,False,OoD Test,OoD Test,0.23,0.99,0.61
+CCT,Entropy,ind_span,True,False,OoD Test,OoD Val,0.0,0.9137055837563451,0.45685279187817257
+CCT,Entropy,ind_span,True,False,OoD Test,hue,0.05555555555555555,0.9634146341463414,0.5094850948509485
+CCT,Entropy,ind_span,True,False,OoD Test,multnoise,0.0,0.9939759036144579,0.49698795180722893
+CCT,Entropy,ind_span,True,False,OoD Test,noise,0.0,0.9902912621359223,0.49514563106796117
+CCT,Entropy,ind_span,True,False,OoD Test,saltpepper,0.0,0.9910714285714286,0.4955357142857143
+CCT,Entropy,ind_span,True,False,OoD Val,OoD Test,0.23,0.99,0.61
+CCT,Entropy,ind_span,True,False,OoD Val,OoD Val,0.0,0.9137055837563451,0.45685279187817257
+CCT,Entropy,ind_span,True,False,OoD Val,hue,0.05555555555555555,0.9634146341463414,0.5094850948509485
+CCT,Entropy,ind_span,True,False,OoD Val,multnoise,0.0,0.9939759036144579,0.49698795180722893
+CCT,Entropy,ind_span,True,False,OoD Val,noise,0.0,0.9902912621359223,0.49514563106796117
+CCT,Entropy,ind_span,True,False,OoD Val,saltpepper,0.0,0.9910714285714286,0.4955357142857143
+CCT,Entropy,ind_span,True,False,brightness,OoD Test,0.23,0.99,0.61
+CCT,Entropy,ind_span,True,False,brightness,OoD Val,0.0,0.9137055837563451,0.45685279187817257
+CCT,Entropy,ind_span,True,False,brightness,hue,0.05555555555555555,0.9634146341463414,0.5094850948509485
+CCT,Entropy,ind_span,True,False,brightness,multnoise,0.0,0.9939759036144579,0.49698795180722893
+CCT,Entropy,ind_span,True,False,brightness,noise,0.0,0.9902912621359223,0.49514563106796117
+CCT,Entropy,ind_span,True,False,brightness,saltpepper,0.0,0.9910714285714286,0.4955357142857143
+CCT,Entropy,ind_span,True,False,contrast,OoD Test,0.23,0.99,0.61
+CCT,Entropy,ind_span,True,False,contrast,OoD Val,0.0,0.9137055837563451,0.45685279187817257
+CCT,Entropy,ind_span,True,False,contrast,hue,0.05555555555555555,0.9634146341463414,0.5094850948509485
+CCT,Entropy,ind_span,True,False,contrast,multnoise,0.0,0.9939759036144579,0.49698795180722893
+CCT,Entropy,ind_span,True,False,contrast,noise,0.0,0.9902912621359223,0.49514563106796117
+CCT,Entropy,ind_span,True,False,contrast,saltpepper,0.0,0.9910714285714286,0.4955357142857143
+CCT,Entropy,ind_span,True,False,hue,OoD Test,0.23,0.99,0.61
+CCT,Entropy,ind_span,True,False,hue,OoD Val,0.0,0.9137055837563451,0.45685279187817257
+CCT,Entropy,ind_span,True,False,hue,hue,0.05555555555555555,0.9634146341463414,0.5094850948509485
+CCT,Entropy,ind_span,True,False,hue,multnoise,0.0,0.9939759036144579,0.49698795180722893
+CCT,Entropy,ind_span,True,False,hue,noise,0.0,0.9902912621359223,0.49514563106796117
+CCT,Entropy,ind_span,True,False,hue,saltpepper,0.0,0.9910714285714286,0.4955357142857143
+CCT,Entropy,ind_span,True,False,multnoise,OoD Test,0.23,0.99,0.61
+CCT,Entropy,ind_span,True,False,multnoise,OoD Val,0.0,0.9137055837563451,0.45685279187817257
+CCT,Entropy,ind_span,True,False,multnoise,hue,0.05555555555555555,0.9634146341463414,0.5094850948509485
+CCT,Entropy,ind_span,True,False,multnoise,multnoise,0.0,0.9939759036144579,0.49698795180722893
+CCT,Entropy,ind_span,True,False,multnoise,noise,0.0,0.9902912621359223,0.49514563106796117
+CCT,Entropy,ind_span,True,False,multnoise,saltpepper,0.0,0.9910714285714286,0.4955357142857143
+CCT,Entropy,ind_span,True,False,noise,OoD Test,0.23,0.99,0.61
+CCT,Entropy,ind_span,True,False,noise,OoD Val,0.0,0.9137055837563451,0.45685279187817257
+CCT,Entropy,ind_span,True,False,noise,hue,0.05555555555555555,0.9634146341463414,0.5094850948509485
+CCT,Entropy,ind_span,True,False,noise,multnoise,0.0,0.9939759036144579,0.49698795180722893
+CCT,Entropy,ind_span,True,False,noise,noise,0.0,0.9902912621359223,0.49514563106796117
+CCT,Entropy,ind_span,True,False,noise,saltpepper,0.0,0.9910714285714286,0.4955357142857143
+CCT,Entropy,ind_span,True,False,saltpepper,OoD Test,0.23,0.99,0.61
+CCT,Entropy,ind_span,True,False,saltpepper,OoD Val,0.0,0.9137055837563451,0.45685279187817257
+CCT,Entropy,ind_span,True,False,saltpepper,hue,0.05555555555555555,0.9634146341463414,0.5094850948509485
+CCT,Entropy,ind_span,True,False,saltpepper,multnoise,0.0,0.9939759036144579,0.49698795180722893
+CCT,Entropy,ind_span,True,False,saltpepper,noise,0.0,0.9902912621359223,0.49514563106796117
+CCT,Entropy,ind_span,True,False,saltpepper,saltpepper,0.0,0.9910714285714286,0.4955357142857143
+CCT,Entropy,ind_span,True,False,smear,OoD Test,0.23,0.99,0.61
+CCT,Entropy,ind_span,True,False,smear,OoD Val,0.0,0.9137055837563451,0.45685279187817257
+CCT,Entropy,ind_span,True,False,smear,hue,0.05555555555555555,0.9634146341463414,0.5094850948509485
+CCT,Entropy,ind_span,True,False,smear,multnoise,0.0,0.9939759036144579,0.49698795180722893
+CCT,Entropy,ind_span,True,False,smear,noise,0.0,0.9902912621359223,0.49514563106796117
+CCT,Entropy,ind_span,True,False,smear,saltpepper,0.0,0.9910714285714286,0.4955357142857143
+CCT,Entropy,val_optimal,False,False,OoD Test,OoD Test,0.74,0.79,0.765
+CCT,Entropy,val_optimal,False,False,OoD Test,OoD Val,0.69,0.79,0.74
+CCT,Entropy,val_optimal,False,False,OoD Test,brightness,0.48,0.79,0.635
+CCT,Entropy,val_optimal,False,False,OoD Test,contrast,0.21,0.79,0.5
+CCT,Entropy,val_optimal,False,False,OoD Test,hue,0.03,0.79,0.41000000000000003
+CCT,Entropy,val_optimal,False,False,OoD Test,multnoise,0.04,0.79,0.41500000000000004
+CCT,Entropy,val_optimal,False,False,OoD Test,noise,0.0,0.79,0.395
+CCT,Entropy,val_optimal,False,False,OoD Test,saltpepper,0.02,0.79,0.405
+CCT,Entropy,val_optimal,False,False,OoD Test,smear,0.2,0.79,0.495
+CCT,Entropy,val_optimal,False,False,OoD Val,OoD Test,0.62,0.88,0.75
+CCT,Entropy,val_optimal,False,False,OoD Val,OoD Val,0.59,0.88,0.735
+CCT,Entropy,val_optimal,False,False,OoD Val,brightness,0.32,0.88,0.6
+CCT,Entropy,val_optimal,False,False,OoD Val,contrast,0.17,0.88,0.525
+CCT,Entropy,val_optimal,False,False,OoD Val,hue,0.03,0.88,0.455
+CCT,Entropy,val_optimal,False,False,OoD Val,multnoise,0.03,0.88,0.455
+CCT,Entropy,val_optimal,False,False,OoD Val,noise,0.0,0.88,0.44
+CCT,Entropy,val_optimal,False,False,OoD Val,saltpepper,0.01,0.88,0.445
+CCT,Entropy,val_optimal,False,False,OoD Val,smear,0.08,0.88,0.48
+CCT,Entropy,val_optimal,False,False,brightness,OoD Test,0.75,0.78,0.765
+CCT,Entropy,val_optimal,False,False,brightness,OoD Val,0.69,0.78,0.735
+CCT,Entropy,val_optimal,False,False,brightness,brightness,0.51,0.78,0.645
+CCT,Entropy,val_optimal,False,False,brightness,contrast,0.21,0.78,0.495
+CCT,Entropy,val_optimal,False,False,brightness,hue,0.03,0.78,0.405
+CCT,Entropy,val_optimal,False,False,brightness,multnoise,0.04,0.78,0.41000000000000003
+CCT,Entropy,val_optimal,False,False,brightness,noise,0.0,0.78,0.39
+CCT,Entropy,val_optimal,False,False,brightness,saltpepper,0.02,0.78,0.4
+CCT,Entropy,val_optimal,False,False,brightness,smear,0.23,0.78,0.505
+CCT,Entropy,val_optimal,False,False,contrast,OoD Test,0.98,0.08999999999999997,0.5349999999999999
+CCT,Entropy,val_optimal,False,False,contrast,OoD Val,0.97,0.08999999999999997,0.53
+CCT,Entropy,val_optimal,False,False,contrast,brightness,0.96,0.08999999999999997,0.5249999999999999
+CCT,Entropy,val_optimal,False,False,contrast,contrast,0.96,0.08999999999999997,0.5249999999999999
+CCT,Entropy,val_optimal,False,False,contrast,hue,0.28,0.08999999999999997,0.185
+CCT,Entropy,val_optimal,False,False,contrast,multnoise,0.56,0.08999999999999997,0.325
+CCT,Entropy,val_optimal,False,False,contrast,noise,0.0,0.08999999999999997,0.044999999999999984
+CCT,Entropy,val_optimal,False,False,contrast,saltpepper,0.72,0.08999999999999997,0.40499999999999997
+CCT,Entropy,val_optimal,False,False,contrast,smear,0.95,0.08999999999999997,0.52
+CCT,Entropy,val_optimal,False,False,hue,OoD Test,0.02,0.89,0.455
+CCT,Entropy,val_optimal,False,False,hue,OoD Val,0.04,0.89,0.465
+CCT,Entropy,val_optimal,False,False,hue,brightness,0.05,0.89,0.47000000000000003
+CCT,Entropy,val_optimal,False,False,hue,contrast,0.06,0.89,0.475
+CCT,Entropy,val_optimal,False,False,hue,hue,0.76,0.89,0.825
+CCT,Entropy,val_optimal,False,False,hue,multnoise,0.46,0.89,0.675
+CCT,Entropy,val_optimal,False,False,hue,noise,1.0,0.89,0.9450000000000001
+CCT,Entropy,val_optimal,False,False,hue,saltpepper,0.32,0.89,0.605
+CCT,Entropy,val_optimal,False,False,hue,smear,0.07,0.89,0.48
+CCT,Entropy,val_optimal,False,False,multnoise,OoD Test,0.05,0.6699999999999999,0.36
+CCT,Entropy,val_optimal,False,False,multnoise,OoD Val,0.07,0.6699999999999999,0.37
+CCT,Entropy,val_optimal,False,False,multnoise,brightness,0.18,0.6699999999999999,0.42499999999999993
+CCT,Entropy,val_optimal,False,False,multnoise,contrast,0.39,0.6699999999999999,0.53
+CCT,Entropy,val_optimal,False,False,multnoise,hue,0.88,0.6699999999999999,0.7749999999999999
+CCT,Entropy,val_optimal,False,False,multnoise,multnoise,0.78,0.6699999999999999,0.725
+CCT,Entropy,val_optimal,False,False,multnoise,noise,1.0,0.6699999999999999,0.835
+CCT,Entropy,val_optimal,False,False,multnoise,saltpepper,0.75,0.6699999999999999,0.71
+CCT,Entropy,val_optimal,False,False,multnoise,smear,0.22,0.6699999999999999,0.44499999999999995
+CCT,Entropy,val_optimal,False,False,noise,OoD Test,0.0,0.96,0.48
+CCT,Entropy,val_optimal,False,False,noise,OoD Val,0.0,0.96,0.48
+CCT,Entropy,val_optimal,False,False,noise,brightness,0.01,0.96,0.485
+CCT,Entropy,val_optimal,False,False,noise,contrast,0.03,0.96,0.495
+CCT,Entropy,val_optimal,False,False,noise,hue,0.65,0.96,0.8049999999999999
+CCT,Entropy,val_optimal,False,False,noise,multnoise,0.19,0.96,0.575
+CCT,Entropy,val_optimal,False,False,noise,noise,1.0,0.96,0.98
+CCT,Entropy,val_optimal,False,False,noise,saltpepper,0.1,0.96,0.53
+CCT,Entropy,val_optimal,False,False,noise,smear,0.02,0.96,0.49
+CCT,Entropy,val_optimal,False,False,saltpepper,OoD Test,0.05,0.79,0.42000000000000004
+CCT,Entropy,val_optimal,False,False,saltpepper,OoD Val,0.06,0.79,0.42500000000000004
+CCT,Entropy,val_optimal,False,False,saltpepper,brightness,0.13,0.79,0.46
+CCT,Entropy,val_optimal,False,False,saltpepper,contrast,0.29,0.79,0.54
+CCT,Entropy,val_optimal,False,False,saltpepper,hue,0.85,0.79,0.8200000000000001
+CCT,Entropy,val_optimal,False,False,saltpepper,multnoise,0.7,0.79,0.745
+CCT,Entropy,val_optimal,False,False,saltpepper,noise,1.0,0.79,0.895
+CCT,Entropy,val_optimal,False,False,saltpepper,saltpepper,0.71,0.79,0.75
+CCT,Entropy,val_optimal,False,False,saltpepper,smear,0.15,0.79,0.47000000000000003
+CCT,Entropy,val_optimal,False,False,smear,OoD Test,0.97,0.18999999999999995,0.58
+CCT,Entropy,val_optimal,False,False,smear,OoD Val,0.94,0.18999999999999995,0.565
+CCT,Entropy,val_optimal,False,False,smear,brightness,0.88,0.18999999999999995,0.5349999999999999
+CCT,Entropy,val_optimal,False,False,smear,contrast,0.76,0.18999999999999995,0.475
+CCT,Entropy,val_optimal,False,False,smear,hue,0.16,0.18999999999999995,0.175
+CCT,Entropy,val_optimal,False,False,smear,multnoise,0.34,0.18999999999999995,0.265
+CCT,Entropy,val_optimal,False,False,smear,noise,0.0,0.18999999999999995,0.09499999999999997
+CCT,Entropy,val_optimal,False,False,smear,saltpepper,0.34,0.18999999999999995,0.265
+CCT,Entropy,val_optimal,False,False,smear,smear,0.89,0.18999999999999995,0.54
+CCT,Entropy,ind_span,False,False,OoD Test,OoD Test,0.23,0.99,0.61
+CCT,Entropy,ind_span,False,False,OoD Test,OoD Val,0.16,0.99,0.575
+CCT,Entropy,ind_span,False,False,OoD Test,brightness,0.05,0.99,0.52
+CCT,Entropy,ind_span,False,False,OoD Test,contrast,0.01,0.99,0.5
+CCT,Entropy,ind_span,False,False,OoD Test,hue,0.07,0.99,0.53
+CCT,Entropy,ind_span,False,False,OoD Test,multnoise,0.0,0.99,0.495
+CCT,Entropy,ind_span,False,False,OoD Test,noise,0.0,0.99,0.495
+CCT,Entropy,ind_span,False,False,OoD Test,saltpepper,0.0,0.99,0.495
+CCT,Entropy,ind_span,False,False,OoD Test,smear,0.0,0.99,0.495
+CCT,Entropy,ind_span,False,False,OoD Val,OoD Test,0.23,0.99,0.61
+CCT,Entropy,ind_span,False,False,OoD Val,OoD Val,0.16,0.99,0.575
+CCT,Entropy,ind_span,False,False,OoD Val,brightness,0.05,0.99,0.52
+CCT,Entropy,ind_span,False,False,OoD Val,contrast,0.01,0.99,0.5
+CCT,Entropy,ind_span,False,False,OoD Val,hue,0.07,0.99,0.53
+CCT,Entropy,ind_span,False,False,OoD Val,multnoise,0.0,0.99,0.495
+CCT,Entropy,ind_span,False,False,OoD Val,noise,0.0,0.99,0.495
+CCT,Entropy,ind_span,False,False,OoD Val,saltpepper,0.0,0.99,0.495
+CCT,Entropy,ind_span,False,False,OoD Val,smear,0.0,0.99,0.495
+CCT,Entropy,ind_span,False,False,brightness,OoD Test,0.23,0.99,0.61
+CCT,Entropy,ind_span,False,False,brightness,OoD Val,0.16,0.99,0.575
+CCT,Entropy,ind_span,False,False,brightness,brightness,0.05,0.99,0.52
+CCT,Entropy,ind_span,False,False,brightness,contrast,0.01,0.99,0.5
+CCT,Entropy,ind_span,False,False,brightness,hue,0.07,0.99,0.53
+CCT,Entropy,ind_span,False,False,brightness,multnoise,0.0,0.99,0.495
+CCT,Entropy,ind_span,False,False,brightness,noise,0.0,0.99,0.495
+CCT,Entropy,ind_span,False,False,brightness,saltpepper,0.0,0.99,0.495
+CCT,Entropy,ind_span,False,False,brightness,smear,0.0,0.99,0.495
+CCT,Entropy,ind_span,False,False,contrast,OoD Test,0.23,0.99,0.61
+CCT,Entropy,ind_span,False,False,contrast,OoD Val,0.16,0.99,0.575
+CCT,Entropy,ind_span,False,False,contrast,brightness,0.05,0.99,0.52
+CCT,Entropy,ind_span,False,False,contrast,contrast,0.01,0.99,0.5
+CCT,Entropy,ind_span,False,False,contrast,hue,0.07,0.99,0.53
+CCT,Entropy,ind_span,False,False,contrast,multnoise,0.0,0.99,0.495
+CCT,Entropy,ind_span,False,False,contrast,noise,0.0,0.99,0.495
+CCT,Entropy,ind_span,False,False,contrast,saltpepper,0.0,0.99,0.495
+CCT,Entropy,ind_span,False,False,contrast,smear,0.0,0.99,0.495
+CCT,Entropy,ind_span,False,False,hue,OoD Test,0.23,0.99,0.61
+CCT,Entropy,ind_span,False,False,hue,OoD Val,0.16,0.99,0.575
+CCT,Entropy,ind_span,False,False,hue,brightness,0.05,0.99,0.52
+CCT,Entropy,ind_span,False,False,hue,contrast,0.01,0.99,0.5
+CCT,Entropy,ind_span,False,False,hue,hue,0.07,0.99,0.53
+CCT,Entropy,ind_span,False,False,hue,multnoise,0.0,0.99,0.495
+CCT,Entropy,ind_span,False,False,hue,noise,0.0,0.99,0.495
+CCT,Entropy,ind_span,False,False,hue,saltpepper,0.0,0.99,0.495
+CCT,Entropy,ind_span,False,False,hue,smear,0.0,0.99,0.495
+CCT,Entropy,ind_span,False,False,multnoise,OoD Test,0.23,0.99,0.61
+CCT,Entropy,ind_span,False,False,multnoise,OoD Val,0.16,0.99,0.575
+CCT,Entropy,ind_span,False,False,multnoise,brightness,0.05,0.99,0.52
+CCT,Entropy,ind_span,False,False,multnoise,contrast,0.01,0.99,0.5
+CCT,Entropy,ind_span,False,False,multnoise,hue,0.07,0.99,0.53
+CCT,Entropy,ind_span,False,False,multnoise,multnoise,0.0,0.99,0.495
+CCT,Entropy,ind_span,False,False,multnoise,noise,0.0,0.99,0.495
+CCT,Entropy,ind_span,False,False,multnoise,saltpepper,0.0,0.99,0.495
+CCT,Entropy,ind_span,False,False,multnoise,smear,0.0,0.99,0.495
+CCT,Entropy,ind_span,False,False,noise,OoD Test,0.23,0.99,0.61
+CCT,Entropy,ind_span,False,False,noise,OoD Val,0.16,0.99,0.575
+CCT,Entropy,ind_span,False,False,noise,brightness,0.05,0.99,0.52
+CCT,Entropy,ind_span,False,False,noise,contrast,0.01,0.99,0.5
+CCT,Entropy,ind_span,False,False,noise,hue,0.07,0.99,0.53
+CCT,Entropy,ind_span,False,False,noise,multnoise,0.0,0.99,0.495
+CCT,Entropy,ind_span,False,False,noise,noise,0.0,0.99,0.495
+CCT,Entropy,ind_span,False,False,noise,saltpepper,0.0,0.99,0.495
+CCT,Entropy,ind_span,False,False,noise,smear,0.0,0.99,0.495
+CCT,Entropy,ind_span,False,False,saltpepper,OoD Test,0.23,0.99,0.61
+CCT,Entropy,ind_span,False,False,saltpepper,OoD Val,0.16,0.99,0.575
+CCT,Entropy,ind_span,False,False,saltpepper,brightness,0.05,0.99,0.52
+CCT,Entropy,ind_span,False,False,saltpepper,contrast,0.01,0.99,0.5
+CCT,Entropy,ind_span,False,False,saltpepper,hue,0.07,0.99,0.53
+CCT,Entropy,ind_span,False,False,saltpepper,multnoise,0.0,0.99,0.495
+CCT,Entropy,ind_span,False,False,saltpepper,noise,0.0,0.99,0.495
+CCT,Entropy,ind_span,False,False,saltpepper,saltpepper,0.0,0.99,0.495
+CCT,Entropy,ind_span,False,False,saltpepper,smear,0.0,0.99,0.495
+CCT,Entropy,ind_span,False,False,smear,OoD Test,0.23,0.99,0.61
+CCT,Entropy,ind_span,False,False,smear,OoD Val,0.16,0.99,0.575
+CCT,Entropy,ind_span,False,False,smear,brightness,0.05,0.99,0.52
+CCT,Entropy,ind_span,False,False,smear,contrast,0.01,0.99,0.5
+CCT,Entropy,ind_span,False,False,smear,hue,0.07,0.99,0.53
+CCT,Entropy,ind_span,False,False,smear,multnoise,0.0,0.99,0.495
+CCT,Entropy,ind_span,False,False,smear,noise,0.0,0.99,0.495
+CCT,Entropy,ind_span,False,False,smear,saltpepper,0.0,0.99,0.495
+CCT,Entropy,ind_span,False,False,smear,smear,0.0,0.99,0.495
+CCT,Energy,val_optimal,True,True,OoD Test,OoD Test,0.9,0.6111111111111112,0.7555555555555555
+CCT,Energy,val_optimal,True,True,OoD Test,OoD Val,0.6470588235294118,0.6174863387978142,0.632272581163613
+CCT,Energy,val_optimal,True,True,OoD Test,brightness,1.0,0.7035175879396984,0.8517587939698492
+CCT,Energy,val_optimal,True,True,OoD Test,hue,0.1956521739130435,0.8701298701298701,0.5328910220214568
+CCT,Energy,val_optimal,True,True,OoD Test,multnoise,0.02666666666666667,0.952,0.4893333333333333
+CCT,Energy,val_optimal,True,True,OoD Test,noise,0.010101010101010102,0.9405940594059405,0.4753475347534753
+CCT,Energy,val_optimal,True,True,OoD Test,saltpepper,0.0,0.9444444444444444,0.4722222222222222
+CCT,Energy,val_optimal,True,True,OoD Val,OoD Test,0.95,0.5555555555555556,0.7527777777777778
+CCT,Energy,val_optimal,True,True,OoD Val,OoD Val,0.7647058823529411,0.540983606557377,0.652844744455159
+CCT,Energy,val_optimal,True,True,OoD Val,brightness,1.0,0.6080402010050252,0.8040201005025126
+CCT,Energy,val_optimal,True,True,OoD Val,hue,0.2608695652173913,0.8246753246753247,0.542772444946358
+CCT,Energy,val_optimal,True,True,OoD Val,multnoise,0.05333333333333334,0.904,0.4786666666666667
+CCT,Energy,val_optimal,True,True,OoD Val,noise,0.030303030303030304,0.8811881188118812,0.45574557455745573
+CCT,Energy,val_optimal,True,True,OoD Val,saltpepper,0.0,0.8888888888888888,0.4444444444444444
+CCT,Energy,val_optimal,True,True,brightness,OoD Test,0.95,0.55,0.75
+CCT,Energy,val_optimal,True,True,brightness,OoD Val,0.7647058823529411,0.540983606557377,0.652844744455159
+CCT,Energy,val_optimal,True,True,brightness,brightness,1.0,0.6030150753768844,0.8015075376884422
+CCT,Energy,val_optimal,True,True,brightness,hue,0.2608695652173913,0.8246753246753247,0.542772444946358
+CCT,Energy,val_optimal,True,True,brightness,multnoise,0.05333333333333334,0.904,0.4786666666666667
+CCT,Energy,val_optimal,True,True,brightness,noise,0.030303030303030304,0.8811881188118812,0.45574557455745573
+CCT,Energy,val_optimal,True,True,brightness,saltpepper,0.0,0.8888888888888888,0.4444444444444444
+CCT,Energy,val_optimal,True,True,contrast,OoD Test,0.0,0.6833333333333333,0.3416666666666667
+CCT,Energy,val_optimal,True,True,contrast,OoD Val,0.0,0.6994535519125683,0.34972677595628415
+CCT,Energy,val_optimal,True,True,contrast,brightness,0.0,0.6633165829145728,0.3316582914572864
+CCT,Energy,val_optimal,True,True,contrast,hue,0.41304347826086957,0.5064935064935066,0.4597684923771881
+CCT,Energy,val_optimal,True,True,contrast,multnoise,0.84,0.384,0.612
+CCT,Energy,val_optimal,True,True,contrast,noise,0.8888888888888888,0.4554455445544554,0.6721672167216721
+CCT,Energy,val_optimal,True,True,contrast,saltpepper,0.9782608695652174,0.43518518518518523,0.7067230273752013
+CCT,Energy,val_optimal,True,True,hue,OoD Test,0.9,0.6277777777777778,0.7638888888888888
+CCT,Energy,val_optimal,True,True,hue,OoD Val,0.5882352941176471,0.6284153005464481,0.6083252973320477
+CCT,Energy,val_optimal,True,True,hue,brightness,1.0,0.728643216080402,0.864321608040201
+CCT,Energy,val_optimal,True,True,hue,hue,0.17391304347826086,0.8831168831168831,0.528514963297572
+CCT,Energy,val_optimal,True,True,hue,multnoise,0.02666666666666667,0.968,0.4973333333333333
+CCT,Energy,val_optimal,True,True,hue,noise,0.010101010101010102,0.9603960396039604,0.4852485248524852
+CCT,Energy,val_optimal,True,True,hue,saltpepper,0.0,0.962962962962963,0.4814814814814815
+CCT,Energy,val_optimal,True,True,multnoise,OoD Test,0.0,0.9277777777777778,0.4638888888888889
+CCT,Energy,val_optimal,True,True,multnoise,OoD Val,0.0,0.9344262295081968,0.4672131147540984
+CCT,Energy,val_optimal,True,True,multnoise,brightness,0.0,0.9246231155778895,0.4623115577889447
+CCT,Energy,val_optimal,True,True,multnoise,hue,0.2608695652173913,0.8506493506493507,0.555759457933371
+CCT,Energy,val_optimal,True,True,multnoise,multnoise,0.64,0.752,0.696
+CCT,Energy,val_optimal,True,True,multnoise,noise,0.7878787878787878,0.8712871287128713,0.8295829582958296
+CCT,Energy,val_optimal,True,True,multnoise,saltpepper,0.7717391304347826,0.8425925925925926,0.8071658615136876
+CCT,Energy,val_optimal,True,True,noise,OoD Test,0.0,0.9055555555555556,0.4527777777777778
+CCT,Energy,val_optimal,True,True,noise,OoD Val,0.0,0.912568306010929,0.4562841530054645
+CCT,Energy,val_optimal,True,True,noise,brightness,0.0,0.8994974874371859,0.44974874371859297
+CCT,Energy,val_optimal,True,True,noise,hue,0.2826086956521739,0.8116883116883117,0.5471485036702428
+CCT,Energy,val_optimal,True,True,noise,multnoise,0.6533333333333333,0.712,0.6826666666666666
+CCT,Energy,val_optimal,True,True,noise,noise,0.8181818181818182,0.8316831683168316,0.8249324932493249
+CCT,Energy,val_optimal,True,True,noise,saltpepper,0.8152173913043478,0.8055555555555556,0.8103864734299517
+CCT,Energy,val_optimal,True,True,saltpepper,OoD Test,0.0,0.8555555555555556,0.4277777777777778
+CCT,Energy,val_optimal,True,True,saltpepper,OoD Val,0.0,0.8688524590163934,0.4344262295081967
+CCT,Energy,val_optimal,True,True,saltpepper,brightness,0.0,0.8542713567839196,0.4271356783919598
+CCT,Energy,val_optimal,True,True,saltpepper,hue,0.32608695652173914,0.7467532467532467,0.536420101637493
+CCT,Energy,val_optimal,True,True,saltpepper,multnoise,0.7333333333333333,0.64,0.6866666666666666
+CCT,Energy,val_optimal,True,True,saltpepper,noise,0.8484848484848485,0.7524752475247525,0.8004800480048004
+CCT,Energy,val_optimal,True,True,saltpepper,saltpepper,0.9347826086956522,0.7222222222222222,0.8285024154589372
+CCT,Energy,val_optimal,True,True,smear,OoD Test,0.95,0.5611111111111111,0.7555555555555555
+CCT,Energy,val_optimal,True,True,smear,OoD Val,0.7647058823529411,0.5519125683060109,0.658309225329476
+CCT,Energy,val_optimal,True,True,smear,brightness,1.0,0.6080402010050252,0.8040201005025126
+CCT,Energy,val_optimal,True,True,smear,hue,0.2608695652173913,0.8246753246753247,0.542772444946358
+CCT,Energy,val_optimal,True,True,smear,multnoise,0.04,0.904,0.47200000000000003
+CCT,Energy,val_optimal,True,True,smear,noise,0.030303030303030304,0.8811881188118812,0.45574557455745573
+CCT,Energy,val_optimal,True,True,smear,saltpepper,0.0,0.8888888888888888,0.4444444444444444
+CCT,Energy,ind_span,True,True,OoD Test,OoD Test,0.9,0.5944444444444444,0.7472222222222222
+CCT,Energy,ind_span,True,True,OoD Test,OoD Val,0.6470588235294118,0.6010928961748634,0.6240758598521376
+CCT,Energy,ind_span,True,True,OoD Test,brightness,1.0,0.6834170854271358,0.8417085427135679
+CCT,Energy,ind_span,True,True,OoD Test,hue,0.34782608695652173,0.8246753246753247,0.5862507058159232
+CCT,Energy,ind_span,True,True,OoD Test,multnoise,0.37333333333333335,0.856,0.6146666666666667
+CCT,Energy,ind_span,True,True,OoD Test,noise,0.5858585858585859,0.900990099009901,0.7434243424342435
+CCT,Energy,ind_span,True,True,OoD Test,saltpepper,0.021739130434782608,0.9166666666666666,0.4692028985507246
+CCT,Energy,ind_span,True,True,OoD Val,OoD Test,0.9,0.5944444444444444,0.7472222222222222
+CCT,Energy,ind_span,True,True,OoD Val,OoD Val,0.6470588235294118,0.6010928961748634,0.6240758598521376
+CCT,Energy,ind_span,True,True,OoD Val,brightness,1.0,0.6834170854271358,0.8417085427135679
+CCT,Energy,ind_span,True,True,OoD Val,hue,0.34782608695652173,0.8246753246753247,0.5862507058159232
+CCT,Energy,ind_span,True,True,OoD Val,multnoise,0.37333333333333335,0.856,0.6146666666666667
+CCT,Energy,ind_span,True,True,OoD Val,noise,0.5858585858585859,0.900990099009901,0.7434243424342435
+CCT,Energy,ind_span,True,True,OoD Val,saltpepper,0.021739130434782608,0.9166666666666666,0.4692028985507246
+CCT,Energy,ind_span,True,True,brightness,OoD Test,0.9,0.5944444444444444,0.7472222222222222
+CCT,Energy,ind_span,True,True,brightness,OoD Val,0.6470588235294118,0.6010928961748634,0.6240758598521376
+CCT,Energy,ind_span,True,True,brightness,brightness,1.0,0.6834170854271358,0.8417085427135679
+CCT,Energy,ind_span,True,True,brightness,hue,0.34782608695652173,0.8246753246753247,0.5862507058159232
+CCT,Energy,ind_span,True,True,brightness,multnoise,0.37333333333333335,0.856,0.6146666666666667
+CCT,Energy,ind_span,True,True,brightness,noise,0.5858585858585859,0.900990099009901,0.7434243424342435
+CCT,Energy,ind_span,True,True,brightness,saltpepper,0.021739130434782608,0.9166666666666666,0.4692028985507246
+CCT,Energy,ind_span,True,True,contrast,OoD Test,0.9,0.5944444444444444,0.7472222222222222
+CCT,Energy,ind_span,True,True,contrast,OoD Val,0.6470588235294118,0.6010928961748634,0.6240758598521376
+CCT,Energy,ind_span,True,True,contrast,brightness,1.0,0.6834170854271358,0.8417085427135679
+CCT,Energy,ind_span,True,True,contrast,hue,0.34782608695652173,0.8246753246753247,0.5862507058159232
+CCT,Energy,ind_span,True,True,contrast,multnoise,0.37333333333333335,0.856,0.6146666666666667
+CCT,Energy,ind_span,True,True,contrast,noise,0.5858585858585859,0.900990099009901,0.7434243424342435
+CCT,Energy,ind_span,True,True,contrast,saltpepper,0.021739130434782608,0.9166666666666666,0.4692028985507246
+CCT,Energy,ind_span,True,True,hue,OoD Test,0.9,0.5944444444444444,0.7472222222222222
+CCT,Energy,ind_span,True,True,hue,OoD Val,0.6470588235294118,0.6010928961748634,0.6240758598521376
+CCT,Energy,ind_span,True,True,hue,brightness,1.0,0.6834170854271358,0.8417085427135679
+CCT,Energy,ind_span,True,True,hue,hue,0.34782608695652173,0.8246753246753247,0.5862507058159232
+CCT,Energy,ind_span,True,True,hue,multnoise,0.37333333333333335,0.856,0.6146666666666667
+CCT,Energy,ind_span,True,True,hue,noise,0.5858585858585859,0.900990099009901,0.7434243424342435
+CCT,Energy,ind_span,True,True,hue,saltpepper,0.021739130434782608,0.9166666666666666,0.4692028985507246
+CCT,Energy,ind_span,True,True,multnoise,OoD Test,0.9,0.5944444444444444,0.7472222222222222
+CCT,Energy,ind_span,True,True,multnoise,OoD Val,0.6470588235294118,0.6010928961748634,0.6240758598521376
+CCT,Energy,ind_span,True,True,multnoise,brightness,1.0,0.6834170854271358,0.8417085427135679
+CCT,Energy,ind_span,True,True,multnoise,hue,0.34782608695652173,0.8246753246753247,0.5862507058159232
+CCT,Energy,ind_span,True,True,multnoise,multnoise,0.37333333333333335,0.856,0.6146666666666667
+CCT,Energy,ind_span,True,True,multnoise,noise,0.5858585858585859,0.900990099009901,0.7434243424342435
+CCT,Energy,ind_span,True,True,multnoise,saltpepper,0.021739130434782608,0.9166666666666666,0.4692028985507246
+CCT,Energy,ind_span,True,True,noise,OoD Test,0.9,0.5944444444444444,0.7472222222222222
+CCT,Energy,ind_span,True,True,noise,OoD Val,0.6470588235294118,0.6010928961748634,0.6240758598521376
+CCT,Energy,ind_span,True,True,noise,brightness,1.0,0.6834170854271358,0.8417085427135679
+CCT,Energy,ind_span,True,True,noise,hue,0.34782608695652173,0.8246753246753247,0.5862507058159232
+CCT,Energy,ind_span,True,True,noise,multnoise,0.37333333333333335,0.856,0.6146666666666667
+CCT,Energy,ind_span,True,True,noise,noise,0.5858585858585859,0.900990099009901,0.7434243424342435
+CCT,Energy,ind_span,True,True,noise,saltpepper,0.021739130434782608,0.9166666666666666,0.4692028985507246
+CCT,Energy,ind_span,True,True,saltpepper,OoD Test,0.9,0.5944444444444444,0.7472222222222222
+CCT,Energy,ind_span,True,True,saltpepper,OoD Val,0.6470588235294118,0.6010928961748634,0.6240758598521376
+CCT,Energy,ind_span,True,True,saltpepper,brightness,1.0,0.6834170854271358,0.8417085427135679
+CCT,Energy,ind_span,True,True,saltpepper,hue,0.34782608695652173,0.8246753246753247,0.5862507058159232
+CCT,Energy,ind_span,True,True,saltpepper,multnoise,0.37333333333333335,0.856,0.6146666666666667
+CCT,Energy,ind_span,True,True,saltpepper,noise,0.5858585858585859,0.900990099009901,0.7434243424342435
+CCT,Energy,ind_span,True,True,saltpepper,saltpepper,0.021739130434782608,0.9166666666666666,0.4692028985507246
+CCT,Energy,ind_span,True,True,smear,OoD Test,0.9,0.5944444444444444,0.7472222222222222
+CCT,Energy,ind_span,True,True,smear,OoD Val,0.6470588235294118,0.6010928961748634,0.6240758598521376
+CCT,Energy,ind_span,True,True,smear,brightness,1.0,0.6834170854271358,0.8417085427135679
+CCT,Energy,ind_span,True,True,smear,hue,0.34782608695652173,0.8246753246753247,0.5862507058159232
+CCT,Energy,ind_span,True,True,smear,multnoise,0.37333333333333335,0.856,0.6146666666666667
+CCT,Energy,ind_span,True,True,smear,noise,0.5858585858585859,0.900990099009901,0.7434243424342435
+CCT,Energy,ind_span,True,True,smear,saltpepper,0.021739130434782608,0.9166666666666666,0.4692028985507246
+CCT,Energy,val_optimal,True,False,OoD Test,OoD Test,0.82,0.94,0.8799999999999999
+CCT,Energy,val_optimal,True,False,OoD Test,OoD Val,0.6470588235294118,0.6174863387978142,0.632272581163613
+CCT,Energy,val_optimal,True,False,OoD Test,brightness,1.0,0.7035175879396984,0.8517587939698492
+CCT,Energy,val_optimal,True,False,OoD Test,hue,0.1956521739130435,0.8701298701298701,0.5328910220214568
+CCT,Energy,val_optimal,True,False,OoD Test,multnoise,0.02666666666666667,0.952,0.4893333333333333
+CCT,Energy,val_optimal,True,False,OoD Test,noise,0.010101010101010102,0.9405940594059405,0.4753475347534753
+CCT,Energy,val_optimal,True,False,OoD Test,saltpepper,0.0,0.9444444444444444,0.4722222222222222
+CCT,Energy,val_optimal,True,False,OoD Val,OoD Test,0.87,0.88,0.875
+CCT,Energy,val_optimal,True,False,OoD Val,OoD Val,0.7647058823529411,0.540983606557377,0.652844744455159
+CCT,Energy,val_optimal,True,False,OoD Val,brightness,1.0,0.6080402010050252,0.8040201005025126
+CCT,Energy,val_optimal,True,False,OoD Val,hue,0.2608695652173913,0.8246753246753247,0.542772444946358
+CCT,Energy,val_optimal,True,False,OoD Val,multnoise,0.05333333333333334,0.904,0.4786666666666667
+CCT,Energy,val_optimal,True,False,OoD Val,noise,0.030303030303030304,0.8811881188118812,0.45574557455745573
+CCT,Energy,val_optimal,True,False,OoD Val,saltpepper,0.0,0.8888888888888888,0.4444444444444444
+CCT,Energy,val_optimal,True,False,brightness,OoD Test,0.88,0.88,0.88
+CCT,Energy,val_optimal,True,False,brightness,OoD Val,0.7647058823529411,0.540983606557377,0.652844744455159
+CCT,Energy,val_optimal,True,False,brightness,brightness,1.0,0.6030150753768844,0.8015075376884422
+CCT,Energy,val_optimal,True,False,brightness,hue,0.2608695652173913,0.8246753246753247,0.542772444946358
+CCT,Energy,val_optimal,True,False,brightness,multnoise,0.05333333333333334,0.904,0.4786666666666667
+CCT,Energy,val_optimal,True,False,brightness,noise,0.030303030303030304,0.8811881188118812,0.45574557455745573
+CCT,Energy,val_optimal,True,False,brightness,saltpepper,0.0,0.8888888888888888,0.4444444444444444
+CCT,Energy,val_optimal,True,False,contrast,OoD Test,0.03,0.45999999999999996,0.245
+CCT,Energy,val_optimal,True,False,contrast,OoD Val,0.0,0.6994535519125683,0.34972677595628415
+CCT,Energy,val_optimal,True,False,contrast,brightness,0.0,0.6633165829145728,0.3316582914572864
+CCT,Energy,val_optimal,True,False,contrast,hue,0.41304347826086957,0.5064935064935066,0.4597684923771881
+CCT,Energy,val_optimal,True,False,contrast,multnoise,0.84,0.384,0.612
+CCT,Energy,val_optimal,True,False,contrast,noise,0.8888888888888888,0.4554455445544554,0.6721672167216721
+CCT,Energy,val_optimal,True,False,contrast,saltpepper,0.9782608695652174,0.43518518518518523,0.7067230273752013
+CCT,Energy,val_optimal,True,False,hue,OoD Test,0.81,0.96,0.885
+CCT,Energy,val_optimal,True,False,hue,OoD Val,0.5882352941176471,0.6284153005464481,0.6083252973320477
+CCT,Energy,val_optimal,True,False,hue,brightness,1.0,0.728643216080402,0.864321608040201
+CCT,Energy,val_optimal,True,False,hue,hue,0.17391304347826086,0.8831168831168831,0.528514963297572
+CCT,Energy,val_optimal,True,False,hue,multnoise,0.02666666666666667,0.968,0.4973333333333333
+CCT,Energy,val_optimal,True,False,hue,noise,0.010101010101010102,0.9603960396039604,0.4852485248524852
+CCT,Energy,val_optimal,True,False,hue,saltpepper,0.0,0.962962962962963,0.4814814814814815
+CCT,Energy,val_optimal,True,False,multnoise,OoD Test,0.01,0.88,0.445
+CCT,Energy,val_optimal,True,False,multnoise,OoD Val,0.0,0.9344262295081968,0.4672131147540984
+CCT,Energy,val_optimal,True,False,multnoise,brightness,0.0,0.9246231155778895,0.4623115577889447
+CCT,Energy,val_optimal,True,False,multnoise,hue,0.2608695652173913,0.8506493506493507,0.555759457933371
+CCT,Energy,val_optimal,True,False,multnoise,multnoise,0.64,0.752,0.696
+CCT,Energy,val_optimal,True,False,multnoise,noise,0.7878787878787878,0.8712871287128713,0.8295829582958296
+CCT,Energy,val_optimal,True,False,multnoise,saltpepper,0.7717391304347826,0.8425925925925926,0.8071658615136876
+CCT,Energy,val_optimal,True,False,noise,OoD Test,0.01,0.84,0.425
+CCT,Energy,val_optimal,True,False,noise,OoD Val,0.0,0.912568306010929,0.4562841530054645
+CCT,Energy,val_optimal,True,False,noise,brightness,0.0,0.8994974874371859,0.44974874371859297
+CCT,Energy,val_optimal,True,False,noise,hue,0.2826086956521739,0.8116883116883117,0.5471485036702428
+CCT,Energy,val_optimal,True,False,noise,multnoise,0.6533333333333333,0.712,0.6826666666666666
+CCT,Energy,val_optimal,True,False,noise,noise,0.8181818181818182,0.8316831683168316,0.8249324932493249
+CCT,Energy,val_optimal,True,False,noise,saltpepper,0.8152173913043478,0.8055555555555556,0.8103864734299517
+CCT,Energy,val_optimal,True,False,saltpepper,OoD Test,0.02,0.76,0.39
+CCT,Energy,val_optimal,True,False,saltpepper,OoD Val,0.0,0.8688524590163934,0.4344262295081967
+CCT,Energy,val_optimal,True,False,saltpepper,brightness,0.0,0.8542713567839196,0.4271356783919598
+CCT,Energy,val_optimal,True,False,saltpepper,hue,0.32608695652173914,0.7467532467532467,0.536420101637493
+CCT,Energy,val_optimal,True,False,saltpepper,multnoise,0.7333333333333333,0.64,0.6866666666666666
+CCT,Energy,val_optimal,True,False,saltpepper,noise,0.8484848484848485,0.7524752475247525,0.8004800480048004
+CCT,Energy,val_optimal,True,False,saltpepper,saltpepper,0.9347826086956522,0.7222222222222222,0.8285024154589372
+CCT,Energy,val_optimal,True,False,smear,OoD Test,0.86,0.88,0.87
+CCT,Energy,val_optimal,True,False,smear,OoD Val,0.7647058823529411,0.5519125683060109,0.658309225329476
+CCT,Energy,val_optimal,True,False,smear,brightness,1.0,0.6080402010050252,0.8040201005025126
+CCT,Energy,val_optimal,True,False,smear,hue,0.2608695652173913,0.8246753246753247,0.542772444946358
+CCT,Energy,val_optimal,True,False,smear,multnoise,0.04,0.904,0.47200000000000003
+CCT,Energy,val_optimal,True,False,smear,noise,0.030303030303030304,0.8811881188118812,0.45574557455745573
+CCT,Energy,val_optimal,True,False,smear,saltpepper,0.0,0.8888888888888888,0.4444444444444444
+CCT,Energy,ind_span,True,False,OoD Test,OoD Test,0.82,0.91,0.865
+CCT,Energy,ind_span,True,False,OoD Test,OoD Val,0.6470588235294118,0.6010928961748634,0.6240758598521376
+CCT,Energy,ind_span,True,False,OoD Test,brightness,1.0,0.6834170854271358,0.8417085427135679
+CCT,Energy,ind_span,True,False,OoD Test,hue,0.34782608695652173,0.8246753246753247,0.5862507058159232
+CCT,Energy,ind_span,True,False,OoD Test,multnoise,0.37333333333333335,0.856,0.6146666666666667
+CCT,Energy,ind_span,True,False,OoD Test,noise,0.5858585858585859,0.900990099009901,0.7434243424342435
+CCT,Energy,ind_span,True,False,OoD Test,saltpepper,0.021739130434782608,0.9166666666666666,0.4692028985507246
+CCT,Energy,ind_span,True,False,OoD Val,OoD Test,0.82,0.91,0.865
+CCT,Energy,ind_span,True,False,OoD Val,OoD Val,0.6470588235294118,0.6010928961748634,0.6240758598521376
+CCT,Energy,ind_span,True,False,OoD Val,brightness,1.0,0.6834170854271358,0.8417085427135679
+CCT,Energy,ind_span,True,False,OoD Val,hue,0.34782608695652173,0.8246753246753247,0.5862507058159232
+CCT,Energy,ind_span,True,False,OoD Val,multnoise,0.37333333333333335,0.856,0.6146666666666667
+CCT,Energy,ind_span,True,False,OoD Val,noise,0.5858585858585859,0.900990099009901,0.7434243424342435
+CCT,Energy,ind_span,True,False,OoD Val,saltpepper,0.021739130434782608,0.9166666666666666,0.4692028985507246
+CCT,Energy,ind_span,True,False,brightness,OoD Test,0.82,0.91,0.865
+CCT,Energy,ind_span,True,False,brightness,OoD Val,0.6470588235294118,0.6010928961748634,0.6240758598521376
+CCT,Energy,ind_span,True,False,brightness,brightness,1.0,0.6834170854271358,0.8417085427135679
+CCT,Energy,ind_span,True,False,brightness,hue,0.34782608695652173,0.8246753246753247,0.5862507058159232
+CCT,Energy,ind_span,True,False,brightness,multnoise,0.37333333333333335,0.856,0.6146666666666667
+CCT,Energy,ind_span,True,False,brightness,noise,0.5858585858585859,0.900990099009901,0.7434243424342435
+CCT,Energy,ind_span,True,False,brightness,saltpepper,0.021739130434782608,0.9166666666666666,0.4692028985507246
+CCT,Energy,ind_span,True,False,contrast,OoD Test,0.82,0.91,0.865
+CCT,Energy,ind_span,True,False,contrast,OoD Val,0.6470588235294118,0.6010928961748634,0.6240758598521376
+CCT,Energy,ind_span,True,False,contrast,brightness,1.0,0.6834170854271358,0.8417085427135679
+CCT,Energy,ind_span,True,False,contrast,hue,0.34782608695652173,0.8246753246753247,0.5862507058159232
+CCT,Energy,ind_span,True,False,contrast,multnoise,0.37333333333333335,0.856,0.6146666666666667
+CCT,Energy,ind_span,True,False,contrast,noise,0.5858585858585859,0.900990099009901,0.7434243424342435
+CCT,Energy,ind_span,True,False,contrast,saltpepper,0.021739130434782608,0.9166666666666666,0.4692028985507246
+CCT,Energy,ind_span,True,False,hue,OoD Test,0.82,0.91,0.865
+CCT,Energy,ind_span,True,False,hue,OoD Val,0.6470588235294118,0.6010928961748634,0.6240758598521376
+CCT,Energy,ind_span,True,False,hue,brightness,1.0,0.6834170854271358,0.8417085427135679
+CCT,Energy,ind_span,True,False,hue,hue,0.34782608695652173,0.8246753246753247,0.5862507058159232
+CCT,Energy,ind_span,True,False,hue,multnoise,0.37333333333333335,0.856,0.6146666666666667
+CCT,Energy,ind_span,True,False,hue,noise,0.5858585858585859,0.900990099009901,0.7434243424342435
+CCT,Energy,ind_span,True,False,hue,saltpepper,0.021739130434782608,0.9166666666666666,0.4692028985507246
+CCT,Energy,ind_span,True,False,multnoise,OoD Test,0.82,0.91,0.865
+CCT,Energy,ind_span,True,False,multnoise,OoD Val,0.6470588235294118,0.6010928961748634,0.6240758598521376
+CCT,Energy,ind_span,True,False,multnoise,brightness,1.0,0.6834170854271358,0.8417085427135679
+CCT,Energy,ind_span,True,False,multnoise,hue,0.34782608695652173,0.8246753246753247,0.5862507058159232
+CCT,Energy,ind_span,True,False,multnoise,multnoise,0.37333333333333335,0.856,0.6146666666666667
+CCT,Energy,ind_span,True,False,multnoise,noise,0.5858585858585859,0.900990099009901,0.7434243424342435
+CCT,Energy,ind_span,True,False,multnoise,saltpepper,0.021739130434782608,0.9166666666666666,0.4692028985507246
+CCT,Energy,ind_span,True,False,noise,OoD Test,0.82,0.91,0.865
+CCT,Energy,ind_span,True,False,noise,OoD Val,0.6470588235294118,0.6010928961748634,0.6240758598521376
+CCT,Energy,ind_span,True,False,noise,brightness,1.0,0.6834170854271358,0.8417085427135679
+CCT,Energy,ind_span,True,False,noise,hue,0.34782608695652173,0.8246753246753247,0.5862507058159232
+CCT,Energy,ind_span,True,False,noise,multnoise,0.37333333333333335,0.856,0.6146666666666667
+CCT,Energy,ind_span,True,False,noise,noise,0.5858585858585859,0.900990099009901,0.7434243424342435
+CCT,Energy,ind_span,True,False,noise,saltpepper,0.021739130434782608,0.9166666666666666,0.4692028985507246
+CCT,Energy,ind_span,True,False,saltpepper,OoD Test,0.82,0.91,0.865
+CCT,Energy,ind_span,True,False,saltpepper,OoD Val,0.6470588235294118,0.6010928961748634,0.6240758598521376
+CCT,Energy,ind_span,True,False,saltpepper,brightness,1.0,0.6834170854271358,0.8417085427135679
+CCT,Energy,ind_span,True,False,saltpepper,hue,0.34782608695652173,0.8246753246753247,0.5862507058159232
+CCT,Energy,ind_span,True,False,saltpepper,multnoise,0.37333333333333335,0.856,0.6146666666666667
+CCT,Energy,ind_span,True,False,saltpepper,noise,0.5858585858585859,0.900990099009901,0.7434243424342435
+CCT,Energy,ind_span,True,False,saltpepper,saltpepper,0.021739130434782608,0.9166666666666666,0.4692028985507246
+CCT,Energy,ind_span,True,False,smear,OoD Test,0.82,0.91,0.865
+CCT,Energy,ind_span,True,False,smear,OoD Val,0.6470588235294118,0.6010928961748634,0.6240758598521376
+CCT,Energy,ind_span,True,False,smear,brightness,1.0,0.6834170854271358,0.8417085427135679
+CCT,Energy,ind_span,True,False,smear,hue,0.34782608695652173,0.8246753246753247,0.5862507058159232
+CCT,Energy,ind_span,True,False,smear,multnoise,0.37333333333333335,0.856,0.6146666666666667
+CCT,Energy,ind_span,True,False,smear,noise,0.5858585858585859,0.900990099009901,0.7434243424342435
+CCT,Energy,ind_span,True,False,smear,saltpepper,0.021739130434782608,0.9166666666666666,0.4692028985507246
+CCT,Energy,val_optimal,False,False,OoD Test,OoD Test,0.82,0.94,0.8799999999999999
+CCT,Energy,val_optimal,False,False,OoD Test,OoD Val,0.75,0.94,0.845
+CCT,Energy,val_optimal,False,False,OoD Test,brightness,0.54,0.94,0.74
+CCT,Energy,val_optimal,False,False,OoD Test,contrast,0.07,0.94,0.505
+CCT,Energy,val_optimal,False,False,OoD Test,hue,0.23,0.94,0.585
+CCT,Energy,val_optimal,False,False,OoD Test,multnoise,0.02,0.94,0.48
+CCT,Energy,val_optimal,False,False,OoD Test,noise,0.01,0.94,0.475
+CCT,Energy,val_optimal,False,False,OoD Test,saltpepper,0.0,0.94,0.47
+CCT,Energy,val_optimal,False,False,OoD Test,smear,0.29,0.94,0.615
+CCT,Energy,val_optimal,False,False,OoD Val,OoD Test,0.87,0.88,0.875
+CCT,Energy,val_optimal,False,False,OoD Val,OoD Val,0.85,0.88,0.865
+CCT,Energy,val_optimal,False,False,OoD Val,brightness,0.67,0.88,0.775
+CCT,Energy,val_optimal,False,False,OoD Val,contrast,0.15,0.88,0.515
+CCT,Energy,val_optimal,False,False,OoD Val,hue,0.27,0.88,0.575
+CCT,Energy,val_optimal,False,False,OoD Val,multnoise,0.04,0.88,0.46
+CCT,Energy,val_optimal,False,False,OoD Val,noise,0.03,0.88,0.455
+CCT,Energy,val_optimal,False,False,OoD Val,saltpepper,0.0,0.88,0.44
+CCT,Energy,val_optimal,False,False,OoD Val,smear,0.44,0.88,0.66
+CCT,Energy,val_optimal,False,False,brightness,OoD Test,0.88,0.88,0.88
+CCT,Energy,val_optimal,False,False,brightness,OoD Val,0.85,0.88,0.865
+CCT,Energy,val_optimal,False,False,brightness,brightness,0.68,0.88,0.78
+CCT,Energy,val_optimal,False,False,brightness,contrast,0.15,0.88,0.515
+CCT,Energy,val_optimal,False,False,brightness,hue,0.27,0.88,0.575
+CCT,Energy,val_optimal,False,False,brightness,multnoise,0.04,0.88,0.46
+CCT,Energy,val_optimal,False,False,brightness,noise,0.03,0.88,0.455
+CCT,Energy,val_optimal,False,False,brightness,saltpepper,0.0,0.88,0.44
+CCT,Energy,val_optimal,False,False,brightness,smear,0.44,0.88,0.66
+CCT,Energy,val_optimal,False,False,contrast,OoD Test,0.03,0.45999999999999996,0.245
+CCT,Energy,val_optimal,False,False,contrast,OoD Val,0.01,0.45999999999999996,0.235
+CCT,Energy,val_optimal,False,False,contrast,brightness,0.13,0.45999999999999996,0.295
+CCT,Energy,val_optimal,False,False,contrast,contrast,0.44,0.45999999999999996,0.44999999999999996
+CCT,Energy,val_optimal,False,False,contrast,hue,0.41,0.45999999999999996,0.43499999999999994
+CCT,Energy,val_optimal,False,False,contrast,multnoise,0.86,0.45999999999999996,0.6599999999999999
+CCT,Energy,val_optimal,False,False,contrast,noise,0.89,0.45999999999999996,0.675
+CCT,Energy,val_optimal,False,False,contrast,saltpepper,0.97,0.45999999999999996,0.715
+CCT,Energy,val_optimal,False,False,contrast,smear,0.16,0.45999999999999996,0.31
+CCT,Energy,val_optimal,False,False,hue,OoD Test,0.81,0.96,0.885
+CCT,Energy,val_optimal,False,False,hue,OoD Val,0.74,0.96,0.85
+CCT,Energy,val_optimal,False,False,hue,brightness,0.51,0.96,0.735
+CCT,Energy,val_optimal,False,False,hue,contrast,0.05,0.96,0.505
+CCT,Energy,val_optimal,False,False,hue,hue,0.22,0.96,0.59
+CCT,Energy,val_optimal,False,False,hue,multnoise,0.02,0.96,0.49
+CCT,Energy,val_optimal,False,False,hue,noise,0.01,0.96,0.485
+CCT,Energy,val_optimal,False,False,hue,saltpepper,0.0,0.96,0.48
+CCT,Energy,val_optimal,False,False,hue,smear,0.28,0.96,0.62
+CCT,Energy,val_optimal,False,False,multnoise,OoD Test,0.01,0.88,0.445
+CCT,Energy,val_optimal,False,False,multnoise,OoD Val,0.0,0.88,0.44
+CCT,Energy,val_optimal,False,False,multnoise,brightness,0.03,0.88,0.455
+CCT,Energy,val_optimal,False,False,multnoise,contrast,0.16,0.88,0.52
+CCT,Energy,val_optimal,False,False,multnoise,hue,0.23,0.88,0.555
+CCT,Energy,val_optimal,False,False,multnoise,multnoise,0.67,0.88,0.775
+CCT,Energy,val_optimal,False,False,multnoise,noise,0.79,0.88,0.835
+CCT,Energy,val_optimal,False,False,multnoise,saltpepper,0.76,0.88,0.8200000000000001
+CCT,Energy,val_optimal,False,False,multnoise,smear,0.04,0.88,0.46
+CCT,Energy,val_optimal,False,False,noise,OoD Test,0.01,0.84,0.425
+CCT,Energy,val_optimal,False,False,noise,OoD Val,0.0,0.84,0.42
+CCT,Energy,val_optimal,False,False,noise,brightness,0.04,0.84,0.44
+CCT,Energy,val_optimal,False,False,noise,contrast,0.19,0.84,0.515
+CCT,Energy,val_optimal,False,False,noise,hue,0.26,0.84,0.55
+CCT,Energy,val_optimal,False,False,noise,multnoise,0.69,0.84,0.7649999999999999
+CCT,Energy,val_optimal,False,False,noise,noise,0.82,0.84,0.83
+CCT,Energy,val_optimal,False,False,noise,saltpepper,0.8,0.84,0.8200000000000001
+CCT,Energy,val_optimal,False,False,noise,smear,0.05,0.84,0.445
+CCT,Energy,val_optimal,False,False,saltpepper,OoD Test,0.02,0.76,0.39
+CCT,Energy,val_optimal,False,False,saltpepper,OoD Val,0.0,0.76,0.38
+CCT,Energy,val_optimal,False,False,saltpepper,brightness,0.05,0.76,0.405
+CCT,Energy,val_optimal,False,False,saltpepper,contrast,0.25,0.76,0.505
+CCT,Energy,val_optimal,False,False,saltpepper,hue,0.3,0.76,0.53
+CCT,Energy,val_optimal,False,False,saltpepper,multnoise,0.76,0.76,0.76
+CCT,Energy,val_optimal,False,False,saltpepper,noise,0.85,0.76,0.8049999999999999
+CCT,Energy,val_optimal,False,False,saltpepper,saltpepper,0.92,0.76,0.8400000000000001
+CCT,Energy,val_optimal,False,False,saltpepper,smear,0.08,0.76,0.42
+CCT,Energy,val_optimal,False,False,smear,OoD Test,0.86,0.88,0.87
+CCT,Energy,val_optimal,False,False,smear,OoD Val,0.83,0.88,0.855
+CCT,Energy,val_optimal,False,False,smear,brightness,0.67,0.88,0.775
+CCT,Energy,val_optimal,False,False,smear,contrast,0.15,0.88,0.515
+CCT,Energy,val_optimal,False,False,smear,hue,0.27,0.88,0.575
+CCT,Energy,val_optimal,False,False,smear,multnoise,0.03,0.88,0.455
+CCT,Energy,val_optimal,False,False,smear,noise,0.03,0.88,0.455
+CCT,Energy,val_optimal,False,False,smear,saltpepper,0.0,0.88,0.44
+CCT,Energy,val_optimal,False,False,smear,smear,0.44,0.88,0.66
+CCT,Energy,ind_span,False,False,OoD Test,OoD Test,0.82,0.91,0.865
+CCT,Energy,ind_span,False,False,OoD Test,OoD Val,0.75,0.91,0.8300000000000001
+CCT,Energy,ind_span,False,False,OoD Test,brightness,0.55,0.91,0.73
+CCT,Energy,ind_span,False,False,OoD Test,contrast,0.1,0.91,0.505
+CCT,Energy,ind_span,False,False,OoD Test,hue,0.34,0.91,0.625
+CCT,Energy,ind_span,False,False,OoD Test,multnoise,0.37,0.91,0.64
+CCT,Energy,ind_span,False,False,OoD Test,noise,0.59,0.91,0.75
+CCT,Energy,ind_span,False,False,OoD Test,saltpepper,0.02,0.91,0.465
+CCT,Energy,ind_span,False,False,OoD Test,smear,0.32,0.91,0.615
+CCT,Energy,ind_span,False,False,OoD Val,OoD Test,0.82,0.91,0.865
+CCT,Energy,ind_span,False,False,OoD Val,OoD Val,0.75,0.91,0.8300000000000001
+CCT,Energy,ind_span,False,False,OoD Val,brightness,0.55,0.91,0.73
+CCT,Energy,ind_span,False,False,OoD Val,contrast,0.1,0.91,0.505
+CCT,Energy,ind_span,False,False,OoD Val,hue,0.34,0.91,0.625
+CCT,Energy,ind_span,False,False,OoD Val,multnoise,0.37,0.91,0.64
+CCT,Energy,ind_span,False,False,OoD Val,noise,0.59,0.91,0.75
+CCT,Energy,ind_span,False,False,OoD Val,saltpepper,0.02,0.91,0.465
+CCT,Energy,ind_span,False,False,OoD Val,smear,0.32,0.91,0.615
+CCT,Energy,ind_span,False,False,brightness,OoD Test,0.82,0.91,0.865
+CCT,Energy,ind_span,False,False,brightness,OoD Val,0.75,0.91,0.8300000000000001
+CCT,Energy,ind_span,False,False,brightness,brightness,0.55,0.91,0.73
+CCT,Energy,ind_span,False,False,brightness,contrast,0.1,0.91,0.505
+CCT,Energy,ind_span,False,False,brightness,hue,0.34,0.91,0.625
+CCT,Energy,ind_span,False,False,brightness,multnoise,0.37,0.91,0.64
+CCT,Energy,ind_span,False,False,brightness,noise,0.59,0.91,0.75
+CCT,Energy,ind_span,False,False,brightness,saltpepper,0.02,0.91,0.465
+CCT,Energy,ind_span,False,False,brightness,smear,0.32,0.91,0.615
+CCT,Energy,ind_span,False,False,contrast,OoD Test,0.82,0.91,0.865
+CCT,Energy,ind_span,False,False,contrast,OoD Val,0.75,0.91,0.8300000000000001
+CCT,Energy,ind_span,False,False,contrast,brightness,0.55,0.91,0.73
+CCT,Energy,ind_span,False,False,contrast,contrast,0.1,0.91,0.505
+CCT,Energy,ind_span,False,False,contrast,hue,0.34,0.91,0.625
+CCT,Energy,ind_span,False,False,contrast,multnoise,0.37,0.91,0.64
+CCT,Energy,ind_span,False,False,contrast,noise,0.59,0.91,0.75
+CCT,Energy,ind_span,False,False,contrast,saltpepper,0.02,0.91,0.465
+CCT,Energy,ind_span,False,False,contrast,smear,0.32,0.91,0.615
+CCT,Energy,ind_span,False,False,hue,OoD Test,0.82,0.91,0.865
+CCT,Energy,ind_span,False,False,hue,OoD Val,0.75,0.91,0.8300000000000001
+CCT,Energy,ind_span,False,False,hue,brightness,0.55,0.91,0.73
+CCT,Energy,ind_span,False,False,hue,contrast,0.1,0.91,0.505
+CCT,Energy,ind_span,False,False,hue,hue,0.34,0.91,0.625
+CCT,Energy,ind_span,False,False,hue,multnoise,0.37,0.91,0.64
+CCT,Energy,ind_span,False,False,hue,noise,0.59,0.91,0.75
+CCT,Energy,ind_span,False,False,hue,saltpepper,0.02,0.91,0.465
+CCT,Energy,ind_span,False,False,hue,smear,0.32,0.91,0.615
+CCT,Energy,ind_span,False,False,multnoise,OoD Test,0.82,0.91,0.865
+CCT,Energy,ind_span,False,False,multnoise,OoD Val,0.75,0.91,0.8300000000000001
+CCT,Energy,ind_span,False,False,multnoise,brightness,0.55,0.91,0.73
+CCT,Energy,ind_span,False,False,multnoise,contrast,0.1,0.91,0.505
+CCT,Energy,ind_span,False,False,multnoise,hue,0.34,0.91,0.625
+CCT,Energy,ind_span,False,False,multnoise,multnoise,0.37,0.91,0.64
+CCT,Energy,ind_span,False,False,multnoise,noise,0.59,0.91,0.75
+CCT,Energy,ind_span,False,False,multnoise,saltpepper,0.02,0.91,0.465
+CCT,Energy,ind_span,False,False,multnoise,smear,0.32,0.91,0.615
+CCT,Energy,ind_span,False,False,noise,OoD Test,0.82,0.91,0.865
+CCT,Energy,ind_span,False,False,noise,OoD Val,0.75,0.91,0.8300000000000001
+CCT,Energy,ind_span,False,False,noise,brightness,0.55,0.91,0.73
+CCT,Energy,ind_span,False,False,noise,contrast,0.1,0.91,0.505
+CCT,Energy,ind_span,False,False,noise,hue,0.34,0.91,0.625
+CCT,Energy,ind_span,False,False,noise,multnoise,0.37,0.91,0.64
+CCT,Energy,ind_span,False,False,noise,noise,0.59,0.91,0.75
+CCT,Energy,ind_span,False,False,noise,saltpepper,0.02,0.91,0.465
+CCT,Energy,ind_span,False,False,noise,smear,0.32,0.91,0.615
+CCT,Energy,ind_span,False,False,saltpepper,OoD Test,0.82,0.91,0.865
+CCT,Energy,ind_span,False,False,saltpepper,OoD Val,0.75,0.91,0.8300000000000001
+CCT,Energy,ind_span,False,False,saltpepper,brightness,0.55,0.91,0.73
+CCT,Energy,ind_span,False,False,saltpepper,contrast,0.1,0.91,0.505
+CCT,Energy,ind_span,False,False,saltpepper,hue,0.34,0.91,0.625
+CCT,Energy,ind_span,False,False,saltpepper,multnoise,0.37,0.91,0.64
+CCT,Energy,ind_span,False,False,saltpepper,noise,0.59,0.91,0.75
+CCT,Energy,ind_span,False,False,saltpepper,saltpepper,0.02,0.91,0.465
+CCT,Energy,ind_span,False,False,saltpepper,smear,0.32,0.91,0.615
+CCT,Energy,ind_span,False,False,smear,OoD Test,0.82,0.91,0.865
+CCT,Energy,ind_span,False,False,smear,OoD Val,0.75,0.91,0.8300000000000001
+CCT,Energy,ind_span,False,False,smear,brightness,0.55,0.91,0.73
+CCT,Energy,ind_span,False,False,smear,contrast,0.1,0.91,0.505
+CCT,Energy,ind_span,False,False,smear,hue,0.34,0.91,0.625
+CCT,Energy,ind_span,False,False,smear,multnoise,0.37,0.91,0.64
+CCT,Energy,ind_span,False,False,smear,noise,0.59,0.91,0.75
+CCT,Energy,ind_span,False,False,smear,saltpepper,0.02,0.91,0.465
+CCT,Energy,ind_span,False,False,smear,smear,0.32,0.91,0.615
+CCT,Typicality,val_optimal,True,True,OoD Test,OoD Test,0.68,0.4742857142857143,0.5771428571428572
+CCT,Typicality,val_optimal,True,True,OoD Test,OoD Val,0.5384615384615384,0.515527950310559,0.5269947443860488
+CCT,Typicality,val_optimal,True,True,OoD Test,brightness,0.5,0.5151515151515151,0.5075757575757576
+CCT,Typicality,val_optimal,True,True,OoD Test,hue,0.44776119402985076,0.6090225563909775,0.5283918752104141
+CCT,Typicality,val_optimal,True,True,OoD Test,multnoise,0.0,0.6864406779661016,0.3432203389830508
+CCT,Typicality,val_optimal,True,True,OoD Test,noise,0.0,0.63,0.315
+CCT,Typicality,val_optimal,True,True,OoD Test,saltpepper,0.0,0.6336633663366337,0.31683168316831684
+CCT,Typicality,val_optimal,True,True,OoD Val,OoD Test,0.76,0.4114285714285715,0.5857142857142857
+CCT,Typicality,val_optimal,True,True,OoD Val,OoD Val,0.6153846153846154,0.40372670807453415,0.5095556617295748
+CCT,Typicality,val_optimal,True,True,OoD Val,brightness,0.5,0.4242424242424242,0.4621212121212121
+CCT,Typicality,val_optimal,True,True,OoD Val,hue,0.4925373134328358,0.5413533834586466,0.5169453484457411
+CCT,Typicality,val_optimal,True,True,OoD Val,multnoise,0.0,0.6101694915254237,0.30508474576271183
+CCT,Typicality,val_optimal,True,True,OoD Val,noise,0.0,0.54,0.27
+CCT,Typicality,val_optimal,True,True,OoD Val,saltpepper,0.0,0.5445544554455446,0.2722772277227723
+CCT,Typicality,val_optimal,True,True,brightness,OoD Test,0.8,0.3371428571428572,0.5685714285714286
+CCT,Typicality,val_optimal,True,True,brightness,OoD Val,0.6666666666666666,0.3291925465838509,0.49792960662525876
+CCT,Typicality,val_optimal,True,True,brightness,brightness,0.5,0.303030303030303,0.4015151515151515
+CCT,Typicality,val_optimal,True,True,brightness,hue,0.6119402985074627,0.45112781954887216,0.5315340590281674
+CCT,Typicality,val_optimal,True,True,brightness,multnoise,0.0,0.5338983050847458,0.2669491525423729
+CCT,Typicality,val_optimal,True,True,brightness,noise,0.0,0.44999999999999996,0.22499999999999998
+CCT,Typicality,val_optimal,True,True,brightness,saltpepper,0.0,0.4554455445544554,0.2277227722772277
+CCT,Typicality,val_optimal,True,True,contrast,OoD Test,0.4,0.4571428571428572,0.4285714285714286
+CCT,Typicality,val_optimal,True,True,contrast,OoD Val,0.48717948717948717,0.44099378881987583,0.46408663799968153
+CCT,Typicality,val_optimal,True,True,contrast,brightness,0.5,0.43939393939393945,0.4696969696969697
+CCT,Typicality,val_optimal,True,True,contrast,hue,0.6119402985074627,0.3308270676691729,0.4713836830883178
+CCT,Typicality,val_optimal,True,True,contrast,multnoise,1.0,0.27118644067796616,0.6355932203389831
+CCT,Typicality,val_optimal,True,True,contrast,noise,1.0,0.31999999999999995,0.6599999999999999
+CCT,Typicality,val_optimal,True,True,contrast,saltpepper,1.0,0.3168316831683168,0.6584158415841583
+CCT,Typicality,val_optimal,True,True,hue,OoD Test,0.6,0.23428571428571432,0.41714285714285715
+CCT,Typicality,val_optimal,True,True,hue,OoD Val,0.6666666666666666,0.26086956521739135,0.463768115942029
+CCT,Typicality,val_optimal,True,True,hue,brightness,1.0,0.2272727272727273,0.6136363636363636
+CCT,Typicality,val_optimal,True,True,hue,hue,0.835820895522388,0.1578947368421053,0.49685781618224667
+CCT,Typicality,val_optimal,True,True,hue,multnoise,1.0,0.13559322033898302,0.5677966101694916
+CCT,Typicality,val_optimal,True,True,hue,noise,1.0,0.16000000000000003,0.5800000000000001
+CCT,Typicality,val_optimal,True,True,hue,saltpepper,1.0,0.15841584158415845,0.5792079207920793
+CCT,Typicality,val_optimal,True,True,multnoise,OoD Test,0.0,1.0,0.5
+CCT,Typicality,val_optimal,True,True,multnoise,OoD Val,0.0,1.0,0.5
+CCT,Typicality,val_optimal,True,True,multnoise,brightness,0.0,1.0,0.5
+CCT,Typicality,val_optimal,True,True,multnoise,hue,0.0,1.0,0.5
+CCT,Typicality,val_optimal,True,True,multnoise,multnoise,1.0,0.847457627118644,0.923728813559322
+CCT,Typicality,val_optimal,True,True,multnoise,noise,1.0,1.0,1.0
+CCT,Typicality,val_optimal,True,True,multnoise,saltpepper,1.0,0.9900990099009901,0.995049504950495
+CCT,Typicality,val_optimal,True,True,noise,OoD Test,0.0,1.0,0.5
+CCT,Typicality,val_optimal,True,True,noise,OoD Val,0.0,1.0,0.5
+CCT,Typicality,val_optimal,True,True,noise,brightness,0.0,1.0,0.5
+CCT,Typicality,val_optimal,True,True,noise,hue,0.0,1.0,0.5
+CCT,Typicality,val_optimal,True,True,noise,multnoise,1.0,0.847457627118644,0.923728813559322
+CCT,Typicality,val_optimal,True,True,noise,noise,1.0,1.0,1.0
+CCT,Typicality,val_optimal,True,True,noise,saltpepper,1.0,0.9900990099009901,0.995049504950495
+CCT,Typicality,val_optimal,True,True,saltpepper,OoD Test,0.0,1.0,0.5
+CCT,Typicality,val_optimal,True,True,saltpepper,OoD Val,0.0,1.0,0.5
+CCT,Typicality,val_optimal,True,True,saltpepper,brightness,0.0,1.0,0.5
+CCT,Typicality,val_optimal,True,True,saltpepper,hue,0.0,1.0,0.5
+CCT,Typicality,val_optimal,True,True,saltpepper,multnoise,1.0,0.847457627118644,0.923728813559322
+CCT,Typicality,val_optimal,True,True,saltpepper,noise,1.0,1.0,1.0
+CCT,Typicality,val_optimal,True,True,saltpepper,saltpepper,1.0,0.9900990099009901,0.995049504950495
+CCT,Typicality,val_optimal,True,True,smear,OoD Test,0.56,0.2914285714285715,0.42571428571428577
+CCT,Typicality,val_optimal,True,True,smear,OoD Val,0.6410256410256411,0.30434782608695654,0.4726867335562988
+CCT,Typicality,val_optimal,True,True,smear,brightness,0.5,0.2777777777777778,0.3888888888888889
+CCT,Typicality,val_optimal,True,True,smear,hue,0.7611940298507462,0.21052631578947367,0.48586017282010996
+CCT,Typicality,val_optimal,True,True,smear,multnoise,1.0,0.1610169491525424,0.5805084745762712
+CCT,Typicality,val_optimal,True,True,smear,noise,1.0,0.18999999999999995,0.595
+CCT,Typicality,val_optimal,True,True,smear,saltpepper,1.0,0.18811881188118806,0.594059405940594
+CCT,Typicality,ind_span,True,True,OoD Test,OoD Test,0.0,0.9885714285714285,0.4942857142857143
+CCT,Typicality,ind_span,True,True,OoD Test,OoD Val,0.0,0.9813664596273292,0.4906832298136646
+CCT,Typicality,ind_span,True,True,OoD Test,brightness,0.0,0.9797979797979798,0.4898989898989899
+CCT,Typicality,ind_span,True,True,OoD Test,hue,0.014925373134328358,0.9849624060150376,0.499943889574683
+CCT,Typicality,ind_span,True,True,OoD Test,multnoise,1.0,0.8389830508474576,0.9194915254237288
+CCT,Typicality,ind_span,True,True,OoD Test,noise,1.0,0.99,0.995
+CCT,Typicality,ind_span,True,True,OoD Test,saltpepper,1.0,0.9801980198019802,0.9900990099009901
+CCT,Typicality,ind_span,True,True,OoD Val,OoD Test,0.0,0.9885714285714285,0.4942857142857143
+CCT,Typicality,ind_span,True,True,OoD Val,OoD Val,0.0,0.9813664596273292,0.4906832298136646
+CCT,Typicality,ind_span,True,True,OoD Val,brightness,0.0,0.9797979797979798,0.4898989898989899
+CCT,Typicality,ind_span,True,True,OoD Val,hue,0.014925373134328358,0.9849624060150376,0.499943889574683
+CCT,Typicality,ind_span,True,True,OoD Val,multnoise,1.0,0.8389830508474576,0.9194915254237288
+CCT,Typicality,ind_span,True,True,OoD Val,noise,1.0,0.99,0.995
+CCT,Typicality,ind_span,True,True,OoD Val,saltpepper,1.0,0.9801980198019802,0.9900990099009901
+CCT,Typicality,ind_span,True,True,brightness,OoD Test,0.0,0.9885714285714285,0.4942857142857143
+CCT,Typicality,ind_span,True,True,brightness,OoD Val,0.0,0.9813664596273292,0.4906832298136646
+CCT,Typicality,ind_span,True,True,brightness,brightness,0.0,0.9797979797979798,0.4898989898989899
+CCT,Typicality,ind_span,True,True,brightness,hue,0.014925373134328358,0.9849624060150376,0.499943889574683
+CCT,Typicality,ind_span,True,True,brightness,multnoise,1.0,0.8389830508474576,0.9194915254237288
+CCT,Typicality,ind_span,True,True,brightness,noise,1.0,0.99,0.995
+CCT,Typicality,ind_span,True,True,brightness,saltpepper,1.0,0.9801980198019802,0.9900990099009901
+CCT,Typicality,ind_span,True,True,contrast,OoD Test,0.0,0.9885714285714285,0.4942857142857143
+CCT,Typicality,ind_span,True,True,contrast,OoD Val,0.0,0.9813664596273292,0.4906832298136646
+CCT,Typicality,ind_span,True,True,contrast,brightness,0.0,0.9797979797979798,0.4898989898989899
+CCT,Typicality,ind_span,True,True,contrast,hue,0.014925373134328358,0.9849624060150376,0.499943889574683
+CCT,Typicality,ind_span,True,True,contrast,multnoise,1.0,0.8389830508474576,0.9194915254237288
+CCT,Typicality,ind_span,True,True,contrast,noise,1.0,0.99,0.995
+CCT,Typicality,ind_span,True,True,contrast,saltpepper,1.0,0.9801980198019802,0.9900990099009901
+CCT,Typicality,ind_span,True,True,hue,OoD Test,0.0,0.9885714285714285,0.4942857142857143
+CCT,Typicality,ind_span,True,True,hue,OoD Val,0.0,0.9813664596273292,0.4906832298136646
+CCT,Typicality,ind_span,True,True,hue,brightness,0.0,0.9797979797979798,0.4898989898989899
+CCT,Typicality,ind_span,True,True,hue,hue,0.014925373134328358,0.9849624060150376,0.499943889574683
+CCT,Typicality,ind_span,True,True,hue,multnoise,1.0,0.8389830508474576,0.9194915254237288
+CCT,Typicality,ind_span,True,True,hue,noise,1.0,0.99,0.995
+CCT,Typicality,ind_span,True,True,hue,saltpepper,1.0,0.9801980198019802,0.9900990099009901
+CCT,Typicality,ind_span,True,True,multnoise,OoD Test,0.0,0.9885714285714285,0.4942857142857143
+CCT,Typicality,ind_span,True,True,multnoise,OoD Val,0.0,0.9813664596273292,0.4906832298136646
+CCT,Typicality,ind_span,True,True,multnoise,brightness,0.0,0.9797979797979798,0.4898989898989899
+CCT,Typicality,ind_span,True,True,multnoise,hue,0.014925373134328358,0.9849624060150376,0.499943889574683
+CCT,Typicality,ind_span,True,True,multnoise,multnoise,1.0,0.8389830508474576,0.9194915254237288
+CCT,Typicality,ind_span,True,True,multnoise,noise,1.0,0.99,0.995
+CCT,Typicality,ind_span,True,True,multnoise,saltpepper,1.0,0.9801980198019802,0.9900990099009901
+CCT,Typicality,ind_span,True,True,noise,OoD Test,0.0,0.9885714285714285,0.4942857142857143
+CCT,Typicality,ind_span,True,True,noise,OoD Val,0.0,0.9813664596273292,0.4906832298136646
+CCT,Typicality,ind_span,True,True,noise,brightness,0.0,0.9797979797979798,0.4898989898989899
+CCT,Typicality,ind_span,True,True,noise,hue,0.014925373134328358,0.9849624060150376,0.499943889574683
+CCT,Typicality,ind_span,True,True,noise,multnoise,1.0,0.8389830508474576,0.9194915254237288
+CCT,Typicality,ind_span,True,True,noise,noise,1.0,0.99,0.995
+CCT,Typicality,ind_span,True,True,noise,saltpepper,1.0,0.9801980198019802,0.9900990099009901
+CCT,Typicality,ind_span,True,True,saltpepper,OoD Test,0.0,0.9885714285714285,0.4942857142857143
+CCT,Typicality,ind_span,True,True,saltpepper,OoD Val,0.0,0.9813664596273292,0.4906832298136646
+CCT,Typicality,ind_span,True,True,saltpepper,brightness,0.0,0.9797979797979798,0.4898989898989899
+CCT,Typicality,ind_span,True,True,saltpepper,hue,0.014925373134328358,0.9849624060150376,0.499943889574683
+CCT,Typicality,ind_span,True,True,saltpepper,multnoise,1.0,0.8389830508474576,0.9194915254237288
+CCT,Typicality,ind_span,True,True,saltpepper,noise,1.0,0.99,0.995
+CCT,Typicality,ind_span,True,True,saltpepper,saltpepper,1.0,0.9801980198019802,0.9900990099009901
+CCT,Typicality,ind_span,True,True,smear,OoD Test,0.0,0.9885714285714285,0.4942857142857143
+CCT,Typicality,ind_span,True,True,smear,OoD Val,0.0,0.9813664596273292,0.4906832298136646
+CCT,Typicality,ind_span,True,True,smear,brightness,0.0,0.9797979797979798,0.4898989898989899
+CCT,Typicality,ind_span,True,True,smear,hue,0.014925373134328358,0.9849624060150376,0.499943889574683
+CCT,Typicality,ind_span,True,True,smear,multnoise,1.0,0.8389830508474576,0.9194915254237288
+CCT,Typicality,ind_span,True,True,smear,noise,1.0,0.99,0.995
+CCT,Typicality,ind_span,True,True,smear,saltpepper,1.0,0.9801980198019802,0.9900990099009901
+CCT,Typicality,val_optimal,True,False,OoD Test,OoD Test,0.72,0.63,0.675
+CCT,Typicality,val_optimal,True,False,OoD Test,OoD Val,0.5384615384615384,0.515527950310559,0.5269947443860488
+CCT,Typicality,val_optimal,True,False,OoD Test,brightness,0.5,0.5151515151515151,0.5075757575757576
+CCT,Typicality,val_optimal,True,False,OoD Test,hue,0.44776119402985076,0.6090225563909775,0.5283918752104141
+CCT,Typicality,val_optimal,True,False,OoD Test,multnoise,0.0,0.6864406779661016,0.3432203389830508
+CCT,Typicality,val_optimal,True,False,OoD Test,noise,0.0,0.63,0.315
+CCT,Typicality,val_optimal,True,False,OoD Test,saltpepper,0.0,0.6336633663366337,0.31683168316831684
+CCT,Typicality,val_optimal,True,False,OoD Val,OoD Test,0.76,0.54,0.65
+CCT,Typicality,val_optimal,True,False,OoD Val,OoD Val,0.6153846153846154,0.40372670807453415,0.5095556617295748
+CCT,Typicality,val_optimal,True,False,OoD Val,brightness,0.5,0.4242424242424242,0.4621212121212121
+CCT,Typicality,val_optimal,True,False,OoD Val,hue,0.4925373134328358,0.5413533834586466,0.5169453484457411
+CCT,Typicality,val_optimal,True,False,OoD Val,multnoise,0.0,0.6101694915254237,0.30508474576271183
+CCT,Typicality,val_optimal,True,False,OoD Val,noise,0.0,0.54,0.27
+CCT,Typicality,val_optimal,True,False,OoD Val,saltpepper,0.0,0.5445544554455446,0.2722772277227723
+CCT,Typicality,val_optimal,True,False,brightness,OoD Test,0.81,0.44999999999999996,0.63
+CCT,Typicality,val_optimal,True,False,brightness,OoD Val,0.6666666666666666,0.3291925465838509,0.49792960662525876
+CCT,Typicality,val_optimal,True,False,brightness,brightness,0.5,0.303030303030303,0.4015151515151515
+CCT,Typicality,val_optimal,True,False,brightness,hue,0.6119402985074627,0.45112781954887216,0.5315340590281674
+CCT,Typicality,val_optimal,True,False,brightness,multnoise,0.0,0.5338983050847458,0.2669491525423729
+CCT,Typicality,val_optimal,True,False,brightness,noise,0.0,0.44999999999999996,0.22499999999999998
+CCT,Typicality,val_optimal,True,False,brightness,saltpepper,0.0,0.4554455445544554,0.2277227722772277
+CCT,Typicality,val_optimal,True,False,contrast,OoD Test,0.37,0.31999999999999995,0.345
+CCT,Typicality,val_optimal,True,False,contrast,OoD Val,0.48717948717948717,0.44099378881987583,0.46408663799968153
+CCT,Typicality,val_optimal,True,False,contrast,brightness,0.5,0.43939393939393945,0.4696969696969697
+CCT,Typicality,val_optimal,True,False,contrast,hue,0.6119402985074627,0.3308270676691729,0.4713836830883178
+CCT,Typicality,val_optimal,True,False,contrast,multnoise,1.0,0.27118644067796616,0.6355932203389831
+CCT,Typicality,val_optimal,True,False,contrast,noise,1.0,0.31999999999999995,0.6599999999999999
+CCT,Typicality,val_optimal,True,False,contrast,saltpepper,1.0,0.3168316831683168,0.6584158415841583
+CCT,Typicality,val_optimal,True,False,hue,OoD Test,0.65,0.16000000000000003,0.405
+CCT,Typicality,val_optimal,True,False,hue,OoD Val,0.6666666666666666,0.26086956521739135,0.463768115942029
+CCT,Typicality,val_optimal,True,False,hue,brightness,1.0,0.2272727272727273,0.6136363636363636
+CCT,Typicality,val_optimal,True,False,hue,hue,0.835820895522388,0.1578947368421053,0.49685781618224667
+CCT,Typicality,val_optimal,True,False,hue,multnoise,1.0,0.13559322033898302,0.5677966101694916
+CCT,Typicality,val_optimal,True,False,hue,noise,1.0,0.16000000000000003,0.5800000000000001
+CCT,Typicality,val_optimal,True,False,hue,saltpepper,1.0,0.15841584158415845,0.5792079207920793
+CCT,Typicality,val_optimal,True,False,multnoise,OoD Test,0.0,1.0,0.5
+CCT,Typicality,val_optimal,True,False,multnoise,OoD Val,0.0,1.0,0.5
+CCT,Typicality,val_optimal,True,False,multnoise,brightness,0.0,1.0,0.5
+CCT,Typicality,val_optimal,True,False,multnoise,hue,0.0,1.0,0.5
+CCT,Typicality,val_optimal,True,False,multnoise,multnoise,1.0,0.847457627118644,0.923728813559322
+CCT,Typicality,val_optimal,True,False,multnoise,noise,1.0,1.0,1.0
+CCT,Typicality,val_optimal,True,False,multnoise,saltpepper,1.0,0.9900990099009901,0.995049504950495
+CCT,Typicality,val_optimal,True,False,noise,OoD Test,0.0,1.0,0.5
+CCT,Typicality,val_optimal,True,False,noise,OoD Val,0.0,1.0,0.5
+CCT,Typicality,val_optimal,True,False,noise,brightness,0.0,1.0,0.5
+CCT,Typicality,val_optimal,True,False,noise,hue,0.0,1.0,0.5
+CCT,Typicality,val_optimal,True,False,noise,multnoise,1.0,0.847457627118644,0.923728813559322
+CCT,Typicality,val_optimal,True,False,noise,noise,1.0,1.0,1.0
+CCT,Typicality,val_optimal,True,False,noise,saltpepper,1.0,0.9900990099009901,0.995049504950495
+CCT,Typicality,val_optimal,True,False,saltpepper,OoD Test,0.0,1.0,0.5
+CCT,Typicality,val_optimal,True,False,saltpepper,OoD Val,0.0,1.0,0.5
+CCT,Typicality,val_optimal,True,False,saltpepper,brightness,0.0,1.0,0.5
+CCT,Typicality,val_optimal,True,False,saltpepper,hue,0.0,1.0,0.5
+CCT,Typicality,val_optimal,True,False,saltpepper,multnoise,1.0,0.847457627118644,0.923728813559322
+CCT,Typicality,val_optimal,True,False,saltpepper,noise,1.0,1.0,1.0
+CCT,Typicality,val_optimal,True,False,saltpepper,saltpepper,1.0,0.9900990099009901,0.995049504950495
+CCT,Typicality,val_optimal,True,False,smear,OoD Test,0.57,0.18999999999999995,0.37999999999999995
+CCT,Typicality,val_optimal,True,False,smear,OoD Val,0.6410256410256411,0.30434782608695654,0.4726867335562988
+CCT,Typicality,val_optimal,True,False,smear,brightness,0.5,0.2777777777777778,0.3888888888888889
+CCT,Typicality,val_optimal,True,False,smear,hue,0.7611940298507462,0.21052631578947367,0.48586017282010996
+CCT,Typicality,val_optimal,True,False,smear,multnoise,1.0,0.1610169491525424,0.5805084745762712
+CCT,Typicality,val_optimal,True,False,smear,noise,1.0,0.18999999999999995,0.595
+CCT,Typicality,val_optimal,True,False,smear,saltpepper,1.0,0.18811881188118806,0.594059405940594
+CCT,Typicality,ind_span,True,False,OoD Test,OoD Test,0.01,0.99,0.5
+CCT,Typicality,ind_span,True,False,OoD Test,OoD Val,0.0,0.9813664596273292,0.4906832298136646
+CCT,Typicality,ind_span,True,False,OoD Test,brightness,0.0,0.9797979797979798,0.4898989898989899
+CCT,Typicality,ind_span,True,False,OoD Test,hue,0.014925373134328358,0.9849624060150376,0.499943889574683
+CCT,Typicality,ind_span,True,False,OoD Test,multnoise,1.0,0.8389830508474576,0.9194915254237288
+CCT,Typicality,ind_span,True,False,OoD Test,noise,1.0,0.99,0.995
+CCT,Typicality,ind_span,True,False,OoD Test,saltpepper,1.0,0.9801980198019802,0.9900990099009901
+CCT,Typicality,ind_span,True,False,OoD Val,OoD Test,0.01,0.99,0.5
+CCT,Typicality,ind_span,True,False,OoD Val,OoD Val,0.0,0.9813664596273292,0.4906832298136646
+CCT,Typicality,ind_span,True,False,OoD Val,brightness,0.0,0.9797979797979798,0.4898989898989899
+CCT,Typicality,ind_span,True,False,OoD Val,hue,0.014925373134328358,0.9849624060150376,0.499943889574683
+CCT,Typicality,ind_span,True,False,OoD Val,multnoise,1.0,0.8389830508474576,0.9194915254237288
+CCT,Typicality,ind_span,True,False,OoD Val,noise,1.0,0.99,0.995
+CCT,Typicality,ind_span,True,False,OoD Val,saltpepper,1.0,0.9801980198019802,0.9900990099009901
+CCT,Typicality,ind_span,True,False,brightness,OoD Test,0.01,0.99,0.5
+CCT,Typicality,ind_span,True,False,brightness,OoD Val,0.0,0.9813664596273292,0.4906832298136646
+CCT,Typicality,ind_span,True,False,brightness,brightness,0.0,0.9797979797979798,0.4898989898989899
+CCT,Typicality,ind_span,True,False,brightness,hue,0.014925373134328358,0.9849624060150376,0.499943889574683
+CCT,Typicality,ind_span,True,False,brightness,multnoise,1.0,0.8389830508474576,0.9194915254237288
+CCT,Typicality,ind_span,True,False,brightness,noise,1.0,0.99,0.995
+CCT,Typicality,ind_span,True,False,brightness,saltpepper,1.0,0.9801980198019802,0.9900990099009901
+CCT,Typicality,ind_span,True,False,contrast,OoD Test,0.01,0.99,0.5
+CCT,Typicality,ind_span,True,False,contrast,OoD Val,0.0,0.9813664596273292,0.4906832298136646
+CCT,Typicality,ind_span,True,False,contrast,brightness,0.0,0.9797979797979798,0.4898989898989899
+CCT,Typicality,ind_span,True,False,contrast,hue,0.014925373134328358,0.9849624060150376,0.499943889574683
+CCT,Typicality,ind_span,True,False,contrast,multnoise,1.0,0.8389830508474576,0.9194915254237288
+CCT,Typicality,ind_span,True,False,contrast,noise,1.0,0.99,0.995
+CCT,Typicality,ind_span,True,False,contrast,saltpepper,1.0,0.9801980198019802,0.9900990099009901
+CCT,Typicality,ind_span,True,False,hue,OoD Test,0.01,0.99,0.5
+CCT,Typicality,ind_span,True,False,hue,OoD Val,0.0,0.9813664596273292,0.4906832298136646
+CCT,Typicality,ind_span,True,False,hue,brightness,0.0,0.9797979797979798,0.4898989898989899
+CCT,Typicality,ind_span,True,False,hue,hue,0.014925373134328358,0.9849624060150376,0.499943889574683
+CCT,Typicality,ind_span,True,False,hue,multnoise,1.0,0.8389830508474576,0.9194915254237288
+CCT,Typicality,ind_span,True,False,hue,noise,1.0,0.99,0.995
+CCT,Typicality,ind_span,True,False,hue,saltpepper,1.0,0.9801980198019802,0.9900990099009901
+CCT,Typicality,ind_span,True,False,multnoise,OoD Test,0.01,0.99,0.5
+CCT,Typicality,ind_span,True,False,multnoise,OoD Val,0.0,0.9813664596273292,0.4906832298136646
+CCT,Typicality,ind_span,True,False,multnoise,brightness,0.0,0.9797979797979798,0.4898989898989899
+CCT,Typicality,ind_span,True,False,multnoise,hue,0.014925373134328358,0.9849624060150376,0.499943889574683
+CCT,Typicality,ind_span,True,False,multnoise,multnoise,1.0,0.8389830508474576,0.9194915254237288
+CCT,Typicality,ind_span,True,False,multnoise,noise,1.0,0.99,0.995
+CCT,Typicality,ind_span,True,False,multnoise,saltpepper,1.0,0.9801980198019802,0.9900990099009901
+CCT,Typicality,ind_span,True,False,noise,OoD Test,0.01,0.99,0.5
+CCT,Typicality,ind_span,True,False,noise,OoD Val,0.0,0.9813664596273292,0.4906832298136646
+CCT,Typicality,ind_span,True,False,noise,brightness,0.0,0.9797979797979798,0.4898989898989899
+CCT,Typicality,ind_span,True,False,noise,hue,0.014925373134328358,0.9849624060150376,0.499943889574683
+CCT,Typicality,ind_span,True,False,noise,multnoise,1.0,0.8389830508474576,0.9194915254237288
+CCT,Typicality,ind_span,True,False,noise,noise,1.0,0.99,0.995
+CCT,Typicality,ind_span,True,False,noise,saltpepper,1.0,0.9801980198019802,0.9900990099009901
+CCT,Typicality,ind_span,True,False,saltpepper,OoD Test,0.01,0.99,0.5
+CCT,Typicality,ind_span,True,False,saltpepper,OoD Val,0.0,0.9813664596273292,0.4906832298136646
+CCT,Typicality,ind_span,True,False,saltpepper,brightness,0.0,0.9797979797979798,0.4898989898989899
+CCT,Typicality,ind_span,True,False,saltpepper,hue,0.014925373134328358,0.9849624060150376,0.499943889574683
+CCT,Typicality,ind_span,True,False,saltpepper,multnoise,1.0,0.8389830508474576,0.9194915254237288
+CCT,Typicality,ind_span,True,False,saltpepper,noise,1.0,0.99,0.995
+CCT,Typicality,ind_span,True,False,saltpepper,saltpepper,1.0,0.9801980198019802,0.9900990099009901
+CCT,Typicality,ind_span,True,False,smear,OoD Test,0.01,0.99,0.5
+CCT,Typicality,ind_span,True,False,smear,OoD Val,0.0,0.9813664596273292,0.4906832298136646
+CCT,Typicality,ind_span,True,False,smear,brightness,0.0,0.9797979797979798,0.4898989898989899
+CCT,Typicality,ind_span,True,False,smear,hue,0.014925373134328358,0.9849624060150376,0.499943889574683
+CCT,Typicality,ind_span,True,False,smear,multnoise,1.0,0.8389830508474576,0.9194915254237288
+CCT,Typicality,ind_span,True,False,smear,noise,1.0,0.99,0.995
+CCT,Typicality,ind_span,True,False,smear,saltpepper,1.0,0.9801980198019802,0.9900990099009901
+CCT,Typicality,val_optimal,False,False,OoD Test,OoD Test,0.72,0.63,0.675
+CCT,Typicality,val_optimal,False,False,OoD Test,OoD Val,0.62,0.63,0.625
+CCT,Typicality,val_optimal,False,False,OoD Test,brightness,0.6,0.63,0.615
+CCT,Typicality,val_optimal,False,False,OoD Test,contrast,0.3,0.63,0.46499999999999997
+CCT,Typicality,val_optimal,False,False,OoD Test,hue,0.45,0.63,0.54
+CCT,Typicality,val_optimal,False,False,OoD Test,multnoise,0.0,0.63,0.315
+CCT,Typicality,val_optimal,False,False,OoD Test,noise,0.0,0.63,0.315
+CCT,Typicality,val_optimal,False,False,OoD Test,saltpepper,0.0,0.63,0.315
+CCT,Typicality,val_optimal,False,False,OoD Test,smear,0.28,0.63,0.455
+CCT,Typicality,val_optimal,False,False,OoD Val,OoD Test,0.76,0.54,0.65
+CCT,Typicality,val_optimal,False,False,OoD Val,OoD Val,0.74,0.54,0.64
+CCT,Typicality,val_optimal,False,False,OoD Val,brightness,0.69,0.54,0.615
+CCT,Typicality,val_optimal,False,False,OoD Val,contrast,0.45,0.54,0.495
+CCT,Typicality,val_optimal,False,False,OoD Val,hue,0.48,0.54,0.51
+CCT,Typicality,val_optimal,False,False,OoD Val,multnoise,0.0,0.54,0.27
+CCT,Typicality,val_optimal,False,False,OoD Val,noise,0.0,0.54,0.27
+CCT,Typicality,val_optimal,False,False,OoD Val,saltpepper,0.0,0.54,0.27
+CCT,Typicality,val_optimal,False,False,OoD Val,smear,0.34,0.54,0.44000000000000006
+CCT,Typicality,val_optimal,False,False,brightness,OoD Test,0.81,0.44999999999999996,0.63
+CCT,Typicality,val_optimal,False,False,brightness,OoD Val,0.79,0.44999999999999996,0.62
+CCT,Typicality,val_optimal,False,False,brightness,brightness,0.84,0.44999999999999996,0.645
+CCT,Typicality,val_optimal,False,False,brightness,contrast,0.61,0.44999999999999996,0.53
+CCT,Typicality,val_optimal,False,False,brightness,hue,0.59,0.44999999999999996,0.52
+CCT,Typicality,val_optimal,False,False,brightness,multnoise,0.0,0.44999999999999996,0.22499999999999998
+CCT,Typicality,val_optimal,False,False,brightness,noise,0.0,0.44999999999999996,0.22499999999999998
+CCT,Typicality,val_optimal,False,False,brightness,saltpepper,0.0,0.44999999999999996,0.22499999999999998
+CCT,Typicality,val_optimal,False,False,brightness,smear,0.46,0.44999999999999996,0.45499999999999996
+CCT,Typicality,val_optimal,False,False,contrast,OoD Test,0.37,0.31999999999999995,0.345
+CCT,Typicality,val_optimal,False,False,contrast,OoD Val,0.41,0.31999999999999995,0.365
+CCT,Typicality,val_optimal,False,False,contrast,brightness,0.44,0.31999999999999995,0.38
+CCT,Typicality,val_optimal,False,False,contrast,contrast,0.77,0.31999999999999995,0.5449999999999999
+CCT,Typicality,val_optimal,False,False,contrast,hue,0.62,0.31999999999999995,0.47
+CCT,Typicality,val_optimal,False,False,contrast,multnoise,1.0,0.31999999999999995,0.6599999999999999
+CCT,Typicality,val_optimal,False,False,contrast,noise,1.0,0.31999999999999995,0.6599999999999999
+CCT,Typicality,val_optimal,False,False,contrast,saltpepper,1.0,0.31999999999999995,0.6599999999999999
+CCT,Typicality,val_optimal,False,False,contrast,smear,0.76,0.31999999999999995,0.54
+CCT,Typicality,val_optimal,False,False,hue,OoD Test,0.65,0.16000000000000003,0.405
+CCT,Typicality,val_optimal,False,False,hue,OoD Val,0.61,0.16000000000000003,0.385
+CCT,Typicality,val_optimal,False,False,hue,brightness,0.71,0.16000000000000003,0.435
+CCT,Typicality,val_optimal,False,False,hue,contrast,0.9,0.16000000000000003,0.53
+CCT,Typicality,val_optimal,False,False,hue,hue,0.84,0.16000000000000003,0.5
+CCT,Typicality,val_optimal,False,False,hue,multnoise,1.0,0.16000000000000003,0.5800000000000001
+CCT,Typicality,val_optimal,False,False,hue,noise,1.0,0.16000000000000003,0.5800000000000001
+CCT,Typicality,val_optimal,False,False,hue,saltpepper,1.0,0.16000000000000003,0.5800000000000001
+CCT,Typicality,val_optimal,False,False,hue,smear,0.93,0.16000000000000003,0.545
+CCT,Typicality,val_optimal,False,False,multnoise,OoD Test,0.0,1.0,0.5
+CCT,Typicality,val_optimal,False,False,multnoise,OoD Val,0.0,1.0,0.5
+CCT,Typicality,val_optimal,False,False,multnoise,brightness,0.0,1.0,0.5
+CCT,Typicality,val_optimal,False,False,multnoise,contrast,0.0,1.0,0.5
+CCT,Typicality,val_optimal,False,False,multnoise,hue,0.0,1.0,0.5
+CCT,Typicality,val_optimal,False,False,multnoise,multnoise,1.0,1.0,1.0
+CCT,Typicality,val_optimal,False,False,multnoise,noise,1.0,1.0,1.0
+CCT,Typicality,val_optimal,False,False,multnoise,saltpepper,1.0,1.0,1.0
+CCT,Typicality,val_optimal,False,False,multnoise,smear,0.0,1.0,0.5
+CCT,Typicality,val_optimal,False,False,noise,OoD Test,0.0,1.0,0.5
+CCT,Typicality,val_optimal,False,False,noise,OoD Val,0.0,1.0,0.5
+CCT,Typicality,val_optimal,False,False,noise,brightness,0.0,1.0,0.5
+CCT,Typicality,val_optimal,False,False,noise,contrast,0.0,1.0,0.5
+CCT,Typicality,val_optimal,False,False,noise,hue,0.0,1.0,0.5
+CCT,Typicality,val_optimal,False,False,noise,multnoise,1.0,1.0,1.0
+CCT,Typicality,val_optimal,False,False,noise,noise,1.0,1.0,1.0
+CCT,Typicality,val_optimal,False,False,noise,saltpepper,1.0,1.0,1.0
+CCT,Typicality,val_optimal,False,False,noise,smear,0.0,1.0,0.5
+CCT,Typicality,val_optimal,False,False,saltpepper,OoD Test,0.0,1.0,0.5
+CCT,Typicality,val_optimal,False,False,saltpepper,OoD Val,0.0,1.0,0.5
+CCT,Typicality,val_optimal,False,False,saltpepper,brightness,0.0,1.0,0.5
+CCT,Typicality,val_optimal,False,False,saltpepper,contrast,0.0,1.0,0.5
+CCT,Typicality,val_optimal,False,False,saltpepper,hue,0.0,1.0,0.5
+CCT,Typicality,val_optimal,False,False,saltpepper,multnoise,1.0,1.0,1.0
+CCT,Typicality,val_optimal,False,False,saltpepper,noise,1.0,1.0,1.0
+CCT,Typicality,val_optimal,False,False,saltpepper,saltpepper,1.0,1.0,1.0
+CCT,Typicality,val_optimal,False,False,saltpepper,smear,0.0,1.0,0.5
+CCT,Typicality,val_optimal,False,False,smear,OoD Test,0.57,0.18999999999999995,0.37999999999999995
+CCT,Typicality,val_optimal,False,False,smear,OoD Val,0.56,0.18999999999999995,0.375
+CCT,Typicality,val_optimal,False,False,smear,brightness,0.63,0.18999999999999995,0.41
+CCT,Typicality,val_optimal,False,False,smear,contrast,0.84,0.18999999999999995,0.5149999999999999
+CCT,Typicality,val_optimal,False,False,smear,hue,0.75,0.18999999999999995,0.47
+CCT,Typicality,val_optimal,False,False,smear,multnoise,1.0,0.18999999999999995,0.595
+CCT,Typicality,val_optimal,False,False,smear,noise,1.0,0.18999999999999995,0.595
+CCT,Typicality,val_optimal,False,False,smear,saltpepper,1.0,0.18999999999999995,0.595
+CCT,Typicality,val_optimal,False,False,smear,smear,0.9,0.18999999999999995,0.5449999999999999
+CCT,Typicality,ind_span,False,False,OoD Test,OoD Test,0.01,0.99,0.5
+CCT,Typicality,ind_span,False,False,OoD Test,OoD Val,0.02,0.99,0.505
+CCT,Typicality,ind_span,False,False,OoD Test,brightness,0.03,0.99,0.51
+CCT,Typicality,ind_span,False,False,OoD Test,contrast,0.0,0.99,0.495
+CCT,Typicality,ind_span,False,False,OoD Test,hue,0.02,0.99,0.505
+CCT,Typicality,ind_span,False,False,OoD Test,multnoise,1.0,0.99,0.995
+CCT,Typicality,ind_span,False,False,OoD Test,noise,1.0,0.99,0.995
+CCT,Typicality,ind_span,False,False,OoD Test,saltpepper,1.0,0.99,0.995
+CCT,Typicality,ind_span,False,False,OoD Test,smear,0.0,0.99,0.495
+CCT,Typicality,ind_span,False,False,OoD Val,OoD Test,0.01,0.99,0.5
+CCT,Typicality,ind_span,False,False,OoD Val,OoD Val,0.02,0.99,0.505
+CCT,Typicality,ind_span,False,False,OoD Val,brightness,0.03,0.99,0.51
+CCT,Typicality,ind_span,False,False,OoD Val,contrast,0.0,0.99,0.495
+CCT,Typicality,ind_span,False,False,OoD Val,hue,0.02,0.99,0.505
+CCT,Typicality,ind_span,False,False,OoD Val,multnoise,1.0,0.99,0.995
+CCT,Typicality,ind_span,False,False,OoD Val,noise,1.0,0.99,0.995
+CCT,Typicality,ind_span,False,False,OoD Val,saltpepper,1.0,0.99,0.995
+CCT,Typicality,ind_span,False,False,OoD Val,smear,0.0,0.99,0.495
+CCT,Typicality,ind_span,False,False,brightness,OoD Test,0.01,0.99,0.5
+CCT,Typicality,ind_span,False,False,brightness,OoD Val,0.02,0.99,0.505
+CCT,Typicality,ind_span,False,False,brightness,brightness,0.03,0.99,0.51
+CCT,Typicality,ind_span,False,False,brightness,contrast,0.0,0.99,0.495
+CCT,Typicality,ind_span,False,False,brightness,hue,0.02,0.99,0.505
+CCT,Typicality,ind_span,False,False,brightness,multnoise,1.0,0.99,0.995
+CCT,Typicality,ind_span,False,False,brightness,noise,1.0,0.99,0.995
+CCT,Typicality,ind_span,False,False,brightness,saltpepper,1.0,0.99,0.995
+CCT,Typicality,ind_span,False,False,brightness,smear,0.0,0.99,0.495
+CCT,Typicality,ind_span,False,False,contrast,OoD Test,0.01,0.99,0.5
+CCT,Typicality,ind_span,False,False,contrast,OoD Val,0.02,0.99,0.505
+CCT,Typicality,ind_span,False,False,contrast,brightness,0.03,0.99,0.51
+CCT,Typicality,ind_span,False,False,contrast,contrast,0.0,0.99,0.495
+CCT,Typicality,ind_span,False,False,contrast,hue,0.02,0.99,0.505
+CCT,Typicality,ind_span,False,False,contrast,multnoise,1.0,0.99,0.995
+CCT,Typicality,ind_span,False,False,contrast,noise,1.0,0.99,0.995
+CCT,Typicality,ind_span,False,False,contrast,saltpepper,1.0,0.99,0.995
+CCT,Typicality,ind_span,False,False,contrast,smear,0.0,0.99,0.495
+CCT,Typicality,ind_span,False,False,hue,OoD Test,0.01,0.99,0.5
+CCT,Typicality,ind_span,False,False,hue,OoD Val,0.02,0.99,0.505
+CCT,Typicality,ind_span,False,False,hue,brightness,0.03,0.99,0.51
+CCT,Typicality,ind_span,False,False,hue,contrast,0.0,0.99,0.495
+CCT,Typicality,ind_span,False,False,hue,hue,0.02,0.99,0.505
+CCT,Typicality,ind_span,False,False,hue,multnoise,1.0,0.99,0.995
+CCT,Typicality,ind_span,False,False,hue,noise,1.0,0.99,0.995
+CCT,Typicality,ind_span,False,False,hue,saltpepper,1.0,0.99,0.995
+CCT,Typicality,ind_span,False,False,hue,smear,0.0,0.99,0.495
+CCT,Typicality,ind_span,False,False,multnoise,OoD Test,0.01,0.99,0.5
+CCT,Typicality,ind_span,False,False,multnoise,OoD Val,0.02,0.99,0.505
+CCT,Typicality,ind_span,False,False,multnoise,brightness,0.03,0.99,0.51
+CCT,Typicality,ind_span,False,False,multnoise,contrast,0.0,0.99,0.495
+CCT,Typicality,ind_span,False,False,multnoise,hue,0.02,0.99,0.505
+CCT,Typicality,ind_span,False,False,multnoise,multnoise,1.0,0.99,0.995
+CCT,Typicality,ind_span,False,False,multnoise,noise,1.0,0.99,0.995
+CCT,Typicality,ind_span,False,False,multnoise,saltpepper,1.0,0.99,0.995
+CCT,Typicality,ind_span,False,False,multnoise,smear,0.0,0.99,0.495
+CCT,Typicality,ind_span,False,False,noise,OoD Test,0.01,0.99,0.5
+CCT,Typicality,ind_span,False,False,noise,OoD Val,0.02,0.99,0.505
+CCT,Typicality,ind_span,False,False,noise,brightness,0.03,0.99,0.51
+CCT,Typicality,ind_span,False,False,noise,contrast,0.0,0.99,0.495
+CCT,Typicality,ind_span,False,False,noise,hue,0.02,0.99,0.505
+CCT,Typicality,ind_span,False,False,noise,multnoise,1.0,0.99,0.995
+CCT,Typicality,ind_span,False,False,noise,noise,1.0,0.99,0.995
+CCT,Typicality,ind_span,False,False,noise,saltpepper,1.0,0.99,0.995
+CCT,Typicality,ind_span,False,False,noise,smear,0.0,0.99,0.495
+CCT,Typicality,ind_span,False,False,saltpepper,OoD Test,0.01,0.99,0.5
+CCT,Typicality,ind_span,False,False,saltpepper,OoD Val,0.02,0.99,0.505
+CCT,Typicality,ind_span,False,False,saltpepper,brightness,0.03,0.99,0.51
+CCT,Typicality,ind_span,False,False,saltpepper,contrast,0.0,0.99,0.495
+CCT,Typicality,ind_span,False,False,saltpepper,hue,0.02,0.99,0.505
+CCT,Typicality,ind_span,False,False,saltpepper,multnoise,1.0,0.99,0.995
+CCT,Typicality,ind_span,False,False,saltpepper,noise,1.0,0.99,0.995
+CCT,Typicality,ind_span,False,False,saltpepper,saltpepper,1.0,0.99,0.995
+CCT,Typicality,ind_span,False,False,saltpepper,smear,0.0,0.99,0.495
+CCT,Typicality,ind_span,False,False,smear,OoD Test,0.01,0.99,0.5
+CCT,Typicality,ind_span,False,False,smear,OoD Val,0.02,0.99,0.505
+CCT,Typicality,ind_span,False,False,smear,brightness,0.03,0.99,0.51
+CCT,Typicality,ind_span,False,False,smear,contrast,0.0,0.99,0.495
+CCT,Typicality,ind_span,False,False,smear,hue,0.02,0.99,0.505
+CCT,Typicality,ind_span,False,False,smear,multnoise,1.0,0.99,0.995
+CCT,Typicality,ind_span,False,False,smear,noise,1.0,0.99,0.995
+CCT,Typicality,ind_span,False,False,smear,saltpepper,1.0,0.99,0.995
+CCT,Typicality,ind_span,False,False,smear,smear,0.0,0.99,0.495
+CCT,Softmax,val_optimal,True,True,OoD Test,OoD Test,1.0,0.4568527918781726,0.7284263959390863
+CCT,Softmax,val_optimal,True,True,OoD Test,OoD Val,1.0,0.45959595959595956,0.7297979797979798
+CCT,Softmax,val_optimal,True,True,OoD Test,hue,0.2894736842105263,0.7530864197530864,0.5212800519818064
+CCT,Softmax,val_optimal,True,True,OoD Test,multnoise,0.625,0.6488095238095238,0.6369047619047619
+CCT,Softmax,val_optimal,True,True,OoD Test,noise,0.2736842105263158,0.8095238095238095,0.5416040100250626
+CCT,Softmax,val_optimal,True,True,OoD Test,saltpepper,0.7361111111111112,0.703125,0.7196180555555556
+CCT,Softmax,val_optimal,True,True,OoD Val,OoD Test,1.0,0.4873096446700508,0.7436548223350254
+CCT,Softmax,val_optimal,True,True,OoD Val,OoD Val,1.0,0.4797979797979798,0.7398989898989898
+CCT,Softmax,val_optimal,True,True,OoD Val,hue,0.2894736842105263,0.7839506172839507,0.5367121507472385
+CCT,Softmax,val_optimal,True,True,OoD Val,multnoise,0.5625,0.6964285714285714,0.6294642857142857
+CCT,Softmax,val_optimal,True,True,OoD Val,noise,0.2631578947368421,0.8285714285714285,0.5458646616541353
+CCT,Softmax,val_optimal,True,True,OoD Val,saltpepper,0.6666666666666666,0.71875,0.6927083333333333
+CCT,Softmax,val_optimal,True,True,brightness,OoD Test,1.0,0.4416243654822335,0.7208121827411167
+CCT,Softmax,val_optimal,True,True,brightness,OoD Val,1.0,0.4494949494949495,0.7247474747474747
+CCT,Softmax,val_optimal,True,True,brightness,hue,0.3157894736842105,0.7283950617283951,0.5220922677063028
+CCT,Softmax,val_optimal,True,True,brightness,multnoise,0.625,0.6369047619047619,0.6309523809523809
+CCT,Softmax,val_optimal,True,True,brightness,noise,0.28421052631578947,0.8,0.5421052631578948
+CCT,Softmax,val_optimal,True,True,brightness,saltpepper,0.8194444444444444,0.6875,0.7534722222222222
+CCT,Softmax,val_optimal,True,True,contrast,OoD Test,0.0,0.7055837563451777,0.35279187817258884
+CCT,Softmax,val_optimal,True,True,contrast,OoD Val,0.0,0.702020202020202,0.351010101010101
+CCT,Softmax,val_optimal,True,True,contrast,hue,0.5,0.4691358024691358,0.4845679012345679
+CCT,Softmax,val_optimal,True,True,contrast,multnoise,0.21875,0.5892857142857143,0.40401785714285715
+CCT,Softmax,val_optimal,True,True,contrast,noise,0.49473684210526314,0.4380952380952381,0.4664160401002506
+CCT,Softmax,val_optimal,True,True,contrast,saltpepper,0.041666666666666664,0.5390625,0.2903645833333333
+CCT,Softmax,val_optimal,True,True,hue,OoD Test,1.0,0.4873096446700508,0.7436548223350254
+CCT,Softmax,val_optimal,True,True,hue,OoD Val,1.0,0.4797979797979798,0.7398989898989898
+CCT,Softmax,val_optimal,True,True,hue,hue,0.2894736842105263,0.7839506172839507,0.5367121507472385
+CCT,Softmax,val_optimal,True,True,hue,multnoise,0.53125,0.6964285714285714,0.6138392857142857
+CCT,Softmax,val_optimal,True,True,hue,noise,0.2631578947368421,0.8285714285714285,0.5458646616541353
+CCT,Softmax,val_optimal,True,True,hue,saltpepper,0.6666666666666666,0.71875,0.6927083333333333
+CCT,Softmax,val_optimal,True,True,multnoise,OoD Test,1.0,0.46192893401015234,0.7309644670050761
+CCT,Softmax,val_optimal,True,True,multnoise,OoD Val,1.0,0.46464646464646464,0.7323232323232323
+CCT,Softmax,val_optimal,True,True,multnoise,hue,0.2894736842105263,0.7716049382716049,0.5305393112410657
+CCT,Softmax,val_optimal,True,True,multnoise,multnoise,0.5625,0.6547619047619048,0.6086309523809523
+CCT,Softmax,val_optimal,True,True,multnoise,noise,0.2736842105263158,0.8095238095238095,0.5416040100250626
+CCT,Softmax,val_optimal,True,True,multnoise,saltpepper,0.7361111111111112,0.703125,0.7196180555555556
+CCT,Softmax,val_optimal,True,True,noise,OoD Test,1.0,0.4873096446700508,0.7436548223350254
+CCT,Softmax,val_optimal,True,True,noise,OoD Val,1.0,0.4797979797979798,0.7398989898989898
+CCT,Softmax,val_optimal,True,True,noise,hue,0.2631578947368421,0.7901234567901234,0.5266406757634827
+CCT,Softmax,val_optimal,True,True,noise,multnoise,0.53125,0.6964285714285714,0.6138392857142857
+CCT,Softmax,val_optimal,True,True,noise,noise,0.2631578947368421,0.8285714285714285,0.5458646616541353
+CCT,Softmax,val_optimal,True,True,noise,saltpepper,0.6666666666666666,0.71875,0.6927083333333333
+CCT,Softmax,val_optimal,True,True,saltpepper,OoD Test,1.0,0.4416243654822335,0.7208121827411167
+CCT,Softmax,val_optimal,True,True,saltpepper,OoD Val,1.0,0.4494949494949495,0.7247474747474747
+CCT,Softmax,val_optimal,True,True,saltpepper,hue,0.3157894736842105,0.7283950617283951,0.5220922677063028
+CCT,Softmax,val_optimal,True,True,saltpepper,multnoise,0.625,0.6369047619047619,0.6309523809523809
+CCT,Softmax,val_optimal,True,True,saltpepper,noise,0.28421052631578947,0.8,0.5421052631578948
+CCT,Softmax,val_optimal,True,True,saltpepper,saltpepper,0.8194444444444444,0.6875,0.7534722222222222
+CCT,Softmax,val_optimal,True,True,smear,OoD Test,1.0,0.46700507614213194,0.733502538071066
+CCT,Softmax,val_optimal,True,True,smear,OoD Val,1.0,0.4696969696969697,0.7348484848484849
+CCT,Softmax,val_optimal,True,True,smear,hue,0.2894736842105263,0.7716049382716049,0.5305393112410657
+CCT,Softmax,val_optimal,True,True,smear,multnoise,0.5625,0.6666666666666667,0.6145833333333334
+CCT,Softmax,val_optimal,True,True,smear,noise,0.2736842105263158,0.8095238095238095,0.5416040100250626
+CCT,Softmax,val_optimal,True,True,smear,saltpepper,0.7083333333333334,0.703125,0.7057291666666667
+CCT,Softmax,ind_span,True,True,OoD Test,OoD Test,1.0,0.7309644670050761,0.8654822335025381
+CCT,Softmax,ind_span,True,True,OoD Test,OoD Val,0.0,0.7272727272727273,0.36363636363636365
+CCT,Softmax,ind_span,True,True,OoD Test,hue,0.02631578947368421,0.9567901234567902,0.49155295646523717
+CCT,Softmax,ind_span,True,True,OoD Test,multnoise,0.125,0.9166666666666666,0.5208333333333333
+CCT,Softmax,ind_span,True,True,OoD Test,noise,0.09473684210526316,0.9619047619047619,0.5283208020050125
+CCT,Softmax,ind_span,True,True,OoD Test,saltpepper,0.2916666666666667,0.8671875,0.5794270833333334
+CCT,Softmax,ind_span,True,True,OoD Val,OoD Test,1.0,0.7309644670050761,0.8654822335025381
+CCT,Softmax,ind_span,True,True,OoD Val,OoD Val,0.0,0.7272727272727273,0.36363636363636365
+CCT,Softmax,ind_span,True,True,OoD Val,hue,0.02631578947368421,0.9567901234567902,0.49155295646523717
+CCT,Softmax,ind_span,True,True,OoD Val,multnoise,0.125,0.9166666666666666,0.5208333333333333
+CCT,Softmax,ind_span,True,True,OoD Val,noise,0.09473684210526316,0.9619047619047619,0.5283208020050125
+CCT,Softmax,ind_span,True,True,OoD Val,saltpepper,0.2916666666666667,0.8671875,0.5794270833333334
+CCT,Softmax,ind_span,True,True,brightness,OoD Test,1.0,0.7309644670050761,0.8654822335025381
+CCT,Softmax,ind_span,True,True,brightness,OoD Val,0.0,0.7272727272727273,0.36363636363636365
+CCT,Softmax,ind_span,True,True,brightness,hue,0.02631578947368421,0.9567901234567902,0.49155295646523717
+CCT,Softmax,ind_span,True,True,brightness,multnoise,0.125,0.9166666666666666,0.5208333333333333
+CCT,Softmax,ind_span,True,True,brightness,noise,0.09473684210526316,0.9619047619047619,0.5283208020050125
+CCT,Softmax,ind_span,True,True,brightness,saltpepper,0.2916666666666667,0.8671875,0.5794270833333334
+CCT,Softmax,ind_span,True,True,contrast,OoD Test,1.0,0.7309644670050761,0.8654822335025381
+CCT,Softmax,ind_span,True,True,contrast,OoD Val,0.0,0.7272727272727273,0.36363636363636365
+CCT,Softmax,ind_span,True,True,contrast,hue,0.02631578947368421,0.9567901234567902,0.49155295646523717
+CCT,Softmax,ind_span,True,True,contrast,multnoise,0.125,0.9166666666666666,0.5208333333333333
+CCT,Softmax,ind_span,True,True,contrast,noise,0.09473684210526316,0.9619047619047619,0.5283208020050125
+CCT,Softmax,ind_span,True,True,contrast,saltpepper,0.2916666666666667,0.8671875,0.5794270833333334
+CCT,Softmax,ind_span,True,True,hue,OoD Test,1.0,0.7309644670050761,0.8654822335025381
+CCT,Softmax,ind_span,True,True,hue,OoD Val,0.0,0.7272727272727273,0.36363636363636365
+CCT,Softmax,ind_span,True,True,hue,hue,0.02631578947368421,0.9567901234567902,0.49155295646523717
+CCT,Softmax,ind_span,True,True,hue,multnoise,0.125,0.9166666666666666,0.5208333333333333
+CCT,Softmax,ind_span,True,True,hue,noise,0.09473684210526316,0.9619047619047619,0.5283208020050125
+CCT,Softmax,ind_span,True,True,hue,saltpepper,0.2916666666666667,0.8671875,0.5794270833333334
+CCT,Softmax,ind_span,True,True,multnoise,OoD Test,1.0,0.7309644670050761,0.8654822335025381
+CCT,Softmax,ind_span,True,True,multnoise,OoD Val,0.0,0.7272727272727273,0.36363636363636365
+CCT,Softmax,ind_span,True,True,multnoise,hue,0.02631578947368421,0.9567901234567902,0.49155295646523717
+CCT,Softmax,ind_span,True,True,multnoise,multnoise,0.125,0.9166666666666666,0.5208333333333333
+CCT,Softmax,ind_span,True,True,multnoise,noise,0.09473684210526316,0.9619047619047619,0.5283208020050125
+CCT,Softmax,ind_span,True,True,multnoise,saltpepper,0.2916666666666667,0.8671875,0.5794270833333334
+CCT,Softmax,ind_span,True,True,noise,OoD Test,1.0,0.7309644670050761,0.8654822335025381
+CCT,Softmax,ind_span,True,True,noise,OoD Val,0.0,0.7272727272727273,0.36363636363636365
+CCT,Softmax,ind_span,True,True,noise,hue,0.02631578947368421,0.9567901234567902,0.49155295646523717
+CCT,Softmax,ind_span,True,True,noise,multnoise,0.125,0.9166666666666666,0.5208333333333333
+CCT,Softmax,ind_span,True,True,noise,noise,0.09473684210526316,0.9619047619047619,0.5283208020050125
+CCT,Softmax,ind_span,True,True,noise,saltpepper,0.2916666666666667,0.8671875,0.5794270833333334
+CCT,Softmax,ind_span,True,True,saltpepper,OoD Test,1.0,0.7309644670050761,0.8654822335025381
+CCT,Softmax,ind_span,True,True,saltpepper,OoD Val,0.0,0.7272727272727273,0.36363636363636365
+CCT,Softmax,ind_span,True,True,saltpepper,hue,0.02631578947368421,0.9567901234567902,0.49155295646523717
+CCT,Softmax,ind_span,True,True,saltpepper,multnoise,0.125,0.9166666666666666,0.5208333333333333
+CCT,Softmax,ind_span,True,True,saltpepper,noise,0.09473684210526316,0.9619047619047619,0.5283208020050125
+CCT,Softmax,ind_span,True,True,saltpepper,saltpepper,0.2916666666666667,0.8671875,0.5794270833333334
+CCT,Softmax,ind_span,True,True,smear,OoD Test,1.0,0.7309644670050761,0.8654822335025381
+CCT,Softmax,ind_span,True,True,smear,OoD Val,0.0,0.7272727272727273,0.36363636363636365
+CCT,Softmax,ind_span,True,True,smear,hue,0.02631578947368421,0.9567901234567902,0.49155295646523717
+CCT,Softmax,ind_span,True,True,smear,multnoise,0.125,0.9166666666666666,0.5208333333333333
+CCT,Softmax,ind_span,True,True,smear,noise,0.09473684210526316,0.9619047619047619,0.5283208020050125
+CCT,Softmax,ind_span,True,True,smear,saltpepper,0.2916666666666667,0.8671875,0.5794270833333334
+CCT,Softmax,val_optimal,True,False,OoD Test,OoD Test,0.91,0.81,0.8600000000000001
+CCT,Softmax,val_optimal,True,False,OoD Test,OoD Val,1.0,0.45959595959595956,0.7297979797979798
+CCT,Softmax,val_optimal,True,False,OoD Test,hue,0.2894736842105263,0.7530864197530864,0.5212800519818064
+CCT,Softmax,val_optimal,True,False,OoD Test,multnoise,0.625,0.6488095238095238,0.6369047619047619
+CCT,Softmax,val_optimal,True,False,OoD Test,noise,0.2736842105263158,0.8095238095238095,0.5416040100250626
+CCT,Softmax,val_optimal,True,False,OoD Test,saltpepper,0.7361111111111112,0.703125,0.7196180555555556
+CCT,Softmax,val_optimal,True,False,OoD Val,OoD Test,0.87,0.83,0.85
+CCT,Softmax,val_optimal,True,False,OoD Val,OoD Val,1.0,0.4797979797979798,0.7398989898989898
+CCT,Softmax,val_optimal,True,False,OoD Val,hue,0.2894736842105263,0.7839506172839507,0.5367121507472385
+CCT,Softmax,val_optimal,True,False,OoD Val,multnoise,0.5625,0.6964285714285714,0.6294642857142857
+CCT,Softmax,val_optimal,True,False,OoD Val,noise,0.2631578947368421,0.8285714285714285,0.5458646616541353
+CCT,Softmax,val_optimal,True,False,OoD Val,saltpepper,0.6666666666666666,0.71875,0.6927083333333333
+CCT,Softmax,val_optimal,True,False,brightness,OoD Test,0.93,0.8,0.865
+CCT,Softmax,val_optimal,True,False,brightness,OoD Val,1.0,0.4494949494949495,0.7247474747474747
+CCT,Softmax,val_optimal,True,False,brightness,hue,0.3157894736842105,0.7283950617283951,0.5220922677063028
+CCT,Softmax,val_optimal,True,False,brightness,multnoise,0.625,0.6369047619047619,0.6309523809523809
+CCT,Softmax,val_optimal,True,False,brightness,noise,0.28421052631578947,0.8,0.5421052631578948
+CCT,Softmax,val_optimal,True,False,brightness,saltpepper,0.8194444444444444,0.6875,0.7534722222222222
+CCT,Softmax,val_optimal,True,False,contrast,OoD Test,0.02,0.43999999999999995,0.22999999999999998
+CCT,Softmax,val_optimal,True,False,contrast,OoD Val,0.0,0.702020202020202,0.351010101010101
+CCT,Softmax,val_optimal,True,False,contrast,hue,0.5,0.4691358024691358,0.4845679012345679
+CCT,Softmax,val_optimal,True,False,contrast,multnoise,0.21875,0.5892857142857143,0.40401785714285715
+CCT,Softmax,val_optimal,True,False,contrast,noise,0.49473684210526314,0.4380952380952381,0.4664160401002506
+CCT,Softmax,val_optimal,True,False,contrast,saltpepper,0.041666666666666664,0.5390625,0.2903645833333333
+CCT,Softmax,val_optimal,True,False,hue,OoD Test,0.87,0.83,0.85
+CCT,Softmax,val_optimal,True,False,hue,OoD Val,1.0,0.4797979797979798,0.7398989898989898
+CCT,Softmax,val_optimal,True,False,hue,hue,0.2894736842105263,0.7839506172839507,0.5367121507472385
+CCT,Softmax,val_optimal,True,False,hue,multnoise,0.53125,0.6964285714285714,0.6138392857142857
+CCT,Softmax,val_optimal,True,False,hue,noise,0.2631578947368421,0.8285714285714285,0.5458646616541353
+CCT,Softmax,val_optimal,True,False,hue,saltpepper,0.6666666666666666,0.71875,0.6927083333333333
+CCT,Softmax,val_optimal,True,False,multnoise,OoD Test,0.9,0.81,0.855
+CCT,Softmax,val_optimal,True,False,multnoise,OoD Val,1.0,0.46464646464646464,0.7323232323232323
+CCT,Softmax,val_optimal,True,False,multnoise,hue,0.2894736842105263,0.7716049382716049,0.5305393112410657
+CCT,Softmax,val_optimal,True,False,multnoise,multnoise,0.5625,0.6547619047619048,0.6086309523809523
+CCT,Softmax,val_optimal,True,False,multnoise,noise,0.2736842105263158,0.8095238095238095,0.5416040100250626
+CCT,Softmax,val_optimal,True,False,multnoise,saltpepper,0.7361111111111112,0.703125,0.7196180555555556
+CCT,Softmax,val_optimal,True,False,noise,OoD Test,0.87,0.83,0.85
+CCT,Softmax,val_optimal,True,False,noise,OoD Val,1.0,0.4797979797979798,0.7398989898989898
+CCT,Softmax,val_optimal,True,False,noise,hue,0.2631578947368421,0.7901234567901234,0.5266406757634827
+CCT,Softmax,val_optimal,True,False,noise,multnoise,0.53125,0.6964285714285714,0.6138392857142857
+CCT,Softmax,val_optimal,True,False,noise,noise,0.2631578947368421,0.8285714285714285,0.5458646616541353
+CCT,Softmax,val_optimal,True,False,noise,saltpepper,0.6666666666666666,0.71875,0.6927083333333333
+CCT,Softmax,val_optimal,True,False,saltpepper,OoD Test,0.93,0.8,0.865
+CCT,Softmax,val_optimal,True,False,saltpepper,OoD Val,1.0,0.4494949494949495,0.7247474747474747
+CCT,Softmax,val_optimal,True,False,saltpepper,hue,0.3157894736842105,0.7283950617283951,0.5220922677063028
+CCT,Softmax,val_optimal,True,False,saltpepper,multnoise,0.625,0.6369047619047619,0.6309523809523809
+CCT,Softmax,val_optimal,True,False,saltpepper,noise,0.28421052631578947,0.8,0.5421052631578948
+CCT,Softmax,val_optimal,True,False,saltpepper,saltpepper,0.8194444444444444,0.6875,0.7534722222222222
+CCT,Softmax,val_optimal,True,False,smear,OoD Test,0.89,0.81,0.8500000000000001
+CCT,Softmax,val_optimal,True,False,smear,OoD Val,1.0,0.4696969696969697,0.7348484848484849
+CCT,Softmax,val_optimal,True,False,smear,hue,0.2894736842105263,0.7716049382716049,0.5305393112410657
+CCT,Softmax,val_optimal,True,False,smear,multnoise,0.5625,0.6666666666666667,0.6145833333333334
+CCT,Softmax,val_optimal,True,False,smear,noise,0.2736842105263158,0.8095238095238095,0.5416040100250626
+CCT,Softmax,val_optimal,True,False,smear,saltpepper,0.7083333333333334,0.703125,0.7057291666666667
+CCT,Softmax,ind_span,True,False,OoD Test,OoD Test,0.52,0.96,0.74
+CCT,Softmax,ind_span,True,False,OoD Test,OoD Val,0.0,0.7272727272727273,0.36363636363636365
+CCT,Softmax,ind_span,True,False,OoD Test,hue,0.02631578947368421,0.9567901234567902,0.49155295646523717
+CCT,Softmax,ind_span,True,False,OoD Test,multnoise,0.125,0.9166666666666666,0.5208333333333333
+CCT,Softmax,ind_span,True,False,OoD Test,noise,0.09473684210526316,0.9619047619047619,0.5283208020050125
+CCT,Softmax,ind_span,True,False,OoD Test,saltpepper,0.2916666666666667,0.8671875,0.5794270833333334
+CCT,Softmax,ind_span,True,False,OoD Val,OoD Test,0.52,0.96,0.74
+CCT,Softmax,ind_span,True,False,OoD Val,OoD Val,0.0,0.7272727272727273,0.36363636363636365
+CCT,Softmax,ind_span,True,False,OoD Val,hue,0.02631578947368421,0.9567901234567902,0.49155295646523717
+CCT,Softmax,ind_span,True,False,OoD Val,multnoise,0.125,0.9166666666666666,0.5208333333333333
+CCT,Softmax,ind_span,True,False,OoD Val,noise,0.09473684210526316,0.9619047619047619,0.5283208020050125
+CCT,Softmax,ind_span,True,False,OoD Val,saltpepper,0.2916666666666667,0.8671875,0.5794270833333334
+CCT,Softmax,ind_span,True,False,brightness,OoD Test,0.52,0.96,0.74
+CCT,Softmax,ind_span,True,False,brightness,OoD Val,0.0,0.7272727272727273,0.36363636363636365
+CCT,Softmax,ind_span,True,False,brightness,hue,0.02631578947368421,0.9567901234567902,0.49155295646523717
+CCT,Softmax,ind_span,True,False,brightness,multnoise,0.125,0.9166666666666666,0.5208333333333333
+CCT,Softmax,ind_span,True,False,brightness,noise,0.09473684210526316,0.9619047619047619,0.5283208020050125
+CCT,Softmax,ind_span,True,False,brightness,saltpepper,0.2916666666666667,0.8671875,0.5794270833333334
+CCT,Softmax,ind_span,True,False,contrast,OoD Test,0.52,0.96,0.74
+CCT,Softmax,ind_span,True,False,contrast,OoD Val,0.0,0.7272727272727273,0.36363636363636365
+CCT,Softmax,ind_span,True,False,contrast,hue,0.02631578947368421,0.9567901234567902,0.49155295646523717
+CCT,Softmax,ind_span,True,False,contrast,multnoise,0.125,0.9166666666666666,0.5208333333333333
+CCT,Softmax,ind_span,True,False,contrast,noise,0.09473684210526316,0.9619047619047619,0.5283208020050125
+CCT,Softmax,ind_span,True,False,contrast,saltpepper,0.2916666666666667,0.8671875,0.5794270833333334
+CCT,Softmax,ind_span,True,False,hue,OoD Test,0.52,0.96,0.74
+CCT,Softmax,ind_span,True,False,hue,OoD Val,0.0,0.7272727272727273,0.36363636363636365
+CCT,Softmax,ind_span,True,False,hue,hue,0.02631578947368421,0.9567901234567902,0.49155295646523717
+CCT,Softmax,ind_span,True,False,hue,multnoise,0.125,0.9166666666666666,0.5208333333333333
+CCT,Softmax,ind_span,True,False,hue,noise,0.09473684210526316,0.9619047619047619,0.5283208020050125
+CCT,Softmax,ind_span,True,False,hue,saltpepper,0.2916666666666667,0.8671875,0.5794270833333334
+CCT,Softmax,ind_span,True,False,multnoise,OoD Test,0.52,0.96,0.74
+CCT,Softmax,ind_span,True,False,multnoise,OoD Val,0.0,0.7272727272727273,0.36363636363636365
+CCT,Softmax,ind_span,True,False,multnoise,hue,0.02631578947368421,0.9567901234567902,0.49155295646523717
+CCT,Softmax,ind_span,True,False,multnoise,multnoise,0.125,0.9166666666666666,0.5208333333333333
+CCT,Softmax,ind_span,True,False,multnoise,noise,0.09473684210526316,0.9619047619047619,0.5283208020050125
+CCT,Softmax,ind_span,True,False,multnoise,saltpepper,0.2916666666666667,0.8671875,0.5794270833333334
+CCT,Softmax,ind_span,True,False,noise,OoD Test,0.52,0.96,0.74
+CCT,Softmax,ind_span,True,False,noise,OoD Val,0.0,0.7272727272727273,0.36363636363636365
+CCT,Softmax,ind_span,True,False,noise,hue,0.02631578947368421,0.9567901234567902,0.49155295646523717
+CCT,Softmax,ind_span,True,False,noise,multnoise,0.125,0.9166666666666666,0.5208333333333333
+CCT,Softmax,ind_span,True,False,noise,noise,0.09473684210526316,0.9619047619047619,0.5283208020050125
+CCT,Softmax,ind_span,True,False,noise,saltpepper,0.2916666666666667,0.8671875,0.5794270833333334
+CCT,Softmax,ind_span,True,False,saltpepper,OoD Test,0.52,0.96,0.74
+CCT,Softmax,ind_span,True,False,saltpepper,OoD Val,0.0,0.7272727272727273,0.36363636363636365
+CCT,Softmax,ind_span,True,False,saltpepper,hue,0.02631578947368421,0.9567901234567902,0.49155295646523717
+CCT,Softmax,ind_span,True,False,saltpepper,multnoise,0.125,0.9166666666666666,0.5208333333333333
+CCT,Softmax,ind_span,True,False,saltpepper,noise,0.09473684210526316,0.9619047619047619,0.5283208020050125
+CCT,Softmax,ind_span,True,False,saltpepper,saltpepper,0.2916666666666667,0.8671875,0.5794270833333334
+CCT,Softmax,ind_span,True,False,smear,OoD Test,0.52,0.96,0.74
+CCT,Softmax,ind_span,True,False,smear,OoD Val,0.0,0.7272727272727273,0.36363636363636365
+CCT,Softmax,ind_span,True,False,smear,hue,0.02631578947368421,0.9567901234567902,0.49155295646523717
+CCT,Softmax,ind_span,True,False,smear,multnoise,0.125,0.9166666666666666,0.5208333333333333
+CCT,Softmax,ind_span,True,False,smear,noise,0.09473684210526316,0.9619047619047619,0.5283208020050125
+CCT,Softmax,ind_span,True,False,smear,saltpepper,0.2916666666666667,0.8671875,0.5794270833333334
+CCT,Softmax,val_optimal,False,False,OoD Test,OoD Test,0.91,0.81,0.8600000000000001
+CCT,Softmax,val_optimal,False,False,OoD Test,OoD Val,0.9,0.81,0.855
+CCT,Softmax,val_optimal,False,False,OoD Test,brightness,0.68,0.81,0.7450000000000001
+CCT,Softmax,val_optimal,False,False,OoD Test,contrast,0.17,0.81,0.49000000000000005
+CCT,Softmax,val_optimal,False,False,OoD Test,hue,0.32,0.81,0.5650000000000001
+CCT,Softmax,val_optimal,False,False,OoD Test,multnoise,0.6,0.81,0.7050000000000001
+CCT,Softmax,val_optimal,False,False,OoD Test,noise,0.27,0.81,0.54
+CCT,Softmax,val_optimal,False,False,OoD Test,saltpepper,0.72,0.81,0.765
+CCT,Softmax,val_optimal,False,False,OoD Test,smear,0.43,0.81,0.62
+CCT,Softmax,val_optimal,False,False,OoD Val,OoD Test,0.87,0.83,0.85
+CCT,Softmax,val_optimal,False,False,OoD Val,OoD Val,0.88,0.83,0.855
+CCT,Softmax,val_optimal,False,False,OoD Val,brightness,0.64,0.83,0.735
+CCT,Softmax,val_optimal,False,False,OoD Val,contrast,0.16,0.83,0.495
+CCT,Softmax,val_optimal,False,False,OoD Val,hue,0.29,0.83,0.5599999999999999
+CCT,Softmax,val_optimal,False,False,OoD Val,multnoise,0.52,0.83,0.675
+CCT,Softmax,val_optimal,False,False,OoD Val,noise,0.26,0.83,0.5449999999999999
+CCT,Softmax,val_optimal,False,False,OoD Val,saltpepper,0.67,0.83,0.75
+CCT,Softmax,val_optimal,False,False,OoD Val,smear,0.38,0.83,0.605
+CCT,Softmax,val_optimal,False,False,brightness,OoD Test,0.93,0.8,0.865
+CCT,Softmax,val_optimal,False,False,brightness,OoD Val,0.91,0.8,0.855
+CCT,Softmax,val_optimal,False,False,brightness,brightness,0.78,0.8,0.79
+CCT,Softmax,val_optimal,False,False,brightness,contrast,0.19,0.8,0.495
+CCT,Softmax,val_optimal,False,False,brightness,hue,0.36,0.8,0.5800000000000001
+CCT,Softmax,val_optimal,False,False,brightness,multnoise,0.61,0.8,0.7050000000000001
+CCT,Softmax,val_optimal,False,False,brightness,noise,0.28,0.8,0.54
+CCT,Softmax,val_optimal,False,False,brightness,saltpepper,0.79,0.8,0.795
+CCT,Softmax,val_optimal,False,False,brightness,smear,0.44,0.8,0.62
+CCT,Softmax,val_optimal,False,False,contrast,OoD Test,0.02,0.43999999999999995,0.22999999999999998
+CCT,Softmax,val_optimal,False,False,contrast,OoD Val,0.03,0.43999999999999995,0.235
+CCT,Softmax,val_optimal,False,False,contrast,brightness,0.12,0.43999999999999995,0.27999999999999997
+CCT,Softmax,val_optimal,False,False,contrast,contrast,0.62,0.43999999999999995,0.53
+CCT,Softmax,val_optimal,False,False,contrast,hue,0.49,0.43999999999999995,0.46499999999999997
+CCT,Softmax,val_optimal,False,False,contrast,multnoise,0.2,0.43999999999999995,0.31999999999999995
+CCT,Softmax,val_optimal,False,False,contrast,noise,0.5,0.43999999999999995,0.47
+CCT,Softmax,val_optimal,False,False,contrast,saltpepper,0.06,0.43999999999999995,0.24999999999999997
+CCT,Softmax,val_optimal,False,False,contrast,smear,0.35,0.43999999999999995,0.39499999999999996
+CCT,Softmax,val_optimal,False,False,hue,OoD Test,0.87,0.83,0.85
+CCT,Softmax,val_optimal,False,False,hue,OoD Val,0.88,0.83,0.855
+CCT,Softmax,val_optimal,False,False,hue,brightness,0.64,0.83,0.735
+CCT,Softmax,val_optimal,False,False,hue,contrast,0.16,0.83,0.495
+CCT,Softmax,val_optimal,False,False,hue,hue,0.29,0.83,0.5599999999999999
+CCT,Softmax,val_optimal,False,False,hue,multnoise,0.51,0.83,0.6699999999999999
+CCT,Softmax,val_optimal,False,False,hue,noise,0.26,0.83,0.5449999999999999
+CCT,Softmax,val_optimal,False,False,hue,saltpepper,0.67,0.83,0.75
+CCT,Softmax,val_optimal,False,False,hue,smear,0.37,0.83,0.6
+CCT,Softmax,val_optimal,False,False,multnoise,OoD Test,0.9,0.81,0.855
+CCT,Softmax,val_optimal,False,False,multnoise,OoD Val,0.89,0.81,0.8500000000000001
+CCT,Softmax,val_optimal,False,False,multnoise,brightness,0.68,0.81,0.7450000000000001
+CCT,Softmax,val_optimal,False,False,multnoise,contrast,0.17,0.81,0.49000000000000005
+CCT,Softmax,val_optimal,False,False,multnoise,hue,0.29,0.81,0.55
+CCT,Softmax,val_optimal,False,False,multnoise,multnoise,0.57,0.81,0.69
+CCT,Softmax,val_optimal,False,False,multnoise,noise,0.27,0.81,0.54
+CCT,Softmax,val_optimal,False,False,multnoise,saltpepper,0.72,0.81,0.765
+CCT,Softmax,val_optimal,False,False,multnoise,smear,0.41,0.81,0.61
+CCT,Softmax,val_optimal,False,False,noise,OoD Test,0.87,0.83,0.85
+CCT,Softmax,val_optimal,False,False,noise,OoD Val,0.88,0.83,0.855
+CCT,Softmax,val_optimal,False,False,noise,brightness,0.64,0.83,0.735
+CCT,Softmax,val_optimal,False,False,noise,contrast,0.15,0.83,0.49
+CCT,Softmax,val_optimal,False,False,noise,hue,0.27,0.83,0.55
+CCT,Softmax,val_optimal,False,False,noise,multnoise,0.51,0.83,0.6699999999999999
+CCT,Softmax,val_optimal,False,False,noise,noise,0.26,0.83,0.5449999999999999
+CCT,Softmax,val_optimal,False,False,noise,saltpepper,0.67,0.83,0.75
+CCT,Softmax,val_optimal,False,False,noise,smear,0.37,0.83,0.6
+CCT,Softmax,val_optimal,False,False,saltpepper,OoD Test,0.93,0.8,0.865
+CCT,Softmax,val_optimal,False,False,saltpepper,OoD Val,0.91,0.8,0.855
+CCT,Softmax,val_optimal,False,False,saltpepper,brightness,0.78,0.8,0.79
+CCT,Softmax,val_optimal,False,False,saltpepper,contrast,0.19,0.8,0.495
+CCT,Softmax,val_optimal,False,False,saltpepper,hue,0.36,0.8,0.5800000000000001
+CCT,Softmax,val_optimal,False,False,saltpepper,multnoise,0.61,0.8,0.7050000000000001
+CCT,Softmax,val_optimal,False,False,saltpepper,noise,0.28,0.8,0.54
+CCT,Softmax,val_optimal,False,False,saltpepper,saltpepper,0.79,0.8,0.795
+CCT,Softmax,val_optimal,False,False,saltpepper,smear,0.44,0.8,0.62
+CCT,Softmax,val_optimal,False,False,smear,OoD Test,0.89,0.81,0.8500000000000001
+CCT,Softmax,val_optimal,False,False,smear,OoD Val,0.88,0.81,0.845
+CCT,Softmax,val_optimal,False,False,smear,brightness,0.67,0.81,0.74
+CCT,Softmax,val_optimal,False,False,smear,contrast,0.17,0.81,0.49000000000000005
+CCT,Softmax,val_optimal,False,False,smear,hue,0.29,0.81,0.55
+CCT,Softmax,val_optimal,False,False,smear,multnoise,0.55,0.81,0.68
+CCT,Softmax,val_optimal,False,False,smear,noise,0.27,0.81,0.54
+CCT,Softmax,val_optimal,False,False,smear,saltpepper,0.7,0.81,0.755
+CCT,Softmax,val_optimal,False,False,smear,smear,0.41,0.81,0.61
+CCT,Softmax,ind_span,False,False,OoD Test,OoD Test,0.52,0.96,0.74
+CCT,Softmax,ind_span,False,False,OoD Test,OoD Val,0.5,0.96,0.73
+CCT,Softmax,ind_span,False,False,OoD Test,brightness,0.27,0.96,0.615
+CCT,Softmax,ind_span,False,False,OoD Test,contrast,0.08,0.96,0.52
+CCT,Softmax,ind_span,False,False,OoD Test,hue,0.04,0.96,0.5
+CCT,Softmax,ind_span,False,False,OoD Test,multnoise,0.14,0.96,0.55
+CCT,Softmax,ind_span,False,False,OoD Test,noise,0.09,0.96,0.525
+CCT,Softmax,ind_span,False,False,OoD Test,saltpepper,0.34,0.96,0.65
+CCT,Softmax,ind_span,False,False,OoD Test,smear,0.13,0.96,0.5449999999999999
+CCT,Softmax,ind_span,False,False,OoD Val,OoD Test,0.52,0.96,0.74
+CCT,Softmax,ind_span,False,False,OoD Val,OoD Val,0.5,0.96,0.73
+CCT,Softmax,ind_span,False,False,OoD Val,brightness,0.27,0.96,0.615
+CCT,Softmax,ind_span,False,False,OoD Val,contrast,0.08,0.96,0.52
+CCT,Softmax,ind_span,False,False,OoD Val,hue,0.04,0.96,0.5
+CCT,Softmax,ind_span,False,False,OoD Val,multnoise,0.14,0.96,0.55
+CCT,Softmax,ind_span,False,False,OoD Val,noise,0.09,0.96,0.525
+CCT,Softmax,ind_span,False,False,OoD Val,saltpepper,0.34,0.96,0.65
+CCT,Softmax,ind_span,False,False,OoD Val,smear,0.13,0.96,0.5449999999999999
+CCT,Softmax,ind_span,False,False,brightness,OoD Test,0.52,0.96,0.74
+CCT,Softmax,ind_span,False,False,brightness,OoD Val,0.5,0.96,0.73
+CCT,Softmax,ind_span,False,False,brightness,brightness,0.27,0.96,0.615
+CCT,Softmax,ind_span,False,False,brightness,contrast,0.08,0.96,0.52
+CCT,Softmax,ind_span,False,False,brightness,hue,0.04,0.96,0.5
+CCT,Softmax,ind_span,False,False,brightness,multnoise,0.14,0.96,0.55
+CCT,Softmax,ind_span,False,False,brightness,noise,0.09,0.96,0.525
+CCT,Softmax,ind_span,False,False,brightness,saltpepper,0.34,0.96,0.65
+CCT,Softmax,ind_span,False,False,brightness,smear,0.13,0.96,0.5449999999999999
+CCT,Softmax,ind_span,False,False,contrast,OoD Test,0.52,0.96,0.74
+CCT,Softmax,ind_span,False,False,contrast,OoD Val,0.5,0.96,0.73
+CCT,Softmax,ind_span,False,False,contrast,brightness,0.27,0.96,0.615
+CCT,Softmax,ind_span,False,False,contrast,contrast,0.08,0.96,0.52
+CCT,Softmax,ind_span,False,False,contrast,hue,0.04,0.96,0.5
+CCT,Softmax,ind_span,False,False,contrast,multnoise,0.14,0.96,0.55
+CCT,Softmax,ind_span,False,False,contrast,noise,0.09,0.96,0.525
+CCT,Softmax,ind_span,False,False,contrast,saltpepper,0.34,0.96,0.65
+CCT,Softmax,ind_span,False,False,contrast,smear,0.13,0.96,0.5449999999999999
+CCT,Softmax,ind_span,False,False,hue,OoD Test,0.52,0.96,0.74
+CCT,Softmax,ind_span,False,False,hue,OoD Val,0.5,0.96,0.73
+CCT,Softmax,ind_span,False,False,hue,brightness,0.27,0.96,0.615
+CCT,Softmax,ind_span,False,False,hue,contrast,0.08,0.96,0.52
+CCT,Softmax,ind_span,False,False,hue,hue,0.04,0.96,0.5
+CCT,Softmax,ind_span,False,False,hue,multnoise,0.14,0.96,0.55
+CCT,Softmax,ind_span,False,False,hue,noise,0.09,0.96,0.525
+CCT,Softmax,ind_span,False,False,hue,saltpepper,0.34,0.96,0.65
+CCT,Softmax,ind_span,False,False,hue,smear,0.13,0.96,0.5449999999999999
+CCT,Softmax,ind_span,False,False,multnoise,OoD Test,0.52,0.96,0.74
+CCT,Softmax,ind_span,False,False,multnoise,OoD Val,0.5,0.96,0.73
+CCT,Softmax,ind_span,False,False,multnoise,brightness,0.27,0.96,0.615
+CCT,Softmax,ind_span,False,False,multnoise,contrast,0.08,0.96,0.52
+CCT,Softmax,ind_span,False,False,multnoise,hue,0.04,0.96,0.5
+CCT,Softmax,ind_span,False,False,multnoise,multnoise,0.14,0.96,0.55
+CCT,Softmax,ind_span,False,False,multnoise,noise,0.09,0.96,0.525
+CCT,Softmax,ind_span,False,False,multnoise,saltpepper,0.34,0.96,0.65
+CCT,Softmax,ind_span,False,False,multnoise,smear,0.13,0.96,0.5449999999999999
+CCT,Softmax,ind_span,False,False,noise,OoD Test,0.52,0.96,0.74
+CCT,Softmax,ind_span,False,False,noise,OoD Val,0.5,0.96,0.73
+CCT,Softmax,ind_span,False,False,noise,brightness,0.27,0.96,0.615
+CCT,Softmax,ind_span,False,False,noise,contrast,0.08,0.96,0.52
+CCT,Softmax,ind_span,False,False,noise,hue,0.04,0.96,0.5
+CCT,Softmax,ind_span,False,False,noise,multnoise,0.14,0.96,0.55
+CCT,Softmax,ind_span,False,False,noise,noise,0.09,0.96,0.525
+CCT,Softmax,ind_span,False,False,noise,saltpepper,0.34,0.96,0.65
+CCT,Softmax,ind_span,False,False,noise,smear,0.13,0.96,0.5449999999999999
+CCT,Softmax,ind_span,False,False,saltpepper,OoD Test,0.52,0.96,0.74
+CCT,Softmax,ind_span,False,False,saltpepper,OoD Val,0.5,0.96,0.73
+CCT,Softmax,ind_span,False,False,saltpepper,brightness,0.27,0.96,0.615
+CCT,Softmax,ind_span,False,False,saltpepper,contrast,0.08,0.96,0.52
+CCT,Softmax,ind_span,False,False,saltpepper,hue,0.04,0.96,0.5
+CCT,Softmax,ind_span,False,False,saltpepper,multnoise,0.14,0.96,0.55
+CCT,Softmax,ind_span,False,False,saltpepper,noise,0.09,0.96,0.525
+CCT,Softmax,ind_span,False,False,saltpepper,saltpepper,0.34,0.96,0.65
+CCT,Softmax,ind_span,False,False,saltpepper,smear,0.13,0.96,0.5449999999999999
+CCT,Softmax,ind_span,False,False,smear,OoD Test,0.52,0.96,0.74
+CCT,Softmax,ind_span,False,False,smear,OoD Val,0.5,0.96,0.73
+CCT,Softmax,ind_span,False,False,smear,brightness,0.27,0.96,0.615
+CCT,Softmax,ind_span,False,False,smear,contrast,0.08,0.96,0.52
+CCT,Softmax,ind_span,False,False,smear,hue,0.04,0.96,0.5
+CCT,Softmax,ind_span,False,False,smear,multnoise,0.14,0.96,0.55
+CCT,Softmax,ind_span,False,False,smear,noise,0.09,0.96,0.525
+CCT,Softmax,ind_span,False,False,smear,saltpepper,0.34,0.96,0.65
+CCT,Softmax,ind_span,False,False,smear,smear,0.13,0.96,0.5449999999999999
