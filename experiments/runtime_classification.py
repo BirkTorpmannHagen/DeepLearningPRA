@@ -418,7 +418,7 @@ def debiased_ood_detector_correctness_prediction_accuracy(batch_size):
             data.to_csv(f"ood_detector_data/debiased_ood_detector_correctness_{dataset}_{batch_size}.csv", index=False)
 
 def eval_debiased_ood_detectors():
-    data = load_all_biased(prefix="debiased_data")
+    data = load_all_biased(prefix="old_debiased_data")
     data = data[data["fold"] != "train"]
     data_dict = []
 
@@ -426,8 +426,8 @@ def eval_debiased_ood_detectors():
         for dataset in DATASETS:
             with tqdm(total=len(DSDS) * 2*3) as pbar:
                 for feature in DSDS:
-                    for assessed_correctness in [True, False]:
-                        for k in [-1, 0,1,5,10]:
+                    for assessed_correctness in [False]:
+                        for k in [-1, 0,1,5]:
                             data_dataset = data[(data["Dataset"] == dataset) & (data["feature_name"] == feature) & (data["k"]==k) & (data["batch_size"]==batch_size)]
                             if data_dataset.empty:
                                 print(f"No data for {dataset}-{feature}-{k}")

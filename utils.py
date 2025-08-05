@@ -92,32 +92,33 @@ class ArgumentIterator:
     def __len__(self):
         return len(self.iterable)
 
-def load_random_rabanser(batch_size, prefix="debiased_data"):
+def load_all_rabanser(batch_size, prefix="debiased_data", k=0):
     dfs = []
     for dataset in DATASETS:
-        try:
-            fname = f"{dataset}_normal_RandomSampler_{batch_size}_k=0_rabanser.csv"
-            df = pd.read_csv(
-                join(prefix, f"{dataset}_normal_RandomSampler_{batch_size}_k=0_rabanser.csv"))
-        except FileNotFoundError:
-            print(f"No data found for {prefix}/{dataset}_normal_RandomSampler_{batch_size}_k=0_rabanser.csv")
-            continue
-        df["feature_name"] = "rabanser"
-        df["Dataset"] = dataset
-        df["batch_size"] = batch_size
-        if dataset == "Polyp":
-            df["correct_prediction"] = df["loss"] < df[df["fold"] == "ind_val"][
-                "loss"].max()  # maximum observed val mean jaccard
-        else:
-            df["correct_prediction"] = df["loss"] < df[df["fold"] == "ind_val"]["loss"].quantile(
-                0.95)  # losswise definition
-            # df["correct_prediction"] = df["acc"]>=ind_val_acc   #accuracywise definition
-        df["shift"] = df["fold"].apply(
-            lambda x: x.split("_")[0] if "_0." in x else x)  # what kind of shift has occured?
-        df["shift_intensity"] = df["fold"].apply(
-            lambda x: x.split("_")[1] if "_" in x else x)  # what intensity?
-        df["ood"] = ~df["fold"].isin(["train", "ind_val", "ind_test"])
-        dfs.append(df)
+        for sampler in SAMPLERS:
+            try:
+                df = pd.read_csv(join(prefix, f"{dataset}_normal_{sampler}_{batch_size}_k={k}_rabanser.csv"))
+            except FileNotFoundError:
+                print(f"Could not find {join(prefix, f"{dataset}_normal_{sampler}_{batch_size}_k={k}_rabanser.csv")}.csv")
+                continue
+            df["k"]=k
+            df["bias"] = SAMPLER_LUT[sampler]
+            df["feature_name"] = "rabanser"
+            df["Dataset"] = dataset
+            df["batch_size"] = batch_size
+            if dataset == "Polyp":
+                df["correct_prediction"] = df["loss"] < df[df["fold"] == "ind_val"][
+                    "loss"].max()  # maximum observed val mean jaccard
+            else:
+                df["correct_prediction"] = df["loss"] < df[df["fold"] == "ind_val"]["loss"].quantile(
+                    0.95)  # losswise definition
+                # df["correct_prediction"] = df["acc"]>=ind_val_acc   #accuracywise definition
+            df["shift"] = df["fold"].apply(
+                lambda x: x.split("_")[0] if "_0." in x else x)  # what kind of shift has occured?
+            df["shift_intensity"] = df["fold"].apply(
+                lambda x: x.split("_")[1] if "_" in x else x)  # what intensity?
+            df["ood"] = ~df["fold"].isin(["train", "ind_val", "ind_test"])
+            dfs.append(df)
     try:
         return pd.concat(dfs)
     except ValueError:
@@ -140,7 +141,7 @@ def load_all_biased(prefix="debiased_data", filter_batch=False):
                         try:
                             df = pd.read_csv(join(prefix, f"{dataset}_normal_{sampler}_{batch_size}_k={k}_{feature}.csv"))
                         except FileNotFoundError:
-                            # print(f"No data found for {prefix}/{dataset}_normal_{sampler}_{batch_size}_k={k}_{feature}.csv")
+                            print(f"No data found for {prefix}/{dataset}_normal_{sampler}_{batch_size}_k={k}_{feature}.csv")
                             continue
                         try:
 
@@ -183,8 +184,7 @@ def load_all(batch_size=30, samples=1000, feature="all", shift="normal", prefix=
 
 def load_pra_df(dataset_name, feature_name, model="" , batch_size=1, samples=1000, prefix="final_data", shift="normal", reduce=True):
     try:
-        df = pd.concat(
-        [pd.read_csv(join(prefix, fname)) for fname in os.listdir(prefix) if dataset_name in fname and feature_name in fname and model in fname  and shift in fname])
+        df = pd.concat([pd.read_csv(join(prefix, fname)) for fname in os.listdir(prefix) if dataset_name in fname and feature_name in fname and model in fname  and shift in fname])
     except:
         print("no data found for ", dataset_name, feature_name)
         return pd.DataFrame()

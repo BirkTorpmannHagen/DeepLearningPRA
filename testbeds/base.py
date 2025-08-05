@@ -45,7 +45,7 @@ class BaseTestBed:
         elif self.sampler=="ClassOrderSampler":
             return DataLoader(dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers, drop_last=True, sampler=ClassOrderSampler(dataset, num_classes))
         elif self.sampler=="ClusterSampler":
-            return DataLoader(dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers, drop_last=True, sampler=ClusterSampler(dataset, self.classifier))
+            return DataLoader(dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers, drop_last=True, sampler=ClusterSampler(dataset, self.classifier, self.batch_size))
 
 
     def ind_loader(self):
@@ -131,3 +131,13 @@ class BaseTestBed:
             return losses.numpy()
 
         return losses.flatten(0, 1).numpy()
+
+    def get_encodings(self, dataloader):
+        features = np.zeros((len(dataloader), self.batch_size, self.classifier.latent_dim))
+        for i, data in tqdm(enumerate(dataloader), total=len(dataloader), desc="Computing Encodings"):
+            x = data[0].cuda()
+            with torch.no_grad():
+                out = self.classifier.get_encoding(x).detach().cpu().numpy()
+            features[i]=out
+        features = features.reshape((len(dataloader)*self.batch_size, self.classifier.latent_dim))
+        return features

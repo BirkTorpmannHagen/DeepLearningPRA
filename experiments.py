@@ -1,5 +1,8 @@
 # from albumentations.random_utils import normal
+import itertools
 
+import numpy as np
+from scipy.stats import ks_2samp
 from seaborn import FacetGrid
 import warnings
 
@@ -233,47 +236,142 @@ def get_datasetwise_risk():
     print(results.groupby(["Model", "DSD", "Dataset", "Tree"])[["True Risk", "Accuracy"]].mean())
     results.to_csv("datasetwise_risk.csv")
 
+def examine_feature_distributions():
+    df = load_all(1)
+    df = df[df["fold"]!="train"]
 
-if __name__ == '__main__':
-    #accuracies on each dataset
-    from experiments.dataset_analysis import *
-    from experiments.runtime_classification import *
+    p_value_data = []
+    for dataset, feature_name in itertools.product(DATASETS, DSDS):
+        subdf_dataset = df[(df["Dataset"]==dataset)&(df["feature_name"]==feature_name)]
+        for fold in subdf_dataset["fold"].unique():
+            subdf = subdf_dataset[subdf_dataset["fold"]==fold]
+            if subdf.empty:
+                print(f"Empty dataframe for {dataset} {feature_name}")
+                continue
 
-    # accuracy_table()
-    #class distribution
-    # dataset_summaries()
+            subdf["idx_quant"] =  pd.qcut(subdf["idx"], q=50, labels=False)
+            unique_classes = subdf["class"].unique()
+            unique_idx = subdf["idx_quant"].unique()
+
+            for idx in unique_idx:
+                data1 = subdf[subdf["idx_quant"] == idx]["feature"]
+                data2 = subdf["feature"].sample(len(data1))
+
+                p_value = ks_2samp(data1, data2).pvalue
+                p_value_data.append(
+                    {"Dataset": dataset, "feature_name": feature_name, "Bias": "Temporal", "x":idx,
+                     "p": p_value})
+            if dataset!="Polyp":
+                for cls in unique_classes:
+                    data1 = subdf[subdf["class"]==cls]["feature"]
+                    data2 = subdf["feature"].sample(len(data1))
+                    p_value = ks_2samp(data1,data2).pvalue
+                    p_value_data.append({"Dataset": dataset, "feature_name": feature_name, "Bias":"Class", "x":cls, "p": p_value})
+
+    data = pd.DataFrame(p_value_data)
+    print(data.groupby(["Dataset", "Bias", "feature_name"])["p"].agg(["mean"]))
+
+
+def examine_aggregated_feature_distributions(batch_size):
+    dfs = load_all_biased("old_debiased_data", filter_batch=batch_size)
+    dfs = dfs[dfs["fold"]!="train"]
+    dfs["feature"] = dfs["feature"].astype(float)
+    p_value_data = []
+    # g = sns.FacetGrid(dfs, col="Dataset", row="feature_name", sharex=False, sharey=False)
+    # g.map_dataframe(sns.kdeplot, x="feature", hue="bias", common_norm = False, fill=True)
+    # plt.tight_layout()
+    # plt.show()
+    for dataset, feature in itertools.product(DATASETS, DSDS):
+        data_feature_df = dfs[(dfs["Dataset"]==dataset) & (dfs["feature_name"]==feature)]
+
+        for fold in data_feature_df["fold"].unique():
+            subdf = data_feature_df[data_feature_df["fold"]==fold]
+            if feature == "rabanser":
+                subdf = subdf[subdf["k"] == 0]
+            else:
+                subdf = subdf[subdf["k"] == -1]
+            if subdf.empty:
+                continue
+            random_rabanser = subdf[subdf["bias"] == "RandomSampler"]
+            for bias in SAMPLERS:
+                if bias=="RandomSampler":
+                    continue
+                by_bias = subdf[subdf["bias"]==bias]
+                if by_bias.empty:
+                    print(f"Empty for {dataset} {bias}")
+                    continue
+                p_val = ks_2samp(by_bias["feature"], random_rabanser["feature"]).pvalue
+                p_value_data.append({"Dataset": dataset, "feature_name":feature, "fold":fold, "bias": SAMPLER_LUT[bias], "p": p_val})
+    df = pd.DataFrame(p_value_data)
+    print(df.groupby(["Dataset", "feature_name", "bias"])["p"].mean())
+
+def examine_rabanser_feature_distributions(batch_size):
+    dfs = load_all_rabanser(batch_size=batch_size, prefix="old_debiased_data", k=0)
+    dfs = dfs[dfs["fold"]=="ind_val"]
+    dfs
+    for dataset in DATASETS:
+        subdf = dfs[(dfs["Dataset"]==dataset)]
+        if subdf.empty:
+            print(f"Empty dataframe for {dataset} {fold}")
+            continue
+        for bias in SAMPLERS:
+            p_val = subdf["feature"].mean()
+            p_value_data.append({"Dataset": dataset, "feature_name":"Rabanser", "fold":fold, "bias": SAMPLER_LUT[bias], "p": p_val})
+    df = pd.DataFrame(p_value_data)
+    print(df.groupby(["Dataset", "fold", "feature_name", "bias"])["p"].mean())
+
+def examine_latent_space_bias(batch_size):
+    data = []
+    for bench in [CCTTestBed, NicoTestBed, PolypTestBed, Office31TestBed, OfficeHomeTestBed]:
+        bench_instances = dict(zip(SAMPLERS, [bench("classifier", mode="normal", sampler=sampler, batch_size=batch_size) for sampler in SAMPLERS]))
+        random = bench_instances["RandomSampler"]
+        train_encodings = random.get_encodings(random.ind_train())
+        for sampler, instance in bench_instances.items():
+            sampler_encodings = instance.get_encodings(instance.ind_val())
+            for batch_idx in range(0, len(sampler_encodings), batch_size)[::-1]:
+                batch = sampler_encodings[batch_idx:batch_idx+batch_size]
+                pval = np.mean([ks_2samp(batch[:, z], random[:, z]).pvalue for z in range(sampler_encodings.shape[-1])])
+                data.append({"Dataset": bench.__name__().split("TestBed")[0], "Bias": SAMPLER_LUT[sampler], "p": pval})
+
+
+
+
+
+def run_methodological_experiments():
+    accuracy_table()
+    dataset_summaries()
+
+def run_rv_experiments():
     """
-        Runtime Verification
-    """
+          Runtime Verification
+      """
     # loss_correctness_test()
-    for batch_size in BATCH_SIZES[1:]:
-        print(f"Running batch size {batch_size}")
-        debiased_ood_detector_correctness_prediction_accuracy(batch_size)
-        # ood_detector_correctness_prediction_accuracy(batch_size, shift="")
-        # ood_verdict_accuracy_table(batch_size)
-    #simple batching
+    # for batch_size in BATCH_SIZES[1:]:
+    #     print(f"Running batch size {batch_size}")
+    #     debiased_ood_detector_correctness_prediction_accuracy(batch_size)
+    # ood_detector_correctness_prediction_accuracy(batch_size, shift="")
+    # ood_verdict_accuracy_table(batch_size)
+
+    # simple batching
     # ood_verdict_plots_batched()
+    # examine_feature_distributions(64)
+    examine_rabanser_feature_distributions(8)
 
     # ood_detector_correctness_prediction_accuracy(64)
     # ood_verdict_accuracy_table(32)
     # ood_verdict_accuracy_table(batch)
 
-
-
     # for batch_size in [1, 8, 16]:
     #     ood_detector_correctness_prediction_accuracy(batch_size)
 
-
-    #runtime verification
+    # runtime verification
     # plot_batching_effect("NICO", "entropy")
     # eval_debiased_ood_detectors()
     # debiased_plots()
 
-
-    #loss regression
+    # loss regression
     # get_gam_data(load=False)
     # regplots(64)
-
 
     # get_datasetwise_risk()
     # iou_distribution()
@@ -282,15 +380,21 @@ if __name__ == '__main__':
     # verdictwise_proportions(cal_idx=1, batch_size=1)
     # loss_verdict_histogram(1)
 
-
     # ood_verdict_plots_batched()
+
+
+if __name__ == '__main__':
+    #accuracies on each dataset
+    from experiments.dataset_analysis import *
+    from experiments.runtime_classification import *
+    from experiments.pra import *
+    run_rv_experiments()
+
+
 
 
     # collect_rate_estimator_data()
     # eval_rate_estimator()
-    # t_check()
-    # fetch_dsd_accuracies(1, plot=False)
-    # ood_verdict_accuracy_table(1)
     # plot_dsd_accuracies(1000)
     # plot_rate_estimation_errors_for_dsds()
 

@@ -1,18 +1,50 @@
 import itertools
 from multiprocessing import Pool
 
-import numpy
+import numpy as np
 import pandas as pd
 import seaborn as sns
 from matplotlib import pyplot as plt
 from tqdm import tqdm
 
 from components import OODDetector
-from experiments import get_dsd_verdicts_given_true_trace, simulate_dsd_accuracy_estimation
 from rateestimators import BernoulliEstimator
 from riskmodel import UNNECESSARY_INTERVENTION
 from simulations import UniformBatchSimulator
 from utils import DATASETS, DSDS, DSD_PRINT_LUT, load_pra_df, BATCH_SIZES
+
+def simulate_dsd_accuracy_estimation(data, rate, val_set, test_set, ba, tpr, tnr, dsd):
+    sim = UniformBatchSimulator(data, ood_test_shift=test_set, ood_val_shift=val_set, estimator=BernoulliEstimator,
+                                use_synth=False)
+    results = sim.sim(rate, 600)
+    results = results.groupby(["Tree"]).mean().reset_index()
+    # results = results.mean()
+    results["dsd"] = dsd
+    results["ba"] = ba
+    results["tpr"] = tpr
+    results["tnr"] = tnr
+    results["rate"] = rate
+    results["test_set"] = test_set
+    results["val_set"] = val_set
+    return results
+
+def xval_errors(values):
+    return np.mean([np.sum(np.abs(np.subtract.outer(valwise_accuracies, valwise_accuracies))) / np.sum(
+        np.ones_like(valwise_accuracies) - np.eye(valwise_accuracies.shape[0])) for valwise_accuracies in values])
+
+def get_dsd_verdicts_given_true_trace(trace, tpr, tnr):
+    def transform(v):
+        if v==1:
+            if np.random.rand() < tpr:
+                return 1
+            else:
+                return 0
+        else:
+            if np.random.rand() < tnr:
+                return 0
+            else:
+                return 1
+    return [transform(i) for i in trace]
 
 
 def collect_rate_estimator_data():
@@ -33,23 +65,23 @@ def collect_rate_estimator_data():
                             re.update(i)
                             rate_estimate = re.get_rate()
                             error = np.abs(rate-rate_estimate)
-                            data.append({"rate": rate, "ba": ba,  "tl": tl, "rate_estimate": rate_estimate, "error":error})
+                            data.append({"rate": rate, "tpr":tpr, "tnr":tnr, "ba": ba,  "tl": tl, "rate_estimate": rate_estimate, "error":error})
+
     df = pd.DataFrame(data)
-    df = df.groupby(["ba","tl", "rate"]).mean()
-    df.to_csv("rate_estimator_eval.csv")
+    df = df.groupby(["tpr", "tnr", "ba","tl", "rate"]).mean()
+    df.to_csv("rate_estimator_sensitivity_analysis.csv")
 
 
 def eval_rate_estimator():
-    df = pd.read_csv("rate_estimator_eval.csv")
+    df = pd.read_csv("rate_estimator_sensitivity_analysis.csv")
     df_barate = df.groupby(["ba", "rate"]).mean().reset_index()
     pivot_table = df_barate.pivot(index="ba", columns="rate", values="error")
     pivot_table = pivot_table.loc[::-1]
-    sns.heatmap(pivot_table, vmin=0, vmax=1)
+    sns.heatmap(pivot_table, vmin=0, vmax=0.5)
     plt.savefig("rate_sensitivity.eps")
     plt.tight_layout()
     plt.show()
 
-    #rate x ba
 
 
 def plot_rate_estimation_errors_for_dsds(batch_size=16, cross_validate=False):

@@ -1,7 +1,8 @@
 from itertools import starmap
 
+import matplotlib.pyplot as plt
 import pandas as pd
-
+from sklearn.decomposition import PCA
 from torch.utils.data import RandomSampler
 
 from tqdm import tqdm
@@ -76,9 +77,6 @@ def convert_to_pandas_df(train_features, train_losses,
     def add_entries(dataset, features_dict, losses_dict, fold_label_override=None):
         for fold, features in features_dict.items():
             losses = losses_dict[fold]
-            print(losses.shape)
-            print(features.shape)
-
             assert len(losses)==len(features)
             label = fold_label_override if fold_label_override else fold
             for i in range(features.shape[0]):
@@ -295,7 +293,7 @@ class BatchedFeatureSD(FeatureSD):
 
 
 
-class RabanserSD(FeatureSD):
+class RabanserSD(BatchedFeatureSD):
     def __init__(self, rep_model,k):
         super().__init__(rep_model, feature_fns=[])
         self.k=k
@@ -303,26 +301,33 @@ class RabanserSD(FeatureSD):
     def get_features(self, dataloader):
         features = np.zeros(len(dataloader))
         # self.train_test_encodings = np.reshape(self.train_test_encodings, (len(self.train_test_encodings)*self.testbed.batch_size, self.rep_model.latent_dim))
-
-        with Pool(20) as pool:
+        pca = PCA(2)
+        pca_enc = pca.fit_transform(self.train_test_encodings)
+        # print(pca_enc.shape)
+        with Pool(16) as pool:
             for i, data in tqdm(enumerate(dataloader), total=len(dataloader), desc="Computing Features"):
                 x = data[0].cuda()
                 with torch.no_grad():
                     x_encodings = self.rep_model.get_encoding(x).detach().cpu().numpy()
+                if i==0 and self.k==0:
+                    plt.scatter(pca_enc[:, 0], pca_enc[:, 1], label="train", alpha=0.5)
+                    trans = pca.transform(x_encodings)
+                    plt.scatter(trans[:, 0], trans[:, 1], label="test")
+                    plt.legend()
+                    plt.title(self.testbed.sampler)
+                    plt.show()
                 enc_dim = range(x_encodings.shape[-1])
                 if self.k==0:
                     results = pool.starmap(ks_distance,
                                            [(x_encodings[:, z], self.train_test_encodings[:, z]) for z in enc_dim])
                     results = np.array(results)
-                    features[i] = np.mean(results[results!=-1])
+                    features[i] = np.min(results[results!=-1])
                 else:
-
                     k_nearest_idx = get_debiased_samples(self.train_test_encodings, x_encodings, k=self.k)
                     iterable = [(x_encodings[:, z], self.train_test_encodings[k_nearest_idx, z]) for z in enc_dim]
                     results = pool.starmap(ks_distance, iterable)
                     results = np.array(results)
-
-                    features[i] = np.mean(results[results!=-1])
+                    features[i] = np.min(results[results!=-1])
         return features
 
 class KNNFeaturewiseSD(FeatureSD):
