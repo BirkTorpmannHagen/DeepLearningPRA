@@ -243,7 +243,7 @@ def ood_detector_correctness_prediction_accuracy(batch_size, shift="normal"):
             data = pd.DataFrame(data_dict)
             data.replace(DSD_PRINT_LUT, inplace=True)
             data.to_csv(f"ood_detector_data/ood_detector_correctness_{dataset}_{batch_size}.csv", index=False)
-
+            return data
 
 def ood_verdict_accuracy_table(batch_size):
     dfs = []
@@ -294,7 +294,6 @@ def get_ood_detector_data(data):
                         continue
                     data_train = data_copy[
                         (data_copy["shift"] == ood_val_fold) | (data_copy["shift"] == "ind_val")]
-
                     dsd = OODDetector(data_train, ood_val_fold)
                     data_copy["Verdict"] = data_copy.apply(lambda row: dsd.predict(row), axis=1)
                     data_copy["ood_val_fold"] = ood_val_fold

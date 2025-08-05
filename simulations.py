@@ -107,7 +107,11 @@ class UniformBatchSimulator(Simulator):
             batch = self.sample_a_uniform_batch(self.ood_test_shift)
         else:
             batch = self.sample_a_uniform_batch("ind_test")
+
+
         ood_pred = self.ood_detector.predict(batch)
+        if isinstance(ood_pred, pd.Series):
+            ood_pred = ood_pred.values[0] #dirty hack
         batch["ood_pred"] = ood_pred #todo, this is a hack
         # self.loss_trace_for_eval.update(batch["loss"])
         self.dsd_trace.update(int(ood_pred))
@@ -130,7 +134,6 @@ class UniformBatchSimulator(Simulator):
                                            "Accuracy": [accuracy, accuracy], "ood_pred": [ood_pred, ood_pred], "is_ood": [shifted, shifted],
                                            "Estimated Rate":[self.detector_tree.rate, self.base_tree.rate],
                  "ind_acc": [self.ind_val_acc, self.ind_val_acc], "ood_val_acc": [self.ood_val_acc, self.ood_val_acc], "ood_test_acc": [self.ood_test_acc, self.ood_test_acc]})
-
             return data
 
 
@@ -145,7 +148,6 @@ class UniformBatchSimulator(Simulator):
             if current_horizon_results is not None:
                 results.append(current_horizon_results)
                 if len(results)>self.dsd_trace.trace_length:
-
                     df = pd.concat(results[-self.dsd_trace.trace_length:]) #get the data corresponding to the last trace length
                     results_trace.append(df.groupby(["Tree"]).mean().reset_index())
         results_df = pd.concat(results_trace)
