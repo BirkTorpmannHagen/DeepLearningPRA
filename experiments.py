@@ -13,7 +13,10 @@ from simulations import *
 from utils import *
 import pandas as pd
 from components import OODDetector
-
+from experiments.dataset_analysis import *
+from experiments.runtime_classification import *
+from experiments.pra import *
+from experiments.loss_regression import *
 
 def simulate_dsd_accuracy_estimation(data, rate, val_set, test_set, ba, tpr, tnr, dsd):
     sim = UniformBatchSimulator(data, ood_test_shift=test_set, ood_val_shift=val_set, estimator=BernoulliEstimator,
@@ -213,28 +216,7 @@ def accuracy_by_fold_and_dsd_verdict():
     # g.map_dataframe(sns.lineplot, x="batch_size", y="correct_prediction", hue="feature_name")
 
 
-def get_datasetwise_risk():
-    results_list = []
-    for dsd in DSDS:
-        for model_name in ["deeplabv3plus", "unet", "segformer"]:
-            df = load_pra_df("Polyp", dsd, model=model_name, batch_size=1, samples=1000)
-            for dataset in ["noise", "ind_test", "EndoCV2020", "EtisLaribDB", "CVC-ClinicDB" ]:
-                if dataset not in df["shift"].unique():
-                    print(f"Dataset {dataset} not in df")
-                    continue
-                print()
-                for ood_val_shift in ["EndoCV2020", "EtisLaribDB", "CVC-ClinicDB"]:
-                    sim = UniformBatchSimulator(df, ood_test_shift=dataset, ood_val_shift=ood_val_shift, maximum_loss=0.5, use_synth=False)
-                    results = sim.sim(1, 600)
-                    results["Dataset"]=dataset
-                    results["Model"]=model_name
-                    results["ood_val_shift"]=ood_val_shift
-                    results = results.groupby(["Model", "Tree",  "Dataset"])[["True Risk", "Accuracy"]].mean().reset_index()
-                    results["DSD"]=dsd
-                    results_list.append(results)
-    results = pd.concat(results_list)
-    print(results.groupby(["Model", "DSD", "Dataset", "Tree"])[["True Risk", "Accuracy"]].mean())
-    results.to_csv("datasetwise_risk.csv")
+
 
 def examine_feature_distributions():
     df = load_all(1)
@@ -355,7 +337,7 @@ def run_rv_experiments():
     # simple batching
     # ood_verdict_plots_batched()
     # examine_feature_distributions(64)
-    examine_rabanser_feature_distributions(8)
+    # examine_rabanser_feature_distributions(8)
 
     # ood_detector_correctness_prediction_accuracy(64)
     # ood_verdict_accuracy_table(32)
@@ -366,8 +348,8 @@ def run_rv_experiments():
 
     # runtime verification
     # plot_batching_effect("NICO", "entropy")
-    # eval_debiased_ood_detectors()
-    # debiased_plots()
+    eval_debiased_ood_detectors()
+    debiased_plots()
 
     # loss regression
     # get_gam_data(load=False)
@@ -382,6 +364,14 @@ def run_rv_experiments():
 
     # ood_verdict_plots_batched()
 
+def run_loss_regression_experiments():
+    regplot_by_shift("NICO")
+    plot_intensitywise_kdes()
+    # plot_variances()
+    # regplots(1)
+
+
+
 def run_pra_experiments():
     # collect_rate_estimator_data()
     # eval_rate_estimator()
@@ -393,19 +383,21 @@ def run_pra_experiments():
 
     # collect_tpr_tnr_sensitivity_data()
     # collect_dsd_accuracy_estimation_data()
-    plot_dsd_acc_errors()
+    # plot_dsd_acc_errors()
     # plot_dsd_accuracies()
     # uniform_bernoulli(data, load = False)
     # show_rate_risk()
     # cost_benefit_analysis()
+    # get_datasetwise_risk()
+    get_risk_tables()
+    # get_error_rate_given_rv()
 
 if __name__ == '__main__':
     #accuracies on each dataset
-    from experiments.dataset_analysis import *
-    from experiments.runtime_classification import *
-    from experiments.pra import *
+
     # run_rv_experiments()
-    run_pra_experiments()
+    run_loss_regression_experiments()
+    # run_pra_experiments()
 
 
 

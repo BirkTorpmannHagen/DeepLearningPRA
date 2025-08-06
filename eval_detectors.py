@@ -9,17 +9,22 @@ def compute_stats(train_features, train_losses, ind_val_features, ind_val_losses
     for df, feature_name in zip(dfs, feature_names):
         df.to_csv(f"{fname}_{feature_name}.csv")
 
+def compute_stats_no_ind(ood_features, ood_losses, fname, feature_names):
+    dfs = convert_to_pandas_df_no_ind(ood_features, ood_losses, feature_names)
+    for df, feature_name in zip(dfs, feature_names):
+        df.to_csv(f"{fname}_{feature_name}.csv")
 
 def collect_data(testbed_constructor, dataset_name, mode="noise"):
-    bench = testbed_constructor("classifier", mode=mode)
+    bench = testbed_constructor("classifier", mode=mode, batch_size=16)
     # features = [mahalanobis]
     features = [cross_entropy, grad_magnitude, energy,knn, typicality, softmax]
 
     # features = [knn]
     tsd = FeatureSD(bench.classifier,features)
     tsd.register_testbed(bench)
-    compute_stats(*tsd.compute_pvals_and_loss(),
-                  fname=f"final_data/{dataset_name}_{mode}", feature_names=[f.__name__ for f in features])
+    compute_stats_no_ind(*tsd.compute_pvals_and_loss(noind=True),fname=f"final_data/{dataset_name}_{mode}", feature_names=[f.__name__ for f in features])
+    # compute_stats(*tsd.compute_pvals_and_loss(),
+    #               fname=f"final_data/{dataset_name}_{mode}", feature_names=[f.__name__ for f in features])
 
 
 def collect_debiased_data(testbed_constructor, dataset_name, mode="noise", sampler="RandomSampler", k=5, batch_size=8):
@@ -48,7 +53,7 @@ def collect_debiased_data(testbed_constructor, dataset_name, mode="noise", sampl
     # features = [rabanser_ks]
     tsd = BatchedFeatureSD(bench.classifier,features,k=k)
     tsd.register_testbed(bench)
-    compute_stats(*tsd.compute_pvals_and_loss(),
+    compute_stats_no_ind(*tsd.compute_pvals_and_loss(noind=True),
                   fname=f"debiased_data/{dataset_name}_{mode}_{sampler}_{batch_size}_k={k}", feature_names=[f.__name__ for f in features])
 
 def collect_rabanser_data(testbed_constructor, dataset_name, mode="noise", sampler="RandomSampler", k=5, batch_size=8):
@@ -129,13 +134,8 @@ def collect_bias_data(batch_size):
 
 
 def collect_single_data(testbed):
-    for mode in ["normal"]:
-        print(testbed.__name__.split("TestBed")[0])
+    for mode in SYNTHETIC_SHIFTS:
         collect_data(testbed, testbed.__name__.split("TestBed")[0], mode=mode)
-        # collect_data(NicoTestBed, "NICO", mode=mode)
-        # collect_data(Office31TestBed, "Office31", mode=mode)
-        # collect_data(CCTTestBed, "CCT", mode=mode)
-        # collect_data(PolypTestBed, "Polyp", mode=mode)
 
 
 
@@ -143,15 +143,19 @@ if __name__ == '__main__':
     from features import *
     # torch.multiprocessing.set_start_method('spawn')
     # collect_bias_data(-1)
-    for batch_size in BATCH_SIZES[1:]:
+    # for batch_size in BATCH_SIZES[1:]:
         collect_bias_data(batch_size)
 
 
     # input("next")
     # collect_data(CCTTestBed, "CCT",mode="normal")
     # collect_bias_data(5)
-    # collect_single_data(OfficeHomeTestBed)
 
+    collect_single_data(OfficeHomeTestBed)
+    collect_single_data(Office31TestBed)
+    collect_single_data(NicoTestBed)
+    collect_single_data(CCTTestBed)
+    collect_single_data(PolypTestBed)
     # bench = NjordTestBed(10)
     # collect_bias_data(5)
     # collect_bias_data(-1)

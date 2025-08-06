@@ -113,6 +113,45 @@ def convert_to_pandas_df(train_features, train_losses,
 
     return dataframes
 
+def convert_to_pandas_df_no_ind(
+                         ood_features, ood_losses,
+                         feature_names):
+    def add_entries(dataset, features_dict, losses_dict, fold_label_override=None):
+        for fold, features in features_dict.items():
+            losses = losses_dict[fold]
+            assert len(losses)==len(features)
+            label = fold_label_override if fold_label_override else fold
+            for i in range(features.shape[0]):
+                try:
+                    dataset.append({
+                        "fold": label,
+                        "feature_name": feature_name,
+                        "feature": features[i][fi],
+                        "loss": losses[i][0],
+                        "acc": losses[i][1],
+                        "idx": losses[i][2],
+                        "class": losses[i][3] if losses.shape[1]>3 else None,
+                    })
+                except IndexError:
+                    dataset.append({
+                        "fold": label,
+                        "feature_name": feature_name,
+                        "feature": features[i],
+                        "loss": losses[i][0],
+                        "acc": losses[i][1],
+                        "idx": losses[i][2],
+                        "class": losses[i][3] if losses.shape[1] > 3 else None,
+                    })
+
+    dataframes = []
+
+    for fi, feature_name in enumerate(feature_names):
+        dataset = []
+        add_entries(dataset, ood_features, ood_losses)
+        dataframes.append(pd.DataFrame(dataset))
+
+    return dataframes
+
 class BaseSD:
     def __init__(self, rep_model):
         self.rep_model = rep_model
@@ -176,7 +215,7 @@ class FeatureSD(BaseSD):
 
         return features, losses
 
-    def compute_pvals_and_loss(self):
+    def compute_pvals_and_loss(self, noind=False):
         """
 
         :param sample_size: sample size for the tests
@@ -187,44 +226,47 @@ class FeatureSD(BaseSD):
         """
 
         #these features are necessary to compute before-hand in order to compute knn and typicality
-        self.train_test_encodings = self.get_encodings(self.testbed.ind_loader()["ind_train"])
-
-        train_features, train_loss = self.compute_features_and_loss_for_loaders(self.testbed.ind_loader())
-        ind_val_features, ind_val_losses = self.compute_features_and_loss_for_loaders(self.testbed.ind_val_loader())
-        ind_test_features, ind_test_losses = self.compute_features_and_loss_for_loaders(self.testbed.ind_test_loader())
-
-
-        ood_features, ood_losses = self.compute_features_and_loss_for_loaders(self.testbed.ood_loaders())
-
-        return train_features, train_loss, ind_val_features,ind_val_losses, ind_test_features, ind_test_losses, ood_features,  ood_losses
+        if not noind:
+            self.train_test_encodings = self.get_encodings(self.testbed.ind_loader()["ind_train"])
+            train_features, train_loss = self.compute_features_and_loss_for_loaders(self.testbed.ind_loader())
+            ind_val_features, ind_val_losses = self.compute_features_and_loss_for_loaders(self.testbed.ind_val_loader())
+            ind_test_features, ind_test_losses = self.compute_features_and_loss_for_loaders(self.testbed.ind_test_loader())
+            ood_features, ood_losses = self.compute_features_and_loss_for_loaders(self.testbed.ood_loaders())
+            return train_features, train_loss, ind_val_features,ind_val_losses, ind_test_features, ind_test_losses, ood_features,  ood_losses
+        else:
+            self.train_test_encodings = self.get_encodings(self.testbed.ind_loader()["ind_train"])
+            ood_features, ood_losses = self.compute_features_and_loss_for_loaders(self.testbed.ood_loaders())
+            return ood_features,  ood_losses
 
 class BatchedFeatureSD(FeatureSD):
     def __init__(self, rep_model, feature_fns, k=5):
         super().__init__(rep_model, feature_fns)
         self.k = k
 
-    def compute_pvals_and_loss(self):
-        loader = self.testbed.ind_loader()["ind_train"]
-
-        self.train_test_encodings = super(BatchedFeatureSD, self).get_encodings(self.testbed.ind_loader()["ind_train"]).reshape((len(self.testbed.ind_loader()["ind_train"])*self.testbed.batch_size, self.rep_model.latent_dim))
+    def compute_pvals_and_loss(self, noind=True):
         indloaders = self.testbed.ind_loader()
-        self.train_features = dict(
-            zip(indloaders.keys(),
-                          [super(BatchedFeatureSD, self).get_features(loader)
-                           for fold_name, loader in indloaders.items()]))
 
-        train_loaders = self.testbed.ind_loader()
-        train_loss = dict(
-            zip(train_loaders.keys(),
-                [self.testbed.compute_losses(loader) for fold_name, loader in train_loaders.items()]))
+        try:
+            self.train_test_encodings = np.load(f"cache_{self.testbed.__class__.__name__}_train_test_encodings.npy")
+            self.train_features_raw = np.load(f"cache_{list_to_str(self.feature_fns)}_{self.testbed.__class__.__name__}_train_features.npy")
+        except FileNotFoundError
+            self.train_test_encodings = super(BatchedFeatureSD, self).get_encodings(self.testbed.ind_loader()["ind_train"]).reshape((len(self.testbed.ind_loader()["ind_train"])*self.testbed.batch_size, self.rep_model.latent_dim))
+            self.train_features_raw = super(BatchedFeatureSD, self).get_features(indloaders)
 
-        ind_val_features, ind_val_losses = self.compute_features_and_loss_for_loaders(self.testbed.ind_val_loader())
-        ind_test_features, ind_test_losses = self.compute_features_and_loss_for_loaders(self.testbed.ind_test_loader())
+        self.train_features = {"ind_train": self.train_features_raw}
+        if not noind:
+            train_loaders = self.testbed.ind_loader()
+            train_loss = dict(
+                zip(train_loaders.keys(),
+                    [self.testbed.compute_losses(loader) for fold_name, loader in train_loaders.items()]))
 
-
+            ind_val_features, ind_val_losses = self.compute_features_and_loss_for_loaders(self.testbed.ind_val_loader())
+            ind_test_features, ind_test_losses = self.compute_features_and_loss_for_loaders(self.testbed.ind_test_loader())
         ood_features, ood_losses = self.compute_features_and_loss_for_loaders(self.testbed.ood_loaders())
-
-        return self.train_features, train_loss, ind_val_features,ind_val_losses, ind_test_features, ind_test_losses, ood_features,  ood_losses
+        if noind:
+            return ood_features, ood_losses
+        else:
+            return self.train_features, train_loss, ind_val_features,ind_val_losses, ind_test_features, ind_test_losses, ood_features,  ood_losses
 
 
     def get_features(self, dataloader):
