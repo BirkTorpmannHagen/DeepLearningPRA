@@ -1,4 +1,4 @@
-import numpy
+import numpy as np
 import pandas as pd
 import pygam
 import seaborn as sns
@@ -6,8 +6,7 @@ from matplotlib import pyplot as plt, patches as patches
 from scipy.stats import spearmanr
 
 from components import OODDetector
-from plots import load_dfs
-from utils import BATCH_SIZES, load_all
+from utils import *
 
 
 def get_gam_data(load=True):
@@ -91,9 +90,7 @@ def get_gam_data(load=True):
 
 
 def regplots(sample_size):
-    def bin_Y(group, bins):
-        group['feature_bin'] = pd.qcut(group['feature'], bins, labels=False, duplicates='drop')
-        return group
+
 
     df = load_all(batch_size=sample_size, prefix="final_data", shift="", samples=40)
     df = df[df["fold"]!="train"] #exclude training data, to not skew results
@@ -111,9 +108,25 @@ def regplots(sample_size):
         threshold = OODDetector(data, ood_val_shift="Organic Shift", threshold_method="val_optimal").threshold
         plt.axvline(threshold, color=color, linestyle="--", label="Threshold")
 
-    g = sns.FacetGrid(df, row="Dataset", col="feature_name", margin_titles=True, sharex=False, sharey=False)
-    g.map_dataframe(sns.scatterplot, x="feature", y="loss", hue="shift", hue_order=hues,  alpha=0.5)
+    def custom_scatter(data, **kwargs):
+        kwargs.pop("color", None)  # Remove auto-passed color to prevent conflict
+        sns.scatterplot(data=data[data["ood"]], x="feature", y="loss", hue="shift", alpha=0.5, **kwargs)
+        sns.scatterplot(data=data[~data["ood"]], x="feature", y="loss", color="black", marker="x", alpha=1, **kwargs, label="InD")
+    df.replace(DSD_PRINT_LUT, inplace=True)
+    df = df[(df["shift"] == "Organic Shift") |
+            ((df["shift"] != "Organic Shift") &
+             (df.apply(lambda row: row["loss"] <= DATASETWISE_RANDOM_LOSS[row["Dataset"]], axis=1)))]
+    g = sns.FacetGrid(df, row="feature_name", col="Dataset", margin_titles=True, sharex=False, sharey=False)
+    g.map_dataframe(custom_scatter)
     g.map_dataframe(plot_threshold)
+    g.set_titles(row_template="Feature = {row_name}", col_template="{col_name}")
+
+    for ax, row_val in zip(g.axes[:, 0], g.row_names):
+        if row_val == "feature_name":
+            ax.set_ylabel("Feature")
+        else:
+            ax.set_ylabel(row_val)
+
     g.add_legend()
     for ax in g.axes.flat:
         ax.set_yscale("log")
@@ -121,79 +134,45 @@ def regplots(sample_size):
     plt.show()
 
 
-def regplot_by_shift(sample_size, simulate=False):
+def regplot_by_shift(dataset="NICO"):
+    print("Loading")
+    df = load_all(batch_size=30, shift="", samples=100)
+    df = df[df["fold"]!="train"]
+    df["shift_intensity"] = np.round(df["shift_intensity"],2)
+    # df = filter_max_loss(df)
+    df = df[~df["shift"].isin(["contrast", "brightness","smear"])]
+    print("Loaded!")
+    df = df[df["Dataset"]=="NICO"]
 
-    df = load_dfs(sample_size=sample_size, simulate=simulate)
-    df["ind"]=df["fold"]=="ind"
-    df["Shift Severity"]=df["fold"].apply(lambda x: round(float(x.split("_")[1]),2) if "_" in x else x)
-    df.rename(columns={"feature_name":"Feature"}, inplace=True)
-    df.replace({"typicality":"Typicality", "cross_entropy":"Cross Entropy", "knn":"KNN", "grad_magnitude":"GradNorm", "energy":"Energy", "softmax":"Softmax"}, inplace=True)
-    hues = df["Shift Severity"].unique()
-    if simulate:
-        df = df[df["KS"]==False]
-    df.replace({"normal":"Organic Shift"}, inplace=True)
-    g = sns.FacetGrid(df, row="Shift", col="Feature", margin_titles=True, sharex=False, sharey=False)
-    g.map_dataframe(sns.scatterplot, x="feature", y="loss", hue="Shift Severity", hue_order=hues)
+    special_intensities = ['InD', 'OoD']
+    unique_intensities = df["shift_intensity"].unique()
+    remaining_intensities = sorted([x for x in unique_intensities if x not in special_intensities])
+
+    base_colors = sns.color_palette(n_colors=2)  # For 'InD' and 'OoD'
+    mako_colors = sns.color_palette("mako", len(remaining_intensities))
+    full_palette = base_colors + mako_colors
+    hue_order = special_intensities + remaining_intensities
+    palette = {k: c for k, c in zip(hue_order, full_palette)}
+    df["shift"] = df["shift"].apply(lambda x: x if x in SYNTHETIC_SHIFTS else "Organic")
+    def plot_max_loss(data,color=None, **kwargs):
+        dataset = data["Dataset"].unique()[0]
+        plt.axhline(DATASETWISE_RANDOM_LOSS[dataset], color=color, linestyle="--", label="Random Guessing")
+    g = sns.FacetGrid(df, row="shift", col="feature_name", margin_titles=True, sharex=False, sharey=False)
+    g.map_dataframe(sns.scatterplot, x="feature", y="loss", hue="shift_intensity", palette=palette, hue_order=hue_order)
+    g.map_dataframe(plot_max_loss)
     g.add_legend()
     plt.show()
 
+def filter_max_loss(df):
+    return df[(df["shift"] == "Organic Shift") |
+            ((df["shift"] != "Organic Shift") &
+             (df.apply(lambda row: row["loss"] <= DATASETWISE_RANDOM_LOSS[row["Dataset"]], axis=1)))]
 
-def plot_variances(df):
-    sampled = load_dfs(10, simulate=True, samples=30)
-    sampled = sampled[(sampled["KS"] == False) & (sampled["Dataset"] == "NICO")]
-    df["Shift Severity"] = df["fold"].apply(
-        lambda x: round(float(x.split("_")[1]), 2) if "_" in x else 0 if "ind" in x else 0.35)
-    sampled["Shift Severity"] = sampled["fold"].apply(
-        lambda x: round(float(x.split("_")[1]), 2) if "_" in x else 0 if "ind" in x else 0.35)
 
-    data_feat = df.groupby(["Dataset", "feature_name", "Shift", "Shift Severity"])["feature"].std().reset_index()
-    data_loss = df.groupby(["Dataset", "feature_name", "Shift", "Shift Severity"])["loss"].std().reset_index()
-    data_mean_feat = df.groupby(["Dataset", "feature_name", "Shift", "Shift Severity"])["feature"].mean().reset_index()
-    data_mean_loss = df.groupby(["Dataset", "feature_name", "Shift", "Shift Severity"])["loss"].mean().reset_index()
-    data_feat.rename(columns={"feature": "Feature Variance"}, inplace=True)
-    data_loss.rename(columns={"loss": "Loss Variance"}, inplace=True)
-    data = pd.merge(data_feat, data_loss, on=["Dataset", "feature_name", "Shift", "Shift Severity"])
-    data = pd.merge(data, data_mean_feat, on=["Dataset", "feature_name", "Shift", "Shift Severity"])
-    data = pd.merge(data, data_mean_loss, on=["Dataset", "feature_name", "Shift", "Shift Severity"])
-    name_map = {"grad_magnitude": "GradNorm", "cross_entropy": "Cross Entropy", "knn": "KNN", "softmax":"Softmax", "typicality":"Typicality", "energy":"Energy"}
-    shift_map = {"normal": "Organic Shift", "noise": "Additive Noise", "multnoise":"Multiplicative Noise", "hue":"Hue Shift", "saltpepper": "Salt & Pepper Noise"}
-    g = sns.FacetGrid(data, row="Dataset", col="feature_name", margin_titles=True, sharex=False, sharey=False)
-    g.map_dataframe(sns.lineplot, x="Shift Severity", y="Feature Variance", hue="Shift", alpha=0.5)
-    g.add_legend()
-    plt.show()
-
-    g = sns.FacetGrid(data, row="Dataset", col="feature_name", margin_titles=True, sharex=False, sharey=False)
-    g.map_dataframe(sns.lineplot, x="Shift Severity", y="Loss Variance", hue="Shift", alpha=0.5)
-    g.add_legend()
-    plt.show()
-    data = data[data["Dataset"] == "NICO"]
-
-    fig, ax = plt.subplots(len(data["Shift"].unique()), len(data["feature_name"].unique()), figsize=(20, 20))
-    color_map = dict(
-        zip(sorted(data["Shift Severity"].unique()), sns.color_palette("magma", len(data["Shift Severity"].unique()))))
-
-    # Add a color column to the sampled DataFrame
-    sampled["color"] = sampled["Shift Severity"].map(color_map)
-
-    for i, sev in enumerate(data["Shift"].unique()):
-        for j, feature in enumerate(data["feature_name"].unique()):
-            subdf = data[(data["Shift"] == sev) & (data["feature_name"] == feature)]
-            sampled_subdf = sampled[(sampled["Shift"] == sev) & (sampled["feature_name"] == feature)]
-
-            # Plot scatter points for the sampled data with a black outline
-            ax[i, j].scatter(sampled_subdf['feature'], sampled_subdf['loss'],
-                             color=sampled_subdf['color'], alpha=0.5,
-                             edgecolors='black', linewidth=1.5)
-
-            for row_n, (_, row) in enumerate(subdf.iterrows()):
-                color = color_map[row['Shift Severity']]
-                ellipse = patches.Ellipse((row['feature'], row['loss']), row['Feature Variance'], row['Loss Variance'],
-                                          color=color, alpha=0.3)
-                ax[i, j].add_patch(ellipse)
-
-            ax[i, j].set_title(f"{shift_map[sev]}|{name_map[feature]}")
-    plt.tight_layout()
-    plt.savefig("variance_plot.pdf")
+def plot_intensitywise_kdes():
+    df = load_all(batch_size=1, shift="", prefix="final_data")
+    g = sns.FacetGrid(df, row="Dataset", col="shift")
+    g.map_dataframe(sns.kdeplot, x="feature", y="loss", hue="shift_intensity")
     plt.show()
 
 

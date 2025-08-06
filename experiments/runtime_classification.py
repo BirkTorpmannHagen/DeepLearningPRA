@@ -425,7 +425,7 @@ def eval_debiased_ood_detectors():
         for dataset in DATASETS:
             with tqdm(total=len(DSDS) * 2*3) as pbar:
                 for feature in DSDS:
-                    for assessed_correctness in [False]:
+                    for assessed_correctness in [True, False]:
                         for k in [-1, 0,1,5]:
                             data_dataset = data[(data["Dataset"] == dataset) & (data["feature_name"] == feature) & (data["k"]==k) & (data["batch_size"]==batch_size)]
                             if data_dataset.empty:

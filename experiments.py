@@ -13,7 +13,10 @@ from simulations import *
 from utils import *
 import pandas as pd
 from components import OODDetector
-
+from experiments.dataset_analysis import *
+from experiments.runtime_classification import *
+from experiments.pra import *
+from experiments.loss_regression import *
 
 def simulate_dsd_accuracy_estimation(data, rate, val_set, test_set, ba, tpr, tnr, dsd):
     sim = UniformBatchSimulator(data, ood_test_shift=test_set, ood_val_shift=val_set, estimator=BernoulliEstimator,
@@ -346,7 +349,7 @@ def run_rv_experiments():
     # runtime verification
     # plot_batching_effect("NICO", "entropy")
     eval_debiased_ood_detectors()
-    # debiased_plots()
+    debiased_plots()
 
     # loss regression
     # get_gam_data(load=False)
@@ -360,6 +363,14 @@ def run_rv_experiments():
     # loss_verdict_histogram(1)
 
     # ood_verdict_plots_batched()
+
+def run_loss_regression_experiments():
+    regplot_by_shift("NICO")
+    plot_intensitywise_kdes()
+    # plot_variances()
+    # regplots(1)
+
+
 
 def run_pra_experiments():
     # collect_rate_estimator_data()
@@ -383,10 +394,9 @@ def run_pra_experiments():
 
 if __name__ == '__main__':
     #accuracies on each dataset
-    from experiments.dataset_analysis import *
-    from experiments.runtime_classification import *
-    from experiments.pra import *
-    run_rv_experiments()
+
+    # run_rv_experiments()
+    run_loss_regression_experiments()
     # run_pra_experiments()
 
 

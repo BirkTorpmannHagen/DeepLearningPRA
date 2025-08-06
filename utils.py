@@ -139,7 +139,8 @@ def load_all_biased(prefix="debiased_data", filter_batch=False):
                         if feature=="softmax" and dataset=="Polyp":
                             continue
                         try:
-                            df = pd.read_csv(join(prefix, f"{dataset}_normal_{sampler}_{batch_size}_k={k}_{feature}.csv"))
+                            df = pd.read_csv(join(prefix, f"{dataset}_normal_{sampler}_{batch_size}_k={k}_{feature}.csv"), converters={
+    "feature": lambda x: float(x) if x not in ("[]", "") else 0.0})
                         except FileNotFoundError:
                             print(f"No data found for {prefix}/{dataset}_normal_{sampler}_{batch_size}_k={k}_{feature}.csv")
                             continue
@@ -183,16 +184,12 @@ def load_all(batch_size=30, samples=1000, feature="all", shift="normal", prefix=
 
 
 def load_pra_df(dataset_name, feature_name, model="" , batch_size=1, samples=1000, prefix="final_data", shift="normal", reduce=True):
+    if dataset_name=="Polyp" and feature_name=="softmax":
+        return pd.DataFrame() #softmax does not work for segmentation
     try:
         df = pd.concat([pd.read_csv(join(prefix, fname)) for fname in os.listdir(prefix) if dataset_name in fname and feature_name in fname and model in fname  and shift in fname])
     except:
-        print(prefix)
-        print(dataset_name)
-        print(feature_name)
-        print(model)
-        print(shift)
         print("no data found for ", dataset_name, feature_name)
-        input()
         return pd.DataFrame()
 
     df["Dataset"]=dataset_name
@@ -240,11 +237,13 @@ DATASETWISE_RANDOM_LOSS = {
     "OfficeHome": -np.log(1/65),
     "Office31": -np.log(1/31),
     "NICO": -np.log(1/60),
-    "Polyp": -10 #segmentation task; never incidentally correct
+    "Polyp": 1 #segmentation task; never incidentally correct
 }
 BIAS_TYPES = ["Unbiased", "Class", "Synthetic", "Temporal"]
 SAMPLERS = ["RandomSampler",  "ClassOrderSampler", "ClusterSampler", "SequentialSampler",]
 SYNTHETIC_SHIFTS = ["noise", "multnoise", "brightness", "contrast", "hue", "saltpepper", "saturation",  "smear"]
+SHIFT_PRINT_LUT= {"normal": "Organic", "noise": "Additive Noise", "multnoise": "Multiplicative Noise",
+             "hue": "Hue", "saltpepper": "Salt+Pepper Noise", "brightness":"Brightness", "contrast":"Contrast", "smear":"Smear"}
 
 SAMPLER_LUT = dict(zip(SAMPLERS, BIAS_TYPES))
 # BATCH_SIZES = np.arange(1, 64)

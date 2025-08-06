@@ -11,7 +11,7 @@ def compute_stats(train_features, train_losses, ind_val_features, ind_val_losses
 
 
 def collect_data(testbed_constructor, dataset_name, mode="noise"):
-    bench = testbed_constructor("classifier", mode=mode)
+    bench = testbed_constructor("classifier", mode=mode, batch_size=16)
     # features = [mahalanobis]
     features = [cross_entropy, grad_magnitude, energy,knn, typicality, softmax]
 
@@ -129,13 +129,8 @@ def collect_bias_data(batch_size):
 
 
 def collect_single_data(testbed):
-    for mode in ["normal"]:
-        print(testbed.__name__.split("TestBed")[0])
+    for mode in SYNTHETIC_SHIFTS:
         collect_data(testbed, testbed.__name__.split("TestBed")[0], mode=mode)
-        # collect_data(NicoTestBed, "NICO", mode=mode)
-        # collect_data(Office31TestBed, "Office31", mode=mode)
-        # collect_data(CCTTestBed, "CCT", mode=mode)
-        # collect_data(PolypTestBed, "Polyp", mode=mode)
 
 
 
@@ -150,8 +145,12 @@ if __name__ == '__main__':
     # input("next")
     # collect_data(CCTTestBed, "CCT",mode="normal")
     # collect_bias_data(5)
-    # collect_single_data(OfficeHomeTestBed)
 
+    # collect_single_data(OfficeHomeTestBed)
+    # collect_single_data(Office31TestBed)
+    # collect_single_data(NicoTestBed)
+    # collect_single_data(CCTTestBed)
+    # collect_single_data(PolypTestBed)
     # bench = NjordTestBed(10)
     # collect_bias_data(5)
     # collect_bias_data(-1)
