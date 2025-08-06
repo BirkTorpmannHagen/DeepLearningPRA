@@ -249,7 +249,7 @@ class BatchedFeatureSD(FeatureSD):
         try:
             self.train_test_encodings = np.load(f"cache_{self.testbed.__class__.__name__}_train_test_encodings.npy")
             self.train_features_raw = np.load(f"cache_{list_to_str(self.feature_fns)}_{self.testbed.__class__.__name__}_train_features.npy")
-        except FileNotFoundError
+        except FileNotFoundError:
             self.train_test_encodings = super(BatchedFeatureSD, self).get_encodings(self.testbed.ind_loader()["ind_train"]).reshape((len(self.testbed.ind_loader()["ind_train"])*self.testbed.batch_size, self.rep_model.latent_dim))
             self.train_features_raw = super(BatchedFeatureSD, self).get_features(indloaders)
 
