@@ -186,7 +186,13 @@ def load_pra_df(dataset_name, feature_name, model="" , batch_size=1, samples=100
     try:
         df = pd.concat([pd.read_csv(join(prefix, fname)) for fname in os.listdir(prefix) if dataset_name in fname and feature_name in fname and model in fname  and shift in fname])
     except:
+        print(prefix)
+        print(dataset_name)
+        print(feature_name)
+        print(model)
+        print(shift)
         print("no data found for ", dataset_name, feature_name)
+        input()
         return pd.DataFrame()
 
     df["Dataset"]=dataset_name
@@ -223,6 +229,7 @@ def load_pra_df(dataset_name, feature_name, model="" , batch_size=1, samples=100
 
 
 DSD_PRINT_LUT = {"grad_magnitude": "GradNorm", "cross_entropy" : "Entropy", "energy":"Energy", "knn":"kNN", "mahalanobis":"Mahalanobis", "softmax":"Softmax", "typicality":"Typicality"}
+DSD_LUT = {value: key for key, value in DSD_PRINT_LUT.items()}
 DATASETS = ["CCT", "OfficeHome", "Office31", "NICO", "Polyp"]
 DSDS = ["knn", "grad_magnitude", "cross_entropy", "energy", "typicality", "softmax", "rabanser"]
 # BATCH_SIZES = [32]

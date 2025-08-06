@@ -382,27 +382,30 @@ def run_rv_experiments():
 
     # ood_verdict_plots_batched()
 
-
-if __name__ == '__main__':
-    #accuracies on each dataset
-    from experiments.dataset_analysis import *
-    from experiments.runtime_classification import *
-    from experiments.pra import *
-    run_rv_experiments()
-
-
-
-
+def run_pra_experiments():
     # collect_rate_estimator_data()
     # eval_rate_estimator()
     # plot_dsd_accuracies(1000)
     # plot_rate_estimation_errors_for_dsds()
 
     # accuracy_by_fold_and_dsd_verdict()
-    #print(data)
+    # print(data)
 
     # collect_tpr_tnr_sensitivity_data()
     # collect_dsd_accuracy_estimation_data()
+    plot_dsd_acc_errors()
+    # plot_dsd_accuracies()
     # uniform_bernoulli(data, load = False)
     # show_rate_risk()
     # cost_benefit_analysis()
+
+if __name__ == '__main__':
+    #accuracies on each dataset
+    from experiments.dataset_analysis import *
+    from experiments.runtime_classification import *
+    from experiments.pra import *
+    # run_rv_experiments()
+    run_pra_experiments()
+
+
+
