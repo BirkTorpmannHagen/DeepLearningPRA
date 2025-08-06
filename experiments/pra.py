@@ -527,6 +527,48 @@ def plot_sensitivity_errors():
     plt.savefig("sensitivity_errors.pdf")
     plt.show()
 
+def get_datasetwise_risk():
+    results_list = []
+    for dsd in DSDS:
+        df = load_pra_df("Polyp", dsd, batch_size=1)
+        for dataset in ["ind_test", "EndoCV2020", "EtisLaribDB", "CVC-ClinicDB" ]:
+            for ood_val_shift in ["EndoCV2020", "EtisLaribDB", "CVC-ClinicDB"]:
+                sim = UniformBatchSimulator(df, ood_test_shift=dataset, ood_val_shift=ood_val_shift, maximum_loss=0.5, use_synth=False)
+                results = sim.sim(1, 600)
+
+                results["Dataset"]=dataset
+                results["Model"]=model_name
+                results["ood_val_shift"]=ood_val_shift
+                results = results.groupby(["Model", "Tree",  "Dataset"])[["True Risk", "Accuracy"]].mean().reset_index()
+                results["DSD"]=dsd
+                results_list.append(results)
+    results = pd.concat(results_list)
+    print(results.groupby(["Model", "DSD", "Dataset", "Tree"])[["True Risk", "Accuracy"]].mean())
+    results.to_csv("datasetwise_risk.csv")
+
+def get_error_rate_given_rv():
+    results_list = []
+    for dataset in DATASETS:
+        for dsd in DSDS:
+            if dsd=="rabanser":
+                continue
+            df = load_pra_df(dataset, dsd, batch_size=1)
+            ood_folds = df[df["ood"]]["fold"].unique()
+            for ood_val, ood_test in itertools.product(ood_folds, ood_folds):
+                data_train = df[(df["fold"]=="ind_val")|(df["fold"]==ood_val)]
+                data_test = df[(df["fold"]=="ind_test")|(df["fold"]==ood_test)]
+                ood_detector = OODDetector(data_train, ood_val)
+                data_test["detected_ood"]=ood_detector.predict(data_test)
+                missed_predictions = data_test[~data_test["correct_prediction"]]
+                missed_ood = missed_predictions[~missed_predictions["detected_ood"]]
+                for fold in data_test["fold"].unique():
+                    rv_prop = len(missed_ood[missed_ood["fold"]==fold])/len(data_test[data_test["fold"]==fold])
+                    vanilla_prop = 1-data_test[data_test["fold"]==fold]["correct_prediction"].mean()
+                    results_list.append({"Dataset":dataset, "Feature":dsd, "Fold":fold, "RV Proportion":rv_prop, "Vanilla Prop":vanilla_prop})
+
+    results = pd.DataFrame(results_list)
+    print(results.groupby(["Dataset", "Feature", "Fold"])[["RV Proportion", "Vanilla Prop"]].mean())
+    results.to_csv("datasetwise_incorrect_detections.csv")
 
 def get_risk_tables():
     df = pd.read_csv("datasetwise_risk.csv")

@@ -417,7 +417,7 @@ def debiased_ood_detector_correctness_prediction_accuracy(batch_size):
             data.to_csv(f"ood_detector_data/debiased_ood_detector_correctness_{dataset}_{batch_size}.csv", index=False)
 
 def eval_debiased_ood_detectors():
-    data = load_all_biased(prefix="old_debiased_data")
+    data = load_all_biased(prefix="debiased_data")
     data = data[data["fold"] != "train"]
     data_dict = []
 
