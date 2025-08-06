@@ -35,7 +35,6 @@ class PolypTestBed(BaseTestBed):
         self.mode = mode
 
         self.ind_train, self.ind_val, self.ind_test, self.etis, self.cvc, self.endo = build_polyp_dataset("../../Datasets/Polyps")
-        self.noise_range = np.arange(0.05, 0.3, 0.05)
         self.batch_size=batch_size
         #vae
         if rep_model=="vae":
