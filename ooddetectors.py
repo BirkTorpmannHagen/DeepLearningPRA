@@ -241,6 +241,8 @@ class FeatureSD(BaseSD):
 class BatchedFeatureSD(FeatureSD):
     def __init__(self, rep_model, feature_fns, k=5):
         super().__init__(rep_model, feature_fns)
+        self.feature_names = [fn.__name__() for fn in feature_fns]
+
         self.k = k
 
     def compute_pvals_and_loss(self, noind=True):
@@ -248,18 +250,20 @@ class BatchedFeatureSD(FeatureSD):
 
         try:
             self.train_test_encodings = np.load(f"cache_{self.testbed.__class__.__name__}_train_test_encodings.npy")
-            self.train_features_raw = np.load(f"cache_{list_to_str(self.feature_fns)}_{self.testbed.__class__.__name__}_train_features.npy")
-        except FileNotFoundError:
-            self.train_test_encodings = super(BatchedFeatureSD, self).get_encodings(self.testbed.ind_loader()["ind_train"]).reshape((len(self.testbed.ind_loader()["ind_train"])*self.testbed.batch_size, self.rep_model.latent_dim))
-            self.train_features_raw = super(BatchedFeatureSD, self).get_features(indloaders)
+            self.train_features_raw = np.load(f"cache_{self.feature_names}_{self.testbed.__class__.__name__}_train_features.npy")
+            print("successfully loaded ind")
 
+        except FileNotFoundError:
+            print("Collecting ind data")
+            self.train_test_encodings = super(BatchedFeatureSD, self).get_encodings(indloaders["ind_train"]).reshape((len(self.testbed.ind_loader()["ind_train"])*self.testbed.batch_size, self.rep_model.latent_dim))
+            self.train_features_raw = super(BatchedFeatureSD, self).get_features(indloaders["ind_train"])
+            np.save(f"cache_{self.testbed.__class__.__name__}_train_test_encodings.npy", self.train_test_encodings)
+            np.save(f"cache_{self.feature_names}_{self.testbed.__class__.__name__}_train_features.npy", self.train_features_raw)
         self.train_features = {"ind_train": self.train_features_raw}
         if not noind:
-            train_loaders = self.testbed.ind_loader()
             train_loss = dict(
                 zip(train_loaders.keys(),
-                    [self.testbed.compute_losses(loader) for fold_name, loader in train_loaders.items()]))
-
+                    [self.testbed.compute_losses(loader) for fold_name, loader in indloaders.items()]))
             ind_val_features, ind_val_losses = self.compute_features_and_loss_for_loaders(self.testbed.ind_val_loader())
             ind_test_features, ind_test_losses = self.compute_features_and_loss_for_loaders(self.testbed.ind_test_loader())
         ood_features, ood_losses = self.compute_features_and_loss_for_loaders(self.testbed.ood_loaders())
@@ -339,6 +343,7 @@ class RabanserSD(BatchedFeatureSD):
     def __init__(self, rep_model,k):
         super().__init__(rep_model, feature_fns=[])
         self.k=k
+        self.feature_names = ["rabanser"]
 
     def get_features(self, dataloader):
         features = np.zeros(len(dataloader))
