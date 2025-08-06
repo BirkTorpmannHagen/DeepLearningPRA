@@ -99,7 +99,7 @@ def load_all_rabanser(batch_size, prefix="debiased_data", k=0):
             try:
                 df = pd.read_csv(join(prefix, f"{dataset}_normal_{sampler}_{batch_size}_k={k}_rabanser.csv"))
             except FileNotFoundError:
-                print(f"Could not find {join(prefix, f"{dataset}_normal_{sampler}_{batch_size}_k={k}_rabanser.csv")}.csv")
+                print(f"Could not find  {dataset}_normal_{sampler}_{batch_size}_k={k}_rabanser.csv")
                 continue
             df["k"]=k
             df["bias"] = SAMPLER_LUT[sampler]
