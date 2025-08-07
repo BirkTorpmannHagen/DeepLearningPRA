@@ -48,12 +48,13 @@ def multiplicative_noise(x, intensity):
     noise = 1+torch.randn_like(x) * intensity*2
     return x * noise
 
-def salt_and_pepper(x, intensity):
+def salt_and_pepper(x, intensity, scale=0.5):
     seed_all(0)
     noise = torch.rand_like(x)
     x = x.clone()
-    x[noise<intensity] = 0
-    x[noise>1-intensity] = 1
+    scaled=intensity*scale
+    x[noise<scaled] = 0
+    x[noise>1-scale] = 1
     return x
 
 def smear(img, intensity):

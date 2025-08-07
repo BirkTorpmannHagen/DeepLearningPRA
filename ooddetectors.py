@@ -241,7 +241,7 @@ class FeatureSD(BaseSD):
 class BatchedFeatureSD(FeatureSD):
     def __init__(self, rep_model, feature_fns, k=5):
         super().__init__(rep_model, feature_fns)
-        self.feature_names = [fn.__name__() for fn in feature_fns]
+        self.feature_names = [fn.__name__ for fn in feature_fns]
 
         self.k = k
 

@@ -1,6 +1,6 @@
 from testbeds.base import *
 
-class NicoTestBed(BaseTestBed):
+class NICOTestBed(BaseTestBed):
 
     def __init__(self, sample_size, mode="severity", sampler="RandomSampler", batch_size=16):
         super().__init__( mode=mode, sampler=sampler, batch_size=batch_size)

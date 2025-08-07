@@ -365,10 +365,10 @@ def run_rv_experiments():
     # ood_verdict_plots_batched()
 
 def run_loss_regression_experiments():
-    regplot_by_shift("NICO")
-    plot_intensitywise_kdes()
+    # regplot_by_shift()
+    # plot_intensitywise_kdes()
     # plot_variances()
-    # regplots(1)
+    regplots(32)
 
 
 

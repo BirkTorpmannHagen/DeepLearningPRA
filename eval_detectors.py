@@ -53,7 +53,7 @@ def collect_debiased_data(testbed_constructor, dataset_name, mode="noise", sampl
     # features = [rabanser_ks]
     tsd = BatchedFeatureSD(bench.classifier,features,k=k)
     tsd.register_testbed(bench)
-    compute_stats_no_ind(*tsd.compute_pvals_and_loss(noind=True),
+    compute_stats(*tsd.compute_pvals_and_loss(),
                   fname=f"debiased_data/{dataset_name}_{mode}_{sampler}_{batch_size}_k={k}", feature_names=[f.__name__ for f in features])
 
 def collect_rabanser_data(testbed_constructor, dataset_name, mode="noise", sampler="RandomSampler", k=5, batch_size=8):
@@ -120,21 +120,23 @@ def collect_bias_data(batch_size):
         # for sampler in ["RandomSampler","ClusterSampler",  "ClassOrderSampler"]:
         for sampler in [ "RandomSampler","ClusterSampler", "SequentialSampler", "ClassOrderSampler"]:
             if sampler!="ClassOrderSampler":
-            #     collect_debiased_data(PolypTestBed, "Polyp", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-                collect_rabanser_data(PolypTestBed, "Polyp", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+                collect_debiased_data(PolypTestBed, "Polyp", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+                # collect_rabanser_data(PolypTestBed, "Polyp", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
 
-            # collect_debiased_data(CCTTestBed, "CCT", mode="normal",k=k, sampler=sampler, batch_size=batch_size)
-            # collect_debiased_data(OfficeHomeTestBed, "OfficeHome", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-            # collect_debiased_data(Office31TestBed, "Office31", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-            # collect_debiased_data(NicoTestBed, "NICO", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-            collect_rabanser_data(OfficeHomeTestBed, "OfficeHome", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-            collect_rabanser_data(Office31TestBed, "Office31", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-            collect_rabanser_data(CCTTestBed, "CCT", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-            collect_rabanser_data(NicoTestBed, "NICO", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+            collect_debiased_data(CCTTestBed, "CCT", mode="normal",k=k, sampler=sampler, batch_size=batch_size)
+            collect_debiased_data(OfficeHomeTestBed, "OfficeHome", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+            collect_debiased_data(Office31TestBed, "Office31", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+            collect_debiased_data(NICOTestBed, "NICO", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+            # collect_rabanser_data(OfficeHomeTestBed, "OfficeHome", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+            # collect_rabanser_data(Office31TestBed, "Office31", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+            # collect_rabanser_data(CCTTestBed, "CCT", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+            # collect_rabanser_data(NicoTestBed, "NICO", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
 
 
 def collect_single_data(testbed):
     for mode in SYNTHETIC_SHIFTS:
+        if mode!="saltpepper":
+            continue
         collect_data(testbed, testbed.__name__.split("TestBed")[0], mode=mode)
 
 
@@ -143,19 +145,19 @@ if __name__ == '__main__':
     from features import *
     # torch.multiprocessing.set_start_method('spawn')
     # collect_bias_data(-1)
-    for batch_size in BATCH_SIZES[1:]:
-        collect_bias_data(batch_size)
+    # for batch_size in BATCH_SIZES[1:]:
+    #     collect_bias_data(batch_size)
 
 
     # input("next")
     # collect_data(CCTTestBed, "CCT",mode="normal")
     # collect_bias_data(5)
 
-    # collect_single_data(OfficeHomeTestBed)
-    # collect_single_data(Office31TestBed)
-    # collect_single_data(NicoTestBed)
-    # collect_single_data(CCTTestBed)
-    # collect_single_data(PolypTestBed)
+    collect_single_data(OfficeHomeTestBed)
+    collect_single_data(Office31TestBed)
+    collect_single_data(NICOTestBed)
+    collect_single_data(CCTTestBed)
+    collect_single_data(PolypTestBed)
     # bench = NjordTestBed(10)
     # collect_bias_data(5)
     # collect_bias_data(-1)

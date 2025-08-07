@@ -128,40 +128,41 @@ def regplots(sample_size):
             ax.set_ylabel(row_val)
 
     g.add_legend()
-    for ax in g.axes.flat:
-        ax.set_yscale("log")
-        ax.set_xscale("log")
+    # for ax in g.axes.flat:
+        # ax.set_yscale("log")
+    #     ax.set_xscale("log")
+    plt.savefig(f"figures/regplots_{sample_size}.pdf", dpi=300, bbox_inches='tight')
     plt.show()
 
 
-def regplot_by_shift(dataset="NICO"):
+def regplot_by_shift():
     print("Loading")
     df = load_all(batch_size=30, shift="", samples=100)
     df = df[df["fold"]!="train"]
-    df["shift_intensity"] = np.round(df["shift_intensity"],2)
     # df = filter_max_loss(df)
     df = df[~df["shift"].isin(["contrast", "brightness","smear"])]
     print("Loaded!")
-    df = df[df["Dataset"]=="NICO"]
+    for dataset in DATASETS:
+        subdf = df[df["Dataset"]==dataset]
+        print(f"Plotting for {dataset}")
+        special_intensities = ['InD', 'OoD']
+        unique_intensities = subdf["shift_intensity"].unique()
+        remaining_intensities = sorted([x for x in unique_intensities if x not in special_intensities])
 
-    special_intensities = ['InD', 'OoD']
-    unique_intensities = df["shift_intensity"].unique()
-    remaining_intensities = sorted([x for x in unique_intensities if x not in special_intensities])
-
-    base_colors = sns.color_palette(n_colors=2)  # For 'InD' and 'OoD'
-    mako_colors = sns.color_palette("mako", len(remaining_intensities))
-    full_palette = base_colors + mako_colors
-    hue_order = special_intensities + remaining_intensities
-    palette = {k: c for k, c in zip(hue_order, full_palette)}
-    df["shift"] = df["shift"].apply(lambda x: x if x in SYNTHETIC_SHIFTS else "Organic")
-    def plot_max_loss(data,color=None, **kwargs):
-        dataset = data["Dataset"].unique()[0]
-        plt.axhline(DATASETWISE_RANDOM_LOSS[dataset], color=color, linestyle="--", label="Random Guessing")
-    g = sns.FacetGrid(df, row="shift", col="feature_name", margin_titles=True, sharex=False, sharey=False)
-    g.map_dataframe(sns.scatterplot, x="feature", y="loss", hue="shift_intensity", palette=palette, hue_order=hue_order)
-    g.map_dataframe(plot_max_loss)
-    g.add_legend()
-    plt.show()
+        base_colors = sns.color_palette(n_colors=2)  # For 'InD' and 'OoD'
+        mako_colors = sns.color_palette("mako", len(remaining_intensities))
+        full_palette = base_colors + mako_colors
+        hue_order = special_intensities + remaining_intensities
+        palette = {k: c for k, c in zip(hue_order, full_palette)}
+        subdf["shift"] = subdf["shift"].apply(lambda x: x if x in SYNTHETIC_SHIFTS else "Organic")
+        def plot_max_loss(data,color=None, **kwargs):
+            plt.axhline(DATASETWISE_RANDOM_LOSS[dataset], color=color, linestyle="--", label="Random Guessing")
+        g = sns.FacetGrid(subdf, row="shift", col="feature_name", margin_titles=True, sharex=False, sharey=False)
+        g.map_dataframe(sns.scatterplot, x="feature", y="loss", hue="shift_intensity", palette=palette, hue_order=hue_order)
+        g.map_dataframe(plot_max_loss)
+        # g.add_legend()
+        plt.savefig(f"figures/regplot_by_shift_{dataset}.png", dpi=300, bbox_inches='tight')
+        plt.show()
 
 def filter_max_loss(df):
     return df[(df["shift"] == "Organic Shift") |
