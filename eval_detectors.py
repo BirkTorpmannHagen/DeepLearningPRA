@@ -135,8 +135,6 @@ def collect_bias_data(batch_size):
 
 def collect_single_data(testbed):
     for mode in SYNTHETIC_SHIFTS:
-        if mode!="saltpepper":
-            continue
         collect_data(testbed, testbed.__name__.split("TestBed")[0], mode=mode)
 
 
@@ -145,19 +143,19 @@ if __name__ == '__main__':
     from features import *
     # torch.multiprocessing.set_start_method('spawn')
     # collect_bias_data(-1)
-    # for batch_size in BATCH_SIZES[1:]:
-    #     collect_bias_data(batch_size)
+    for batch_size in BATCH_SIZES[1:]:
+        collect_bias_data(batch_size)
 
 
     # input("next")
     # collect_data(CCTTestBed, "CCT",mode="normal")
     # collect_bias_data(5)
 
-    collect_single_data(OfficeHomeTestBed)
-    collect_single_data(Office31TestBed)
-    collect_single_data(NICOTestBed)
-    collect_single_data(CCTTestBed)
-    collect_single_data(PolypTestBed)
+    # collect_single_data(OfficeHomeTestBed)
+    # collect_single_data(Office31TestBed)
+    # collect_single_data(NICOTestBed)
+    # collect_single_data(CCTTestBed)
+    # collect_single_data(PolypTestBed)
     # bench = NjordTestBed(10)
     # collect_bias_data(5)
     # collect_bias_data(-1)

@@ -94,8 +94,7 @@ def regplots(sample_size):
 
     df = load_all(batch_size=sample_size, prefix="final_data", shift="", samples=40)
     df = df[df["fold"]!="train"] #exclude training data, to not skew results
-    df["ind"]=df["fold"]=="ind"
-    df = df[df["shift"]!="smear"]
+    df = df[~df["shift"].isin(["contrast", "brightness", "smear"])]
     for shift in df["shift"].unique():
         if shift not in ["hue", "saltpepper", "noise", "multnoise", "smear", "contrast", "brightness", "ind_val", "ind_test", "train"]:
             print(shift)
@@ -107,15 +106,14 @@ def regplots(sample_size):
     def plot_threshold(data,color=None, **kwargs):
         threshold = OODDetector(data, ood_val_shift="Organic Shift", threshold_method="val_optimal").threshold
         plt.axvline(threshold, color=color, linestyle="--", label="Threshold")
-
+    # def plot_max_loss(data, color=None, **kwargs):
+    #     plt.axhline(DATASETWISE_RANDOM_LOSS[data["Dataset"].unique()[0]], color=color, linestyle="--", label="Random Guessing")
     def custom_scatter(data, **kwargs):
         kwargs.pop("color", None)  # Remove auto-passed color to prevent conflict
-        sns.scatterplot(data=data[data["ood"]], x="feature", y="loss", hue="shift", alpha=0.5, **kwargs)
-        sns.scatterplot(data=data[~data["ood"]], x="feature", y="loss", color="black", marker="x", alpha=1, **kwargs, label="InD")
+        sns.scatterplot(data=data[data["shift"].isin(SYNTHETIC_SHIFTS)], x="feature", y="loss", hue="shift", palette=sns.color_palette(n_colors=len(SYNTHETIC_SHIFTS)+2)[2:], **kwargs)
+        sns.scatterplot(data=data[~data["shift"].isin(SYNTHETIC_SHIFTS)], x="feature", y="loss", hue="fold", marker="x",palette=sns.color_palette(n_colors=len(SYNTHETIC_SHIFTS)+2)[:2], alpha=1, **kwargs)
     df.replace(DSD_PRINT_LUT, inplace=True)
-    df = df[(df["shift"] == "Organic Shift") |
-            ((df["shift"] != "Organic Shift") &
-             (df.apply(lambda row: row["loss"] <= DATASETWISE_RANDOM_LOSS[row["Dataset"]], axis=1)))]
+    df = filter_max_loss(df)
     g = sns.FacetGrid(df, row="feature_name", col="Dataset", margin_titles=True, sharex=False, sharey=False)
     g.map_dataframe(custom_scatter)
     g.map_dataframe(plot_threshold)
@@ -165,9 +163,18 @@ def regplot_by_shift():
         plt.show()
 
 def filter_max_loss(df):
-    return df[(df["shift"] == "Organic Shift") |
-            ((df["shift"] != "Organic Shift") &
-             (df.apply(lambda row: row["loss"] <= DATASETWISE_RANDOM_LOSS[row["Dataset"]], axis=1)))]
+    # Clip the loss for 'Organic Shift' rows
+    df.loc[df["shift"] == "Organic Shift", "loss"] = df[df["shift"] == "Organic Shift"].apply(
+        lambda row: min(row["loss"], DATASETWISE_RANDOM_LOSS[row["Dataset"]]), axis=1
+    )
+
+    # Filter: keep 'Organic Shift' (already clipped), and non-Organic Shift rows only if their loss is below threshold
+    filt = df[
+        (df["shift"] == "Organic Shift") |
+        ((df["shift"] != "Organic Shift") &
+         (df.apply(lambda row: row["loss"] <= DATASETWISE_RANDOM_LOSS[row["Dataset"]], axis=1)))
+    ]
+    return filt
 
 
 def plot_intensitywise_kdes():

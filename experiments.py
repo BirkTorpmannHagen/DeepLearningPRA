@@ -368,7 +368,7 @@ def run_loss_regression_experiments():
     # regplot_by_shift()
     # plot_intensitywise_kdes()
     # plot_variances()
-    regplots(32)
+    regplots(64)
 
 
 
