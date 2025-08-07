@@ -172,7 +172,7 @@ def load_all_biased(prefix="debiased_data", filter_batch=False):
     return pd.concat(dfs)
 
 
-def load_all(batch_size=30, samples=1000, feature="all", shift="normal", prefix="final_data", reduce=True):
+def load_all(batch_size=30, samples=100, feature="all", shift="normal", prefix="final_data", reduce=True):
     dfs = []
     for dataset in DATASETS:
         if feature!="all":
@@ -239,6 +239,7 @@ DATASETWISE_RANDOM_LOSS = {
     "NICO": -np.log(1/60),
     "Polyp": 1 #segmentation task; never incidentally correct
 }
+COLUMN_PRINT_LUT = {"feature_name":"Feature", "loss":"Loss", "rate":"p(E)", "shift_intensity":"Shift Intensity", "shift":"Shift", "feature": "Feature Value", "loss":"Loss"}
 BIAS_TYPES = ["Unbiased", "Class", "Synthetic", "Temporal"]
 SAMPLERS = ["RandomSampler",  "ClassOrderSampler", "ClusterSampler", "SequentialSampler",]
 SYNTHETIC_SHIFTS = ["noise", "multnoise", "hue", "saltpepper", "saturation" ]

@@ -120,17 +120,17 @@ def collect_bias_data(batch_size):
         # for sampler in ["RandomSampler","ClusterSampler",  "ClassOrderSampler"]:
         for sampler in [ "RandomSampler","ClusterSampler", "SequentialSampler", "ClassOrderSampler"]:
             if sampler!="ClassOrderSampler":
-                collect_debiased_data(PolypTestBed, "Polyp", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-                # collect_rabanser_data(PolypTestBed, "Polyp", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+                # collect_debiased_data(PolypTestBed, "Polyp", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+                collect_rabanser_data(PolypTestBed, "Polyp", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
 
-            collect_debiased_data(CCTTestBed, "CCT", mode="normal",k=k, sampler=sampler, batch_size=batch_size)
-            collect_debiased_data(OfficeHomeTestBed, "OfficeHome", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-            collect_debiased_data(Office31TestBed, "Office31", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-            collect_debiased_data(NICOTestBed, "NICO", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-            # collect_rabanser_data(OfficeHomeTestBed, "OfficeHome", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-            # collect_rabanser_data(Office31TestBed, "Office31", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-            # collect_rabanser_data(CCTTestBed, "CCT", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-            # collect_rabanser_data(NicoTestBed, "NICO", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+            # collect_debiased_data(CCTTestBed, "CCT", mode="normal",k=k, sampler=sampler, batch_size=batch_size)
+            # collect_debiased_data(OfficeHomeTestBed, "OfficeHome", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+            # collect_debiased_data(Office31TestBed, "Office31", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+            # collect_debiased_data(NICOTestBed, "NICO", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+            collect_rabanser_data(OfficeHomeTestBed, "OfficeHome", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+            collect_rabanser_data(Office31TestBed, "Office31", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+            collect_rabanser_data(CCTTestBed, "CCT", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
+            collect_rabanser_data(NICOTestBed, "NICO", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
 
 
 def collect_single_data(testbed):

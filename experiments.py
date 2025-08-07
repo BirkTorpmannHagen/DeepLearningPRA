@@ -368,7 +368,11 @@ def run_loss_regression_experiments():
     # regplot_by_shift()
     # plot_intensitywise_kdes()
     # plot_variances()
-    regplots(64)
+    # regplots(32)
+    # compare_gam_errors()
+    get_gam_data()
+    gam_fits(batch_size=32)
+    # gam_fits(batch_size=1)
 
 
 
