@@ -138,11 +138,10 @@ def get_gam_data(load=True):
                             X_test = test['feature']
                             y_test = test['loss']  # -train["loss"].mean()
                             preds_monotonic = gam_monotonic.predict(X_test)
-                            for i, (y, yhat) in enumerate(zip(y_test, preds_monotonic)):
 
-                                mape_monotonic = np.abs((y-yhat)/y)
-                                mae_monotonic = np.mean(np.abs(y-yhat))
-                                metric_data.append({"Dataset":dataset, "Feature Name":feature_name, "Train Shift":regressor_training_shift, "Test Shift":test_shift, "Shift Intensity":intensity, "Batch Size":batch_size, "MAPE": mape_monotonic, "MAE": mae_monotonic})
+                            mape_monotonic = np.mean(np.abs((y_test-preds_monotonic)/y_test))
+                            mae_monotonic = np.mean(np.abs(y_test-preds_monotonic))
+                            metric_data.append({"Dataset":dataset, "Feature Name":feature_name, "Train Shift":regressor_training_shift, "Test Shift":test_shift, "Shift Intensity":intensity, "Batch Size":batch_size, "MAPE": mape_monotonic, "MAE": mae_monotonic})
 
                     # preds = gam.predict(X_test)
                     # smape = np.mean(np.abs(preds - y_test) / (np.abs(preds) + np.abs(y_test)))
