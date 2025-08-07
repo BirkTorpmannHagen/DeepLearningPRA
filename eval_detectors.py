@@ -65,10 +65,8 @@ def collect_rabanser_data(testbed_constructor, dataset_name, mode="noise", sampl
     bench = testbed_constructor("classifier", mode=mode, sampler=sampler, batch_size=batch_size)
     tsd = RabanserSD(bench.classifier,k=k)
     tsd.register_testbed(bench)
-    compute_stats_no_ind(*tsd.compute_pvals_and_loss(noind=True),
-                         fname=f"debiased_data/{dataset_name}_{mode}_{sampler}_{batch_size}_k={k}", feature_names=["rabanser"])
-    # compute_stats(*tsd.compute_pvals_and_loss(),
-    #               fname=f"debiased_data/{dataset_name}_{mode}_{sampler}_{batch_size}_k={k}", feature_names=["rabanser"])
+    compute_stats(*tsd.compute_pvals_and_loss(),
+                  fname=f"debiased_data/{dataset_name}_{mode}_{sampler}_{batch_size}_k={k}", feature_names=["rabanser"])
 
 def collect_knn_featurewise_data(testbed_constructor, dataset_name, mode="noise", sampler="RandomSampler", k=5, batch_size=8):
     bench = testbed_constructor("classifier", mode=mode, sampler=sampler, batch_size=batch_size)
