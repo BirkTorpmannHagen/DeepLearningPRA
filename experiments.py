@@ -372,7 +372,7 @@ def run_loss_regression_experiments():
     # compare_gam_errors()
     get_gam_data()
     gam_fits(batch_size=32)
-    # gam_fits(batch_size=1)
+    plot_gam_errors(32)
 
 
 
