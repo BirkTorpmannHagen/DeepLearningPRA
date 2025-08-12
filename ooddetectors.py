@@ -77,7 +77,7 @@ def convert_to_pandas_df(train_features, train_losses,
     def add_entries(dataset, features_dict, losses_dict, fold_label_override=None):
         for fold, features in features_dict.items():
             losses = losses_dict[fold]
-            assert len(losses)==len(features)
+            assert len(losses)==len(features), (len(losses),len(features))
             label = fold_label_override if fold_label_override else fold
             for i in range(features.shape[0]):
                 try:
@@ -105,7 +105,8 @@ def convert_to_pandas_df(train_features, train_losses,
 
     for fi, feature_name in enumerate(feature_names):
         dataset = []
-        add_entries(dataset, train_features, train_losses, fold_label_override="train")
+        if feature_name!="rabanser":
+            add_entries(dataset, train_features, train_losses, fold_label_override="train")
         add_entries(dataset, ind_val_features, ind_val_losses)
         add_entries(dataset, ind_test_features, ind_test_losses)
         add_entries(dataset, ood_features, ood_losses)

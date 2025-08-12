@@ -19,7 +19,8 @@ class KvasirSegmentationDataset(Dataset):
     def __init__(self, path, train_alb, val_alb, split="train"):
         super(KvasirSegmentationDataset, self).__init__()
         self.path = path
-        self.fnames = listdir(join(self.path,"segmented-images", "images"))
+        self.fnames = sorted(listdir(join(self.path,"segmented-images", "images")))
+
         self.split = split
         self.train_transforms = train_alb
         self.val_transforms = val_alb
@@ -120,7 +121,7 @@ class EndoCV2020(Dataset):
     def __init__(self, root_directory, tans):
         super(EndoCV2020, self).__init__()
         self.root = root_directory
-        self.mask_fnames = listdir(join(self.root, "masksPerClass", "polyp"))
+        self.mask_fnames = sorted(listdir(join(self.root, "masksPerClass", "polyp")))
         self.mask_locs = [join(self.root, "masksPerClass", "polyp", i) for i in self.mask_fnames]
         self.img_locs = [join(self.root, "originalImages", i.replace("_polyp", "").replace(".tif", ".jpg")) for i in
                          self.mask_fnames]

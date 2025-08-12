@@ -138,6 +138,10 @@ def load_all_biased(prefix="debiased_data", filter_batch=False):
                     for feature in DSDS:
                         if feature=="softmax" and dataset=="Polyp":
                             continue
+                        if feature=="knn" and k!=-1:
+                            continue
+                        if feature=="rabanser" and k==-1:
+                            continue
                         try:
                             df = pd.read_csv(join(prefix, f"{dataset}_normal_{sampler}_{batch_size}_k={k}_{feature}.csv"), converters={
     "feature": lambda x: float(x) if x not in ("[]", "") else 0.0})
@@ -159,8 +163,8 @@ def load_all_biased(prefix="debiased_data", filter_batch=False):
                                     0.95)  # losswise definition
                                 # df["correct_prediction"] = df["acc"]>=ind_val_acc   #accuracywise definition
 
-                                df["shift"] = df["fold"].apply(
-                                lambda x: x.split("_")[0] if "_0." in x else x)  # what kind of shift has occured?
+                            df["shift"] = df["fold"].apply(
+                            lambda x: x.split("_")[0] if "_0." in x else x)  # what kind of shift has occured?
 
 
                             df["shift_intensity"] = df["fold"].apply(
@@ -231,7 +235,7 @@ DATASETS = ["CCT", "OfficeHome", "Office31", "NICO", "Polyp"]
 DSDS = ["knn", "grad_magnitude", "cross_entropy", "energy", "typicality", "softmax", "rabanser"]
 # BATCH_SIZES = [32]
 BATCH_SIZES = [1, 8, 16, 32, 64]
-THRESHOLD_METHODS = [ "val_optimal", "ind_span"]
+THRESHOLD_METHODS = [ "val_optimal", "ind_span", "logistic"]
 DATASETWISE_RANDOM_LOSS = {
     "CCT": -np.log(1/15),
     "OfficeHome": -np.log(1/65),
@@ -239,7 +243,7 @@ DATASETWISE_RANDOM_LOSS = {
     "NICO": -np.log(1/60),
     "Polyp": 1 #segmentation task; never incidentally correct
 }
-COLUMN_PRINT_LUT = {"feature_name":"Feature", "loss":"Loss", "rate":"p(E)", "shift_intensity":"Shift Intensity", "shift":"Shift", "feature": "Feature Value", "loss":"Loss"}
+COLUMN_PRINT_LUT = {"feature_name":"Feature", "loss":"Loss", "rate":"p(E)", "shift_intensity":"Shift Intensity", "shift":"Shift", "feature": "Feature Value"}
 BIAS_TYPES = ["Unbiased", "Class", "Synthetic", "Temporal"]
 SAMPLERS = ["RandomSampler",  "ClassOrderSampler", "ClusterSampler", "SequentialSampler",]
 SYNTHETIC_SHIFTS = ["noise", "multnoise", "hue", "saltpepper", "saturation" ]

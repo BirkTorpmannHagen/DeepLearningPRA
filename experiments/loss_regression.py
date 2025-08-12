@@ -62,7 +62,7 @@ def get_best_gam_data(batch_size=32):
     )
     return filtered_all_gam_results, all_gam_preds, df
 
-def plot_gam_errors(batch_size=32, q=11):
+def plot_gam_errors(batch_size=32, q=21):
     gam_results, gam_preds, df = get_best_gam_data(batch_size=batch_size)
 
     # add numeric midpoint column
@@ -155,23 +155,11 @@ def gam_fits(batch_size=32):
         for shift in subdf_scatter["shift"].unique():
             subdf_shift = subdf_scatter[subdf_scatter["shift"]==shift]
             ax[i].scatter(subdf_shift["feature"], subdf_shift["loss"], alpha=1, color=shift_colors[shift])
-
+        correlation = spearmanr(subdf_preds["feature"], subdf_preds["monotonic_pred_loss"])[0]
         # ax[i,j].scatter(subdf["feature"], subdf["loss"], alpha=0.5)
         ax[i].plot(subdf_preds["feature"], subdf_preds["monotonic_pred_loss"], color="red")
-
-        # if dataset not in ["CCT"]:
-        #     ys = ( subdf_preds["monotonic_pred_loss"].min())
-        #     y_beyond = ( subdf_preds["monotonic_pred_loss"].max())
-        #
-        # else:
-        #     ys = ( subdf_preds["monotonic_pred_loss"].max())
-        #     y_beyond = ( subdf_preds["monotonic_pred_loss"].min())
-        # ax[i].plot([subdf_scatter["feature"].min(), subdf_preds["feature"].min()], [ys, ys], color="red")
-        # ax[i].plot([subdf_preds["feature"].max(), subdf_scatter["feature"].max()], [y_beyond, y_beyond],
-        #            color="red")
-
         ax[i].fill_between(subdf_preds["feature"], subdf_preds["monotonic_pred_loss_lower"], subdf_preds["monotonic_pred_loss_upper"], color="red", alpha=0.3)
-        ax[i].set_title(f"{dataset}|{feature_name}: MAE={round(metric,2)}")
+        ax[i].set_title(f"{dataset}|{DSD_PRINT_LUT[feature_name]}: MAE={round(metric,2)}, Rho={round(correlation,2)}")
         ax[i].set_ylim(bottom=0
                          )
         # ax[i].scatter(subdf_train["feature"], subdf_train["loss"], alpha=0.5, label="train")

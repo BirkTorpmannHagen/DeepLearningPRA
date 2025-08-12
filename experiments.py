@@ -327,28 +327,23 @@ def run_rv_experiments():
     """
           Runtime Verification
       """
-    # loss_correctness_test()
-    # for batch_size in BATCH_SIZES[1:]:
-    #     print(f"Running batch size {batch_size}")
-    #     debiased_ood_detector_correctness_prediction_accuracy(batch_size)
-    # ood_detector_correctness_prediction_accuracy(batch_size, shift="")
-    # ood_verdict_accuracy_table(batch_size)
 
+    # for batch_size in BATCH_SIZES[1:]:
+        # print(f"Running batch size {batch_size}")
+        # ood_detector_correctness_prediction_accuracy(batch_size, shift="")
+        # ood_verdict_accuracy_table(batch_size)
+    #
     # simple batching
     # ood_verdict_plots_batched()
     # examine_feature_distributions(64)
     # examine_rabanser_feature_distributions(8)
 
-    # ood_detector_correctness_prediction_accuracy(64)
-    # ood_verdict_accuracy_table(32)
-    # ood_verdict_accuracy_table(batch)
-
-    # for batch_size in [1, 8, 16]:
-    #     ood_detector_correctness_prediction_accuracy(batch_size)
-
     # runtime verification
     # plot_batching_effect("NICO", "entropy")
-    eval_debiased_ood_detectors()
+
+    for batch_size in BATCH_SIZES[1:-1]:
+        debiased_ood_detector_correctness_prediction_accuracy(batch_size)
+    # eval_debiased_ood_detectors()
     debiased_plots()
 
     # loss regression
@@ -370,7 +365,7 @@ def run_loss_regression_experiments():
     # plot_variances()
     # regplots(32)
     # compare_gam_errors()
-    get_gam_data()
+    # get_gam_data()
     gam_fits(batch_size=32)
     plot_gam_errors(32)
 
@@ -399,8 +394,8 @@ def run_pra_experiments():
 if __name__ == '__main__':
     #accuracies on each dataset
 
-    # run_rv_experiments()
-    run_loss_regression_experiments()
+    run_rv_experiments()
+    # run_loss_regression_experiments()
     # run_pra_experiments()
 
 

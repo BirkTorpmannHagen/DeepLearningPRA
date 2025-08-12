@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from sklearn.linear_model import LogisticRegression
 from matplotlib import pyplot as plt
 from pygam import LinearGAM
 import seaborn as sns
@@ -83,6 +84,13 @@ class OODDetector:
             lower = self.ind_val["feature"].quantile(0.01)
             upper = self.ind_val["feature"].quantile(0.99)
             self.threshold = [lower,upper]
+        if threshold_method=="logistic":
+            self.logreg = LogisticRegression()
+            features = np.concatenate([self.ind_val["feature"].values, self.ood_val["feature"].values]).reshape(-1, 1)
+            labels = np.concatenate([self.ind_val["ood"].astype(int).values, self.ood_val["ood"].astype(int).values])
+            self.logreg.fit(features, labels)
+
+
 
 
 
@@ -109,18 +117,30 @@ class OODDetector:
                 return  feature > self.threshold
             else:
                 return feature < self.threshold
-        elif self.threshold_method == "density":
-            prob = np.exp(self.density_model.score(np.array(feature).reshape(1, -1)))
-            return prob<0.01
+        elif self.threshold_method == "logistic":
+            if feature==np.inf:
+                print(batch)
+            output = bool(self.logreg.predict(np.array(feature).reshape(1, -1))[0])
+            return output
+        else:
+            return NotImplementedError
 
 
 
     def get_tpr(self, data):
-        return data[data["ood"]].apply(lambda row: self.predict(row), axis=1).mean()
+        subset = data[data["ood"]]
+        if subset.empty:
+            return 1
+        tpr =  subset.apply(lambda row: self.predict(row), axis=1).mean()
+        return tpr
 
 
     def get_tnr(self, data):
-        return 1-data[~data["ood"]].apply(lambda row: self.predict(row), axis=1).mean()
+        subset = data[~data["ood"]]
+        if subset.empty:
+            return 1
+        tnr =  1-subset.apply(lambda row: self.predict(row), axis=1).mean()
+        return tnr
 
     def get_accuracy(self, data):
         return 0.5*(self.get_tpr(data)+self.get_tnr(data))
