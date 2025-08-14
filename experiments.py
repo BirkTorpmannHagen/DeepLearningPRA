@@ -327,11 +327,13 @@ def run_rv_experiments():
     """
           Runtime Verification
       """
+    ood_verdict_accuracy_table(1)
 
     # for batch_size in BATCH_SIZES[1:]:
-        # print(f"Running batch size {batch_size}")
-        # ood_detector_correctness_prediction_accuracy(batch_size, shift="")
-        # ood_verdict_accuracy_table(batch_size)
+    #     # print(f"Running batch size {batch_size}")
+    #     # ood_detector_correctness_prediction_accuracy(batch_size, shift="")
+    #     ood_verdict_accuracy_table(batch_size)
+    #     input()
     #
     # simple batching
     # ood_verdict_plots_batched()
@@ -341,10 +343,12 @@ def run_rv_experiments():
     # runtime verification
     # plot_batching_effect("NICO", "entropy")
 
-    for batch_size in BATCH_SIZES[1:-1]:
-        debiased_ood_detector_correctness_prediction_accuracy(batch_size)
-    # eval_debiased_ood_detectors()
-    debiased_plots()
+    # for batch_size in BATCH_SIZES[1:-1]:
+    #     debiased_ood_detector_correctness_prediction_accuracy(batch_size)
+
+    # bias_effect_table()
+    # compare_bias_effect_vs_unbatched_accuracy()
+    # debiased_plots()
 
     # loss regression
     # get_gam_data(load=False)

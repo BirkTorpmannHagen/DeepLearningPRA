@@ -129,7 +129,7 @@ def gam_fits(batch_size=32):
     gam_results, gam_preds, df = get_best_gam_data(batch_size=batch_size)
     for dataframe in gam_results, gam_preds, df:
         for dataset in DATASETS:
-            assert dataframe[dataframe["Dataset"]==dataset]["Feature Name"].nunique() == 1, f"Expected only one feature name per dataset in the GAM dataframes, got {dataframe[dataframe["Dataset"]==dataset]["Feature Name"]}"
+            assert dataframe[dataframe["Dataset"]==dataset]["Feature Name"].nunique() == 1, "Expected only one feature name per dataset in the GAM dataframes"
 
     # 5 columns: 1 empty, 2 subplots, 1 empty — keeps bottom centered
     fig = plt.figure(figsize=(8, 6), constrained_layout=True)

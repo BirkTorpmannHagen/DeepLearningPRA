@@ -77,9 +77,9 @@ def convert_to_pandas_df(train_features, train_losses,
     def add_entries(dataset, features_dict, losses_dict, fold_label_override=None):
         for fold, features in features_dict.items():
             losses = losses_dict[fold]
-            assert len(losses)==len(features), (len(losses),len(features))
             label = fold_label_override if fold_label_override else fold
-            for i in range(features.shape[0]):
+            data_len = max(len(features), len(losses)) #they removed a few data from the CCT dataset, this fixes it
+            for i in range(data_len):
                 try:
                     dataset.append({
                         "fold": label,
@@ -91,15 +91,18 @@ def convert_to_pandas_df(train_features, train_losses,
                         "class": losses[i][3] if losses.shape[1]>3 else None,
                     })
                 except IndexError:
-                    dataset.append({
-                        "fold": label,
-                        "feature_name": feature_name,
-                        "feature": features[i],
-                        "loss": losses[i][0],
-                        "acc": losses[i][1],
-                        "idx": losses[i][2],
-                        "class": losses[i][3] if losses.shape[1] > 3 else None,
-                    })
+                    try:
+                        dataset.append({
+                            "fold": label,
+                            "feature_name": feature_name,
+                            "feature": features[i],
+                            "loss": losses[i][0],
+                            "acc": losses[i][1],
+                            "idx": losses[i][2],
+                            "class": losses[i][3] if losses.shape[1] > 3 else None,
+                        })
+                    except IndexError:
+                        break
 
     dataframes = []
 
