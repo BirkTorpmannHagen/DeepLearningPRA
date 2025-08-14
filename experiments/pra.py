@@ -9,6 +9,7 @@ from matplotlib import pyplot as plt
 from tqdm import tqdm
 
 from components import OODDetector
+from experiments.runtime_classification import get_all_ood_detector_data
 from rateestimators import BernoulliEstimator
 from riskmodel import UNNECESSARY_INTERVENTION
 from simulations import UniformBatchSimulator
@@ -92,30 +93,28 @@ def eval_rate_estimator():
 
 
 
-def plot_rate_estimation_errors_for_dsds(batch_size=16, cross_validate=False):
+def plot_rate_estimation_errors_for_dsds(batch_size=1):
     data = []
-    dsd_data = fetch_dsd_accuracies(batch_size)
-    if not cross_validate:
-        dsd_data = dsd_data[dsd_data["val_fold"]==dsd_data["test_fold"]]
-    # print(dsd_data.groupby(["Dataset", "DSD", "val_fold", "test_fold"])[["tpr", "tnr", "ba"]].mean())
-    # input()
-    with tqdm(total=len(DATASETS) * len(DSDS) * 26) as pbar:
+    dsd_data = get_all_ood_detector_data(batch_size=batch_size)
+    with tqdm(total=len(DATASETS) * len(DSDS) * 11) as pbar:
         for dataset in DATASETS:
             for feature in DSDS:
-                for rate in tqdm(np.linspace(0, 1, 26)):
-                    subdata = dsd_data[(dsd_data["Dataset"]==dataset)&(dsd_data["DSD"]==feature)]
-                    tpr, tnr, ba = subdata["tpr"].mean(), subdata["tnr"].mean(), subdata["ba"].mean()
-                    for tl in [10, 20, 30, 50, 60, 100, 200, 500, 1000]:
-                        re = BernoulliEstimator(prior_rate=rate, tpr=tpr, tnr=tnr)
-                        sample = re.sample(10_000, rate)
-                        dsd = get_dsd_verdicts_given_true_trace(sample, tpr, tnr)
-                        for i in np.array_split(dsd, int(10_000 // tl)):
-                            re.update(i)
-                            rate_estimate = re.get_rate()
-                            error = np.abs(rate - rate_estimate)
-                            data.append(
-                                {"Dataset": dataset, "DSD":feature, "rate": rate, "ba": ba, "tl": tl, "rate_estimate": rate_estimate, "error": error})
-                        pbar.update(1)
+                subdata_dataset = dsd_data[(dsd_data["Dataset"] == dataset) & (dsd_data["DSD"] == feature)]
+                for rate in tqdm(np.linspace(0, 1, 11)):
+                    for shift in subdata_dataset["shift"].unique():
+                        subdata = subdata_dataset[subdata_dataset["shift"] == shift]
+                        tpr, tnr, ba = subdata["tpr"].mean(), subdata["tnr"].mean(), subdata["ba"].mean()
+                        for tl in [10, 20, 30, 50, 60, 100, 200, 500, 1000]:
+                            re = BernoulliEstimator(prior_rate=rate, tpr=tpr, tnr=tnr)
+                            sample = re.sample(10_000, rate)
+                            dsd = get_dsd_verdicts_given_true_trace(sample, tpr, tnr)
+                            for i in np.array_split(dsd, int(10_000 // tl)):
+                                re.update(i)
+                                rate_estimate = re.get_rate()
+                                error = np.abs(rate - rate_estimate)
+                                data.append(
+                                    {"Dataset": dataset, "DSD":feature, "Shift": shift, "rate": rate, "ba": ba, "tl": tl, "rate_estimate": rate_estimate, "error": error})
+                    pbar.update(1)
 
     df = pd.DataFrame(data)
     df.replace(DSD_PRINT_LUT, inplace=True)
@@ -295,53 +294,6 @@ def plot_ba_rate_sensitivity():
     plt.yticks([0, df["Bernoulli Expectation"].nunique()], [1, 0])  # y-axis: only 0 and 1
     plt.savefig("ba_sensitivity.eps")
     plt.show()
-
-
-def fetch_dsd_accuracies(batch_size=32, plot=False, samples=1000):
-    data = []
-    with tqdm(total=len(DATASETS) * len(DSDS)) as pbar:
-        for dataset in DATASETS:
-            for feature in DSDS:
-                if feature=="rabanser":
-                    continue
-                df = load_pra_df(dataset, feature, batch_size=batch_size, samples=samples)
-                # df["ood"]=df["correct_prediction"]==False
-                df = df[df["shift"]!="noise"]
-                if df.empty:
-                    continue
-                ind_val = df[df["shift"]=="ind_val"]
-                ind_test = df[df["shift"]=="ind_test"]
-                ood_folds = df[~df["fold"].isin(["ind_val", "ind_test", "train"])]["shift"].unique()
-                for ood_val_fold in ood_folds:
-                    for ood_test_fold in ood_folds:
-                        ood_val = df[df["shift"]==ood_val_fold]
-                        ood_test = df[df["shift"]==ood_test_fold]
-
-                        dsd = OODDetector(df, ood_val_fold)
-                        test = pd.concat([ind_test, ood_test])
-                        tpr, tnr, ba = dsd.get_metrics(test)
-                        threshold = dsd.threshold
-
-                        if ood_test_fold == ood_folds[0] and plot:
-                            plt.hist(ind_val["feature"], bins=100, alpha=0.5, label="ind_val", density=True)
-                            plt.hist(ind_test["feature"], bins=100, alpha=0.5, label="ind_test", density=True )
-                            plt.hist(ood_val["feature"], bins=100, alpha=0.5, label=ood_val_fold, density=True)
-                            plt.hist(ood_test["feature"], bins=100, alpha=0.5, label=ood_test_fold, density=True)
-
-                            plt.axvline(threshold, color="red", label="Threshold")
-                            plt.title(f"{dataset} {feature} {ood_val_fold} {ood_test_fold}")
-                            plt.legend()
-                            plt.show()
-                        data.append({"Dataset": dataset, "DSD":feature, "val_fold": ood_val_fold, "test_fold":ood_test_fold, "tpr": tpr, "tnr": tnr, "ba": ba, "t":threshold})
-                        pbar.update(1)
-    df = pd.DataFrame(data)
-
-    df.to_csv("dsd_accuracies.csv")
-    df = df[df["val_fold"]!=df["test_fold"]]  # remove cases where val and test folds are the same
-    df.replace(DSD_PRINT_LUT, inplace=True)
-    print(df.groupby(["Dataset", "DSD"])[["tpr", "tnr", "ba"]].mean())
-    # print(df.groupby(["Dataset", "DSD", "val_fold", "test_fold"])[["tpr", "tnr", "ba"]].mean())
-    return df
 
 
 def plot_tpr_tnr_sensitivity():

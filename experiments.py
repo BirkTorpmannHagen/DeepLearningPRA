@@ -327,14 +327,15 @@ def run_rv_experiments():
     """
           Runtime Verification
       """
-    ood_verdict_accuracy_table(1)
 
-    # for batch_size in BATCH_SIZES[1:]:
-    #     # print(f"Running batch size {batch_size}")
-    #     # ood_detector_correctness_prediction_accuracy(batch_size, shift="")
-    #     ood_verdict_accuracy_table(batch_size)
-    #     input()
-    #
+    for batch_size in BATCH_SIZES:
+        print(f"Running batch size {batch_size}")
+        ood_detector_correctness_prediction_accuracy(batch_size, shift="")
+
+    # ood_verdict_accuracy_tables(1)
+
+    #single batch size
+
     # simple batching
     # ood_verdict_plots_batched()
     # examine_feature_distributions(64)
@@ -346,13 +347,7 @@ def run_rv_experiments():
     # for batch_size in BATCH_SIZES[1:-1]:
     #     debiased_ood_detector_correctness_prediction_accuracy(batch_size)
 
-    # bias_effect_table()
-    # compare_bias_effect_vs_unbatched_accuracy()
-    # debiased_plots()
 
-    # loss regression
-    # get_gam_data(load=False)
-    # regplots(64)
 
     # get_datasetwise_risk()
     # iou_distribution()
@@ -369,9 +364,13 @@ def run_loss_regression_experiments():
     # plot_variances()
     # regplots(32)
     # compare_gam_errors()
-    # get_gam_data()
-    gam_fits(batch_size=32)
-    plot_gam_errors(32)
+    get_gam_data()
+    # gam_fits(batch_size=32)
+    # plot_gam_errors(32)
+    plot_gam_errors_by_batch_size()
+    # assess_ungrouped_regression_errors()
+
+
 
 
 
@@ -379,7 +378,7 @@ def run_pra_experiments():
     # collect_rate_estimator_data()
     # eval_rate_estimator()
     # plot_dsd_accuracies(1000)
-    # plot_rate_estimation_errors_for_dsds()
+    plot_rate_estimation_errors_for_dsds()
 
     # accuracy_by_fold_and_dsd_verdict()
     # print(data)

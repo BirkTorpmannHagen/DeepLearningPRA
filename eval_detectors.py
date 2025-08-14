@@ -127,14 +127,10 @@ def collect_bias_data():
                 collect_debiased_data(OfficeHomeTestBed, "OfficeHome", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
                 collect_debiased_data(Office31TestBed, "Office31", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
                 collect_debiased_data(NICOTestBed, "NICO", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-            # collect_rabanser_data(OfficeHomeTestBed, "OfficeHome", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-            # collect_rabanser_data(Office31TestBed, "Office31", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-            # collect_rabanser_data(CCTTestBed, "CCT", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-            # collect_rabanser_data(NICOTestBed, "NICO", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
 
 
 def collect_single_data(testbed):
-    for mode in SYNTHETIC_SHIFTS:
+    for mode in ["brightness", "smear"]:
         collect_data(testbed, testbed.__name__.split("TestBed")[0], mode=mode)
 
 
@@ -143,18 +139,16 @@ if __name__ == '__main__':
     from features import *
     # torch.multiprocessing.set_start_method('spawn')
     # collect_bias_data(-1)
-    collect_bias_data()
+    # collect_bias_data()
 
-
-    # input("next")
     # collect_data(CCTTestBed, "CCT",mode="normal")
     # collect_bias_data(5)
 
-    # collect_single_data(OfficeHomeTestBed)
-    # collect_single_data(Office31TestBed)
-    # collect_single_data(NICOTestBed)
-    # collect_single_data(CCTTestBed)
-    # collect_single_data(PolypTestBed)
+    collect_single_data(OfficeHomeTestBed)
+    collect_single_data(Office31TestBed)
+    collect_single_data(NICOTestBed)
+    collect_single_data(CCTTestBed)
+    collect_single_data(PolypTestBed)
     # bench = NjordTestBed(10)
     # collect_bias_data(5)
     # collect_bias_data(-1)

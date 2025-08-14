@@ -8,27 +8,39 @@ from tqdm import tqdm
 from components import OODDetector
 
 
-def sample_loss_feature(group, n_samples, n_size, reduce=True):
+def sample_loss_feature(group, n_samples, n_size, stratisfication=False):
     samples = []
     for i in range(n_samples):
-        sample = group.sample(n=n_size, replace=True)  # Sampling with replacement
-        sample["index"] = i
-        if reduce:
-            if sample["Dataset"].all() == "Polyp":
-                mean_loss = sample['loss'].median()
-            else:
-                mean_loss = sample['loss'].mean()
+        if stratisfication:
 
-            mean_feature = sample['feature'].mean()
-            samples.append({'loss': mean_loss, 'feature': mean_feature, "acc": sample["acc"].mean(), "index": i})
+            largest_ind_val_loss = np.max(
+                [group[group["fold"] == "ind_val"].sample(n=n_size)["loss"] for _ in range(n_samples)])
+
+            strat_size = round(n_size * stratisfication)
+            if strat_size==0:
+                sample = group[group["shift_intensity"]=="InD"].sample(n=n_size, replace=True)  # Sampling only OOD samples
+            elif strat_size==n_size:
+                sample= group[group["shift_intensity"]=="OoD"].sample(n=n_size, replace=True)  # Sampling InD samples
+            else:
+                sample_ind = group[group["shift_intensity"]=="InD"].sample(n=n_size-strat_size, replace=True)
+                sample_ood = group[group["shift_intensity"]=="OoD"].sample(n=strat_size, replace=True)  # Sampling OoD Organic Samples
+                sample = pd.concat([sample_ind, sample_ood])
+
         else:
-            for _, row in sample.iterrows():
-                samples.append({
-                    'loss': row['loss'],
-                    'feature': row['feature'],
-                    'acc': row['acc'],
-                    'index': i
-                })
+            sample = group.sample(n=n_size, replace=True)  # Sampling with replacement
+
+        sample["index"] = i
+        if i==0 and stratisfication:
+            print(stratisfication)
+            print(sample)
+
+        if sample["Dataset"].all() == "Polyp":
+            mean_loss = sample['loss'].median()
+        else:
+            mean_loss = sample['loss'].mean()
+
+        mean_feature = sample['feature'].mean()
+        samples.append({'loss': mean_loss, 'feature': mean_feature, "acc": sample["acc"].mean(), "index": i})
     return pd.DataFrame(samples)
 
 def sample_biased_loss_feature(group, n_samples, n_size, bias="None", reduce=True):
@@ -176,18 +188,18 @@ def load_all_biased(prefix="debiased_data", filter_batch=False):
     return pd.concat(dfs)
 
 
-def load_all(batch_size=30, samples=100, feature="all", shift="normal", prefix="final_data", reduce=True):
+def load_all(batch_size=30, samples=100, feature="all", shift="normal", prefix="final_data", stratisfication=False, groupbyfolds=True):
     dfs = []
     for dataset in DATASETS:
         if feature!="all":
-            dfs.append(load_pra_df(dataset, feature, model="", batch_size=batch_size, samples=samples, prefix=prefix, reduce=reduce, shift=shift))
+            dfs.append(load_pra_df(dataset, feature, model="", batch_size=batch_size, samples=samples, prefix=prefix, stratisfication=stratisfication, shift=shift, groupbyfolds=groupbyfolds))
         else:
             for dsd in DSDS:
-               dfs.append(load_pra_df(dataset, dsd, model="", batch_size=batch_size, samples=samples, prefix=prefix, reduce=reduce, shift=shift))
+               dfs.append(load_pra_df(dataset, dsd, model="", batch_size=batch_size, samples=samples, prefix=prefix, stratisfication=stratisfication, shift=shift, groupbyfolds=groupbyfolds))
     return pd.concat(dfs)
 
 
-def load_pra_df(dataset_name, feature_name, model="" , batch_size=1, samples=1000, prefix="final_data", shift="normal", reduce=True):
+def load_pra_df(dataset_name, feature_name, model="" , batch_size=1, samples=1000, prefix="final_data", shift="normal", stratisfication=False, groupbyfolds=True):
     if dataset_name=="Polyp" and feature_name=="softmax":
         return pd.DataFrame() #softmax does not work for segmentation
     try:
@@ -198,32 +210,47 @@ def load_pra_df(dataset_name, feature_name, model="" , batch_size=1, samples=100
 
     df["Dataset"]=dataset_name
     df["batch_size"]=batch_size
+    if groupbyfolds:
+        df["shift"] = df["fold"].apply(lambda x: x.split("_")[0] if "_0." in x else x)  # what kind of shift has occured?
+        df["shift_intensity"] = df["fold"].apply(
+            lambda x: x.split("_")[1] if "0." in x else "InD" if "ind" in x else "Train" if "train" in x else "OoD")  # what intensity?
     if model!="":
         df["Model"]=model
     try:
         df.drop(columns=["Unnamed: 0"], inplace=True)
     except:
         pass
+    sampled_ind_val_loss = np.array([df[df["fold"] == "ind_val"]["loss"].sample(batch_size).mean() for _ in range(samples)]).max()
 
     if batch_size!=1:
-        df = df.groupby(["fold", "feature_name", "Dataset"]).apply(sample_loss_feature, samples, batch_size, reduce=reduce).reset_index()
+        if groupbyfolds:
+            df = df.groupby(["fold", "feature_name", "Dataset"]).apply(sample_loss_feature, samples, batch_size, stratisfication=False).reset_index()
+        else:
+            df = df.groupby(["feature_name", "Dataset"]).apply(sample_loss_feature, samples, batch_size, stratisfication=stratisfication).reset_index()
     # ind_acc = df[df["fold"]=="ind_val"]["acc"].mean()
 
     if dataset_name=="Polyp":
-        if batch_size==1 or not reduce:
+        if batch_size==1:
             df["correct_prediction"] = df["loss"] < 0.5  # arbitrary threshold
         else:
-            df["correct_prediction"] = df["loss"] < df[df["fold"]=="ind_val"]["loss"].max()  #maximum observed val mean jaccard
+            df["correct_prediction"] = df["loss"] < sampled_ind_val_loss  #maximum observed val mean jaccard
     else:
         # print(df[df["fold"]=="ind_val"]["loss"].quantile(0.05))
-        if batch_size==1 or not reduce:
+        if batch_size==1:
             df["correct_prediction"] = df["acc"]==1 #arbitrary threshold;
         else:
-            df["correct_prediction"] = df["loss"] < df[df["fold"] == "ind_val"]["loss"].quantile(0.95)#losswise definition
+            df["correct_prediction"] = df["loss"] < sampled_ind_val_loss#losswise definition
             # df["correct_prediction"] = df["acc"]>=ind_val_acc   #accuracywise definition
-    df["shift"] = df["fold"].apply(lambda x: x.split("_")[0] if "_0." in x else x)            #what kind of shift has occured?
-    df["shift_intensity"] = df["fold"].apply(lambda x: x.split("_")[1] if "0." in x else "InD" if "ind" in x else "OoD")  #what intensity?
-    df["ood"] = ~df["fold"].isin(["train", "ind_val", "ind_test"])
+    if groupbyfolds:
+        df["ood"] = ~df["fold"].isin(["train", "ind_val", "ind_test"])
+
+    if not groupbyfolds:
+        df["shift"] = df["fold"].apply(
+            lambda x: x.split("_")[0] if "_0." in x else x)  # what kind of shift has occured?
+        df["shift_intensity"] = df["fold"].apply(
+            lambda x: x.split("_")[
+                1] if "0." in x else "InD" if "ind" in x else "Train" if "train" in x else "OoD")  # what intensity?
+
     df["batch_size"]=batch_size
 
     return df
@@ -246,7 +273,7 @@ DATASETWISE_RANDOM_LOSS = {
 COLUMN_PRINT_LUT = {"feature_name":"Feature", "loss":"Loss", "rate":"p(E)", "shift_intensity":"Shift Intensity", "shift":"Shift", "feature": "Feature Value"}
 BIAS_TYPES = ["Unbiased", "Class", "Synthetic", "Temporal"]
 SAMPLERS = ["RandomSampler",  "ClassOrderSampler", "ClusterSampler", "SequentialSampler",]
-SYNTHETIC_SHIFTS = ["noise", "multnoise", "hue", "saltpepper", "saturation" ]
+SYNTHETIC_SHIFTS = ["noise", "multnoise", "hue", "saltpepper", "saturation", "brightness", "contrast", "smear", "shift"]
 SHIFT_PRINT_LUT= {"normal": "Organic", "noise": "Additive Noise", "multnoise": "Multiplicative Noise",
              "hue": "Hue", "saltpepper": "Salt+Pepper Noise", "brightness":"Brightness", "contrast":"Contrast", "smear":"Smear"}
 

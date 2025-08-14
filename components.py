@@ -86,6 +86,14 @@ class OODDetector:
             self.threshold = [lower,upper]
         if threshold_method=="logistic":
             self.logreg = LogisticRegression()
+            min_len = min(len(self.ind_val), len(self.ood_val))
+
+            #avoid poor balancing
+            if len(self.ind_val) > min_len:
+                self.ind_val = self.ind_val.sample(min_len, random_state=42)
+            if len(self.ood_val) > min_len:
+                self.ood_val = self.ood_val.sample(min_len, random_state=42)
+
             features = np.concatenate([self.ind_val["feature"].values, self.ood_val["feature"].values]).reshape(-1, 1)
             labels = np.concatenate([self.ind_val["ood"].astype(int).values, self.ood_val["ood"].astype(int).values])
             self.logreg.fit(features, labels)
