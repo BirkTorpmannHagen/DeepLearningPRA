@@ -195,10 +195,24 @@ def verdictwise_proportions(cal_idx=0, batch_size=1):
 
 def ood_detector_correctness_prediction_accuracy(batch_size, shift="normal"):
     df = load_all(prefix="final_data", batch_size=batch_size, shift=shift, samples=100)
-    df = df[df["shift_intensity"].isin(["InD", "OoD", "0.30000000000000004"])] #extract only maximum shifts
+
+    df["shift_intensity_num"] = pd.to_numeric(df["shift_intensity"], errors="coerce")
+
+    # For each dataset, get the maximum numeric value (NaNs are ignored)
+    max_shift_intensities = (
+        df.groupby("Dataset")["shift_intensity_num"]
+        .max()
+        .reset_index()
+    )
+
+    # Turn into list if you want just the values
+    max_shift_values = max_shift_intensities["shift_intensity_num"].dropna().unique().tolist()
+    valid_intensities = [str(i) for i in max_shift_values]+ ["InD", "OoD"]  # Include InD and OoD as valid intensities
+
+    df = df[df["shift_intensity"].isin(valid_intensities)] #extract only maximum shifts
     df = df[df["fold"]!="train"]
     for dataset in DATASETS:
-        if dataset!="CCT":
+        if dataset not in ["Polyp"]:
             continue
         data_dict = []
         data_dataset = df[df["Dataset"] == dataset]
@@ -247,40 +261,110 @@ def ood_detector_correctness_prediction_accuracy(batch_size, shift="normal"):
             data.replace(DSD_PRINT_LUT, inplace=True)
             data.to_csv(f"ood_detector_data/ood_detector_correctness_{dataset}_{batch_size}.csv", index=False)
 
-def ood_verdict_accuracy_table(batch_size):
+def get_all_ood_detector_data(batch_size, filter_thresholding_method=False, filter_ood_correctness=False, filter_correctness_calibration=False):
     dfs = []
     for dataset, feature in itertools.product(DATASETS, DSDS):
         dfs.append(pd.read_csv(f"ood_detector_data/ood_detector_correctness_{dataset}_{batch_size}.csv"))
     df = pd.concat(dfs)
-    df["Organic"]=(~df["OoD Test Fold"].isin(SYNTHETIC_SHIFTS))&(~df["OoD Val Fold"].isin(SYNTHETIC_SHIFTS))
-    df = df[~df["OoD Val Fold"].isin(SYNTHETIC_SHIFTS)]
-    print(df.groupby(["Threshold Method", "OoD==f(x)=y", "Performance Calibrated"])[["ba"]].agg(["min", "mean", "max"]))
-    # print(results)
-    df = df[(~df["Performance Calibrated"])&(df["Threshold Method"]=="val_optimal")]
-    #calibration comparison
-    organic_results = df[df["Organic"]
-                            ]  # only synthetic shifts
-    # organic_results = organic_results[organic_results["OoD Test Fold"]==organic_results["OoD Val Fold"]]
+    if filter_thresholding_method:
+        df = df[df["Threshold Method"] == "val_optimal"]
+    if filter_ood_correctness:
+        df = df[df["OoD==f(x)=y"] == False]
+    if filter_correctness_calibration:
+        df = df[df["Performance Calibrated"] == False]
+    return df
 
-    # print(organic_results.groupby(["Dataset", "feature_name", "OoD==f(x)=y"])["ba"].agg(["mean"]).reset_index())
+
+def ood_verdict_accuracy_tables(batch_size):
+    df = get_all_ood_detector_data(batch_size)
+    df = df[~df["OoD Val Fold"].isin(SYNTHETIC_SHIFTS)]
+
+    #get only the shifts that affect the performance of the OOD detector
+    df_raw = load_all(1, shift="")
+    acc_by_dataset_and_shift = df_raw.groupby(["Dataset", "shift"])["correct_prediction"].mean().reset_index()
+    organic_shift_accs = acc_by_dataset_and_shift[~acc_by_dataset_and_shift["shift"].isin(SYNTHETIC_SHIFTS+["train", "ind_val", "ind_test"])]
+
+    ind_accs = acc_by_dataset_and_shift[acc_by_dataset_and_shift["shift"].isin(["ind_val", "ind_test"])]
+
+    #filter away shifts that do not have a correct prediction rate below the maximum organic shift accuracy
+    max_organic_shift_acc_per_dataset = organic_shift_accs.groupby("Dataset")["correct_prediction"].max().reset_index()
+    min_ind_acc_per_dataset = ind_accs.groupby("Dataset")["correct_prediction"].min().reset_index()
+    affective_shifts = acc_by_dataset_and_shift.merge(max_organic_shift_acc_per_dataset, on="Dataset", suffixes=("", "_max"))
+    affective_shifts = affective_shifts.merge(min_ind_acc_per_dataset, on="Dataset", suffixes=("", "_min"))
+    affective_shifts["midpoint"] = (affective_shifts["correct_prediction_max"] + affective_shifts["correct_prediction_min"]) / 2
+
+    affective_shifts["affective"] = affective_shifts["correct_prediction"] <= affective_shifts["midpoint"]
+    affective_shifts = affective_shifts[affective_shifts["affective"]==True]
+    print(affective_shifts)
+
+    #filter df to only those shifts for the corresponding datasets
+    df.rename(columns={"OoD Test Fold":"shift"}, inplace=True)
+    print(affective_shifts.groupby(["Dataset"])["shift"].unique())
+
+    # Merge to keep only matching Dataset+shift rows
+    valid_pairs = set(zip(affective_shifts["Dataset"], affective_shifts["shift"]))
+    print(valid_pairs)
+    print(df.groupby(["Dataset"])["shift"].unique())
+    print(affective_shifts.groupby(["Dataset"])["shift"].unique())
+    input()
+    df_filtered = df[df.apply(lambda row: (row["Dataset"], row["shift"]) in valid_pairs, axis=1)]
+    print(df_filtered.groupby(["Dataset"])["shift"].unique())
+    input()
+    df["Organic"] = (~df["OoD Test Fold"].isin(SYNTHETIC_SHIFTS)) & (~df["OoD Val Fold"].isin(SYNTHETIC_SHIFTS))
+    df = df[~df["OoD Val Fold"].isin(SYNTHETIC_SHIFTS)]
+
+
+    # sanity print
+    print(df.groupby(["Threshold Method", "OoD==f(x)=y", "Performance Calibrated"])[["ba"]].agg(["min","mean","max"]))
+
+    keys = ["Dataset","feature_name","OoD==f(x)=y","Organic"]
+    gk   = keys + ["Threshold Method"]
+
+    # mean ba per dataset/feature/ood/organic/method
+    mean_perf = (
+        df.groupby(gk, as_index=False)["ba"]
+          .mean()
+          .rename(columns={"ba":"ba_mean"})
+    )
+
+    # pick best method per dataset/feature/ood/organic
+    best = (
+        mean_perf.sort_values("ba_mean", ascending=False)
+                 .drop_duplicates(keys)   # keeps the first (best) method per group
+                 .reset_index(drop=True)
+    )
+    # >>> best has the winning Threshold Method per (Dataset, feature_name, OoD==f(x)=y, Organic)
+
+    # filter original df to only those winning methods
+    df_best = df.merge(best[keys + ["Threshold Method"]], on=keys + ["Threshold Method"], how="inner")
+
+    # inspect accuracy these winners get on each OoD Test Fold
+    per_shift = (
+        df_best.groupby(keys + ["Threshold Method", "OoD Test Fold"])["ba"]
+               .agg(["count","min","mean","max"])
+               .reset_index()
+               .sort_values(keys + ["OoD Test Fold"])
+    )
+    per_shift = per_shift.reset_index()
+    print(per_shift)
+    input()
+    print(per_shift.groupby(["OoD==f(x)=y", "Dataset", "OoD Test Fold"])["mean"].max())
+    input()
+
+    # print(best_calib_for_each_dataset)
+    input()
+
+    #best performing calibration method
+    df = df[(~df["Performance Calibrated"])&(df["Threshold Method"]=="val_optimal")]
+
+    print(df.groupby(["Dataset", "Organic"])["feature_name"].unique())
+    input()
     batched_consistency = df.groupby(["Dataset", "feature_name", "OoD==f(x)=y", "Organic" ])[["ba"]].agg(["mean"]).reset_index()
     print(batched_consistency)
-    # print(df.columns)
-    # print(df[~df["OoD Shift"].isin(SYNTHETIC_SHIFTS)].groupby(["OoD==f(x)=y", "Performance Calibrated", "Threshold Method"])[["balanced_accuracy"]].agg(["min", "mean", "max"]).reset_index())
-    #
-    # results = df[df["Threshold Method"] == "val_optimal"]
-    # regular_ood = results[(results["OoD==f(x)=y"]==False) & (results["Performance Calibrated"]==False)]
-    # correctness = results[(results["OoD==f(x)=y"]==True) & (results["Performance Calibrated"]==True)]
-    # regular_ood = regular_ood.groupby(["Dataset", "feature_name"])[["balanced_accuracy"]].mean().reset_index()
-    # regular_ood["correctness_ba"] = correctness.groupby(["Dataset", "feature_name"])[["balanced_accuracy"]].mean().reset_index()["balanced_accuracy"]
-    # regular_ood["diff"] = regular_ood["balanced_accuracy"]-regular_ood["correctness_ba"]
-    # print(regular_ood.groupby(["Dataset", "feature_name"])[["balanced_accuracy", "correctness_ba"]].mean().reset_index())
-    # best_config = df[(df["Threshold Method"] == "ind_span")&(df["Performance Calibrated"])&(df["OoD==f(x)=y"])]
-    # print(best_config.groupby(["Dataset", "feature_name", "OoD Shift"])["balanced_accuracy"].mean())
 
 
 
-def get_ood_detector_data(data):
+def get_all_ood_detector_verdicts(data):
     data = data[data["fold"] != "train"]
     data = data[data["shift"] != "noise"]
     # data = data[data["shift"]!="noise"]
@@ -310,7 +394,7 @@ def get_ood_detector_data(data):
 def loss_verdict_histogram(batch_size, prefix="final_data"):
     df = load_all(prefix=prefix, compute_ood=False, batch_size=batch_size)
 
-    data = get_ood_detector_data(df)
+    data = get_all_ood_detector_verdicts(df)
 
     def baseline(data, color=None, ax=None, **kwargs):
         dataset = data["Dataset"].unique()[0]
