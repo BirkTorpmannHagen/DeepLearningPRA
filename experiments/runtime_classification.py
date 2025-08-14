@@ -197,7 +197,8 @@ def ood_detector_correctness_prediction_accuracy(batch_size, shift="normal"):
     df = load_all(prefix="final_data", batch_size=batch_size, shift=shift, samples=100)
 
     df["shift_intensity_num"] = pd.to_numeric(df["shift_intensity"], errors="coerce")
-
+    print(df.groupby(["Dataset", "shift"])["shift_intensity_num"].max().reset_index())
+    input()
     # For each dataset, get the maximum numeric value (NaNs are ignored)
     max_shift_intensities = (
         df.groupby("Dataset")["shift_intensity_num"]
