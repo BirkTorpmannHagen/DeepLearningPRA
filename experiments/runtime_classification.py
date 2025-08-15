@@ -2,6 +2,7 @@ import itertools
 import os.path
 
 import numpy as np
+import pandas
 import pandas as pd
 import seaborn
 from matplotlib import pyplot
@@ -338,23 +339,29 @@ def ood_verdict_shiftwise_accuracy_tables(batch_size):
 
 
 def ood_accuracy_vs_pred_accuacy_plot(batch_size):
-    df = get_all_ood_detector_data(batch_size, filter_thresholding_method=True, filter_ood_correctness=True,
+    df = get_all_ood_detector_data(batch_size, filter_thresholding_method=True, filter_ood_correctness=False,
                                    filter_correctness_calibration=True, filter_organic=False, filter_best=True)
 
 
     #get only the shifts that affect the performance of the OOD detector
     df_raw = load_all(1, shift="")
     acc_by_dataset_and_shift = df_raw.groupby(["Dataset", "shift"])["correct_prediction"].mean().reset_index()
-    ood_accs = df.groupby(["Dataset", "OoD Test Fold"])["tpr"].mean().reset_index()
+    ood_accs = df.groupby(["Dataset", "OoD Test Fold", "OoD==f(x)=y"])["tpr"].mean().reset_index()
     ood_accs.rename(columns={"OoD Test Fold":"shift"}, inplace=True)
 
     merged = acc_by_dataset_and_shift.merge(ood_accs, on=["Dataset", "shift"])
     print(merged)
-    g = sns.FacetGrid(merged, col="Dataset", col_wrap=3, sharex=False, sharey=False)
+    g = sns.FacetGrid(merged, col="Dataset", row="OoD==f(x)=y", sharex=False, sharey=False)
     g.map_dataframe(sns.regplot, x="correct_prediction", y="tpr", robust=False, scatter=False)
     g.map_dataframe(sns.scatterplot, x="correct_prediction", y="tpr", hue="shift", alpha=0.5, edgecolor=None)
+    for ax in g.axes.flat:
+        ax.plot([0, 1], [1, 0], color="red", linestyle="--", label="Ideal")
+
     g.set_axis_labels("Prediction Accuracy", "OoD Detection Rate")
-    plt.savefig("ood_accuracy_vs_pred_accuacy.pdf")
+    for ax in g.axes.flat:
+        ax.set_ylim(0,1.1)
+        ax.set_xlim(0,1.1)
+    plt.savefig("figures/tpr_v_acc.pdf")
     plt.show()
 
 
@@ -682,3 +689,28 @@ def plot_batching_effect(dataset, feature):
     plt.xlim(0,2500)
     plt.savefig(f"{dataset}_{feature}_kdes.pdf")
     plt.show()
+
+
+def get_error_rate_given_rv():
+    results_list = []
+    for dataset in DATASETS:
+        for dsd in DSDS:
+            if dsd=="rabanser":
+                continue
+            df = load_pra_df(dataset, dsd, batch_size=1)
+            ood_folds = df[df["ood"]]["fold"].unique()
+            for ood_val, ood_test in itertools.product(ood_folds, ood_folds):
+                data_train = df[(df["fold"]=="ind_val")|(df["fold"]==ood_val)]
+                data_test = df[(df["fold"]=="ind_test")|(df["fold"]==ood_test)]
+                ood_detector = OODDetector(data_train, ood_val)
+                data_test["detected_ood"]=ood_detector.predict(data_test)
+                missed_predictions = data_test[~data_test["correct_prediction"]]
+                missed_ood = missed_predictions[~missed_predictions["detected_ood"]]
+                for fold in data_test["fold"].unique():
+                    rv_prop = len(missed_ood[missed_ood["fold"]==fold])/len(data_test[data_test["fold"]==fold])
+                    vanilla_prop = 1-data_test[data_test["fold"]==fold]["correct_prediction"].mean()
+                    results_list.append({"Dataset":dataset, "Feature":dsd, "Fold":fold, "RV Proportion":rv_prop, "Vanilla Prop":vanilla_prop})
+
+    results = pd.DataFrame(results_list)
+    print(results.groupby(["Dataset", "Feature", "Fold"])[["RV Proportion", "Vanilla Prop"]].mean())
+    results.to_csv("datasetwise_incorrect_detections.csv")
