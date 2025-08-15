@@ -7,12 +7,16 @@ import pandas as pd
 import seaborn
 from matplotlib import pyplot
 from matplotlib.lines import Line2D
+from multiprocessing import Pool, cpu_count
 from matplotlib.patches import Patch
 from thop.utils import prRed
 from tqdm import tqdm
+from multiprocessing import Pool, cpu_count
+
 import seaborn as sns
 import matplotlib.pyplot as plt
 from components import OODDetector
+from itertools import product
 from rateestimators import ErrorAdjustmentEstimator
 from simulations import UniformBatchSimulator
 from utils import load_pra_df, load_all, DSD_PRINT_LUT, DATASETWISE_RANDOM_LOSS, DATASETS, DSDS, THRESHOLD_METHODS, \
@@ -194,77 +198,133 @@ def verdictwise_proportions(cal_idx=0, batch_size=1):
     plt.savefig("proportions_all.pdf")
     plt.show()
 
+def parallel_compute_ood_detector_prediction_accuracy(data_filtered, threshold_method, dataset, feature, ood_perf, perf_calibrated):
+    data_dict = []
+    for ind_val_fold in ["ind_val", "ind_test"]:
+        for ood_val_fold in data_filtered["shift"].unique():
+            data_copy = data_filtered.copy()
+            if ood_val_fold in ["train", "ind_val", "ind_test"] or ood_val_fold in SYNTHETIC_SHIFTS:
+                # dont calibrate on ind data or synthetic ood data
+                continue
+            data_train = data_copy[
+                (data_copy["shift"] == ood_val_fold) | (data_copy["shift"] == ind_val_fold)]
+            dsd = OODDetector(data_train, ood_val_fold, threshold_method=threshold_method)
+            # dsd.kde()
+            for ood_test_fold in data_filtered["fold"].unique():
 
+                if ood_test_fold in ["train", "ind_val", "ind_test"]:
+                    continue
+                if perf_calibrated:
+                    data_copy["ood"] = ~data_copy["correct_prediction"]
+                ind_test_fold = "ind_test" if ind_val_fold == "ind_val" else "ind_val"
+                data_test = data_copy[(data_copy["fold"] == ood_test_fold) | (data_copy["fold"] == ind_test_fold)]
+                shift = ood_test_fold.split("_")[0]
+                shift_intensity = ood_test_fold.split("_")[-1] if "_" in ood_test_fold else "Organic"
+                if ood_perf and not perf_calibrated:
+                    data_copy["ood"] = ~data_copy["correct_prediction"]
+                tpr, tnr, ba = dsd.get_metrics(data_test)
+                if np.isnan(ba):
+                    continue
+                data_dict.append({"Dataset": dataset, "feature_name": feature, "Threshold Method": threshold_method,
+                     "OoD==f(x)=y": ood_perf, "Performance Calibrated": perf_calibrated,
+                     "OoD Val Fold": ood_val_fold, "InD Val Fold": ind_val_fold,
+                     "OoD Test Fold": ood_test_fold, "InD Test Fold": ind_test_fold, "Shift": shift,
+                     "Shift Intensity": shift_intensity, "tpr": tpr, "tnr": tnr, "ba": ba})
+    return data_dict
+
+
+def _compute_one(args):
+    (
+        data_filtered, threshold_method, dataset, feature,
+        ood_perf, perf_calibrated
+    ) = args
+    try:
+        out = parallel_compute_ood_detector_prediction_accuracy(
+            data_filtered, threshold_method, dataset, feature,
+            ood_perf, perf_calibrated
+        )
+        return out  # may be None if function early-continues
+    except Exception as e:
+        # optional: return diagnostics instead of raising to avoid killing the pool
+        return {
+            "Dataset": dataset,
+            "feature_name": feature,
+            "Threshold Method": threshold_method,
+            "OoD==f(x)=y": ood_perf,
+            "Performance Calibrated": perf_calibrated,
+            "error": str(e),
+        }
+
+def _make_jobs_for_feature(data_filtered, dataset, feature):
+    # (ood_perf, perf_calibrated) pairs except the skipped case
+    pairs = [(o, p) for o, p in product([True, False], [True, False]) if not (p and not o)]
+    # cartesian product over threshold methods
+    jobs = [
+        (data_filtered, tm, dataset, feature, o, p)
+        for (o, p) in pairs
+        for tm in THRESHOLD_METHODS
+    ]
+    return jobs
+
+# ---- main entry ----
 def ood_detector_correctness_prediction_accuracy(batch_size, shift="normal"):
     df = load_all(prefix="final_data", batch_size=batch_size, shift=shift, samples=100)
+    df = df[df["fold"] != "train"]
 
-    df["shift_intensity_num"] = pd.to_numeric(df["shift_intensity"], errors="coerce")
-    # For each dataset, get the maximum numeric value (NaNs are ignored)
-    max_shift_intensities = (
-        df.groupby("Dataset")["shift_intensity_num"]
-        .max()
-        .reset_index()
-    )
+    # Precompute total jobs for progress bar
+    total_jobs = 0
+    for dataset in DATASETS:
+        data_dataset = df[df["Dataset"] == dataset]
+        for feature in DSDS:
+            data_filtered = data_dataset[data_dataset["feature_name"] == feature]
+            if data_filtered.empty:
+                continue
+            total_jobs += len(_make_jobs_for_feature(data_filtered, dataset, feature))
 
-    # Turn into list if you want just the values
-    max_shift_values = max_shift_intensities["shift_intensity_num"].dropna().unique().tolist()
-    valid_intensities = [str(i) for i in max_shift_values]+ ["InD", "OoD"]  # Include InD and OoD as valid intensities
-    df = df[df["shift_intensity"].isin(valid_intensities)] #extract only maximum shifts
+    results_all = []
+    # choose pool size
+    n_procs = max(1, cpu_count() - 1)
 
-    df = df[df["fold"]!="train"]
-    with tqdm(total=df["feature_name"].nunique() * 3 *len(DATASETS), desc=f"Computing") as pbar:
+    with Pool(processes=n_procs) as pool, tqdm(total=total_jobs, desc="Computing") as pbar:
         for dataset in DATASETS:
-            data_dict = []
             data_dataset = df[df["Dataset"] == dataset]
             for feature in DSDS:
-                data_filtered = data_dataset[data_dataset["feature_name"]==feature]
+                data_filtered = data_dataset[data_dataset["feature_name"] == feature]
                 if data_filtered.empty:
                     print(f"No data for {dataset} {feature}")
                     continue
-                for ood_perf in [True, False]:
-                    for perf_calibrated in [True, False]:
-                        if perf_calibrated and not ood_perf:
-                            continue  # unimportant
-                        for threshold_method in THRESHOLD_METHODS:
 
-                            for ind_val_fold in ["ind_val", "ind_test"]:
-                                for ood_val_fold in data_filtered["shift"].unique():
-                                    data_copy = data_filtered.copy()
-                                    if ood_val_fold in ["train", "ind_val", "ind_test"] or ood_val_fold in SYNTHETIC_SHIFTS:
-                                        # dont calibrate on ind data or synthetic ood data
-                                        continue
-                                    data_train = data_copy[
-                                        (data_copy["shift"] == ood_val_fold) | (data_copy["shift"] == ind_val_fold)]
-                                    dsd = OODDetector(data_train, ood_val_fold, threshold_method=threshold_method)
-                                    # dsd.kde()
-                                    for ood_test_fold in data_filtered["fold"].unique():
-                                        if ood_test_fold in ["train", "ind_val", "ind_test"]:
-                                            continue
-                                        if perf_calibrated:
-                                            data_copy["ood"]=~data_copy["correct_prediction"]
-                                        ind_test_fold = "ind_test" if ind_val_fold == "ind_val" else "ind_val"
-                                        data_test = data_copy[(data_copy["fold"]==ood_test_fold)|(data_copy["fold"]==ind_test_fold)]
-                                        shift = data_test["shift"].unique()[0]
-                                        shift_intensity = data_test["shift_intensity"].unique()[0]
-                                        if ood_perf and not perf_calibrated:
-                                            data_copy["ood"]=~data_copy["correct_prediction"]
-                                        tpr, tnr, ba = dsd.get_metrics(data_test)
-                                        if np.isnan(ba):
-                                            continue
-                                        data_dict.append(
-                                            {"Dataset": dataset, "feature_name": feature, "Threshold Method": threshold_method,
-                                             "OoD==f(x)=y": ood_perf, "Performance Calibrated": perf_calibrated,
-                                             "OoD Val Fold": ood_val_fold, "InD Val Fold":ind_val_fold,
-                                             "OoD Test Fold":ood_test_fold, "InD Test Fold": ind_test_fold, "Shift":shift, "Shift Intensity":shift_intensity, "tpr": tpr, "tnr": tnr, "ba": ba}
-                                        )
-                                        pbar.set_description(f"Computing for {dataset}, {feature} {ood_perf} {ood_test_fold}; current ba: {ba}")
+                jobs = _make_jobs_for_feature(data_filtered, dataset, feature)
 
-                                # data_copy = data_copy[data_copy["ood_val_fold"]!=data_copy["shift"]]
-                        pbar.update(1)
+                # stream results as they complete; update pbar per completed task
+                for out in pool.imap_unordered(_compute_one, jobs, chunksize=1):
+                    pbar.update(1)
+                    if out is None:
+                        continue
+                    results_all.append(out)
 
-            data = pd.DataFrame(data_dict)
-            data["feature_name"].replace(DSD_PRINT_LUT, inplace=True)
-            data.to_csv(f"ood_detector_data/ood_detector_correctness_{dataset}_{batch_size}.csv", index=False)
+    # Collate + save per-dataset CSVs (to match original behavior)
+    # Collate + save per-dataset CSVs (to match original behavior)
+    if not results_all:
+        print("No results produced.")
+        return
+
+    flat_success = [row for out in results_all if isinstance(out, list) for row in out]
+    flat_errors = [out for out in results_all if isinstance(out, dict) and "error" in out]
+
+    data = pd.DataFrame(flat_success)
+    print(data)
+    if not data.empty:
+        data["feature_name"].replace(DSD_PRINT_LUT, inplace=True)
+
+    if flat_errors:
+        pd.DataFrame(flat_errors).to_csv(f"ood_detector_data/ood_detector_errors_{batch_size}.csv", index=False)
+
+    for dataset in DATASETS:
+        data_ds = data[data["Dataset"] == dataset]
+        if data_ds.empty:
+            continue
+        data_ds.to_csv(f"ood_detector_data/ood_detector_correctness_{dataset}_{batch_size}.csv", index=False)
 
 def get_all_ood_detector_data(batch_size, filter_thresholding_method=False, filter_ood_correctness=False, filter_correctness_calibration=False, filter_organic=False, filter_best=False):
     dfs = []
