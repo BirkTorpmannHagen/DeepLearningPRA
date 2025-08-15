@@ -427,23 +427,25 @@ def regplots(batch_size):
             print(shift)
             df.replace({shift: "Organic Shift"}, inplace=True)
 
-
     df.replace({"normal":"Organic Shift"}, inplace=True)
     hues = df["shift"].unique()
     def plot_threshold(data,color=None, **kwargs):
         threshold = OODDetector(data, ood_val_shift="Organic Shift", threshold_method="val_optimal").threshold
         plt.axvline(threshold, color=color, linestyle="--", label="Threshold")
-    # def plot_max_loss(data, color=None, **kwargs):
-    #     plt.axhline(DATASETWISE_RANDOM_LOSS[data["Dataset"].unique()[0]], color=color, linestyle="--", label="Random Guessing")
+    def plot_max_loss(data, color=None, **kwargs):
+        plt.axhline(DATASETWISE_RANDOM_LOSS[data["Dataset"].unique()[0]], color=color, linestyle="--", label="Random Guessing")
     def custom_scatter(data, **kwargs):
         kwargs.pop("color", None)  # Remove auto-passed color to prevent conflict
         sns.scatterplot(data=data[data["shift"].isin(SYNTHETIC_SHIFTS)], x="feature", y="loss", hue="shift", palette=sns.color_palette(n_colors=len(SYNTHETIC_SHIFTS)+2)[2:], **kwargs)
-        sns.scatterplot(data=data[~data["shift"].isin(SYNTHETIC_SHIFTS)], x="feature", y="loss", hue="fold", marker="x",palette=sns.color_palette(n_colors=len(SYNTHETIC_SHIFTS)+2)[:2], alpha=1, **kwargs)
+        sns.scatterplot(data=data[~data["shift"].isin(SYNTHETIC_SHIFTS)], x="feature", y="loss", hue="ood_label", marker="x",palette=sns.color_palette(n_colors=len(SYNTHETIC_SHIFTS)+2)[:2], alpha=1, **kwargs)
     df.replace(DSD_PRINT_LUT, inplace=True)
     # df = filter_max_loss(df)
+    df["ood_label"] = df["ood"].apply(lambda x: "OoD" if x else "InD")
+    # sns.set_context("notebook", font_scale=2)
     g = sns.FacetGrid(df, row="feature_name", col="Dataset", margin_titles=True, sharex=False, sharey=False)
     g.map_dataframe(custom_scatter)
-    g.map_dataframe(plot_threshold)
+    # g.map_dataframe(plot_threshold)
+    g.map_dataframe(plot_max_loss, color="red")
     g.set_titles(row_template="Feature = {row_name}", col_template="{col_name}")
 
     for ax, row_val in zip(g.axes[:, 0], g.row_names):
@@ -451,10 +453,16 @@ def regplots(batch_size):
             ax.set_ylabel("Feature")
         else:
             ax.set_ylabel(row_val)
-    for ax in g.axes.flat:
-        ax.set_ylim(bottom=0)
-    g.add_legend()
-    # for ax in g.axes.flat:
+
+    # g.add_legend(
+    #     title="Shift",
+    #     loc="lower center",
+    #     bbox_to_anchor=(0.5, -0.05),  # centered below plot
+    #     ncol=3  # number of columns in legend
+    # )
+
+    # plt.tight_layout(pad=2)
+    # for ax in g.axes.flat:ood_accuracy_vs_pred_accuacy_plot
         # ax.set_yscale("log")
     #     ax.set_xscale("log")
     plt.savefig(f"figures/regplots_{batch_size}.pdf", dpi=300, bbox_inches='tight')

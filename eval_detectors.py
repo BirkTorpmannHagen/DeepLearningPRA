@@ -29,7 +29,7 @@ def collect_data(testbed_constructor, dataset_name, mode="noise"):
 
 def collect_debiased_data(testbed_constructor, dataset_name, mode="noise", sampler="RandomSampler", k=5, batch_size=8):
     # features=[cross_entropy, energy, softmax]
-    features = [cross_entropy, energy, softmax, typicality, knn]
+    features = [cross_entropy, energy, softmax, typicality, knn, grad_magnitude]
     if k!=-1:
         features.remove(knn)
     uncollected_features = features.copy()
@@ -139,16 +139,16 @@ if __name__ == '__main__':
     from features import *
     # torch.multiprocessing.set_start_method('spawn')
     # collect_bias_data(-1)
-    # collect_bias_data()
+    collect_bias_data()
 
     # collect_data(CCTTestBed, "CCT",mode="normal")
     # collect_bias_data(5)
 
-    collect_single_data(OfficeHomeTestBed)
-    collect_single_data(Office31TestBed)
-    collect_single_data(NICOTestBed)
-    collect_single_data(CCTTestBed)
-    collect_single_data(PolypTestBed)
+    # collect_single_data(OfficeHomeTestBed)
+    # collect_single_data(Office31TestBed)
+    # collect_single_data(NICOTestBed)
+    # collect_single_data(CCTTestBed)
+    # collect_single_data(PolypTestBed)
     # bench = NjordTestBed(10)
     # collect_bias_data(5)
     # collect_bias_data(-1)
