@@ -210,7 +210,7 @@ def ood_detector_correctness_prediction_accuracy(batch_size, shift="normal"):
     df = df[df["shift_intensity"].isin(valid_intensities)] #extract only maximum shifts
 
     df = df[df["fold"]!="train"]
-    with tqdm(total=df["feature_name"].nunique() * 2 * 2*len(DATASETS), desc=f"Computing") as pbar:
+    with tqdm(total=df["feature_name"].nunique() * 3 *len(DATASETS), desc=f"Computing") as pbar:
         for dataset in DATASETS:
             data_dict = []
             data_dataset = df[df["Dataset"] == dataset]
@@ -224,6 +224,7 @@ def ood_detector_correctness_prediction_accuracy(batch_size, shift="normal"):
                         if perf_calibrated and not ood_perf:
                             continue  # unimportant
                         for threshold_method in THRESHOLD_METHODS:
+
                             for ind_val_fold in ["ind_val", "ind_test"]:
                                 for ood_val_fold in data_filtered["shift"].unique():
                                     data_copy = data_filtered.copy()
@@ -241,8 +242,8 @@ def ood_detector_correctness_prediction_accuracy(batch_size, shift="normal"):
                                             data_copy["ood"]=~data_copy["correct_prediction"]
                                         ind_test_fold = "ind_test" if ind_val_fold == "ind_val" else "ind_val"
                                         data_test = data_copy[(data_copy["fold"]==ood_test_fold)|(data_copy["fold"]==ind_test_fold)]
-                                        shift = data_test["shift"]
-                                        shift_intensity = data_test["shift_intensity"]
+                                        shift = data_test["shift"].unique()[0]
+                                        shift_intensity = data_test["shift_intensity"].unique()[0]
                                         if ood_perf and not perf_calibrated:
                                             data_copy["ood"]=~data_copy["correct_prediction"]
                                         tpr, tnr, ba = dsd.get_metrics(data_test)
@@ -252,7 +253,7 @@ def ood_detector_correctness_prediction_accuracy(batch_size, shift="normal"):
                                             {"Dataset": dataset, "feature_name": feature, "Threshold Method": threshold_method,
                                              "OoD==f(x)=y": ood_perf, "Performance Calibrated": perf_calibrated,
                                              "OoD Val Fold": ood_val_fold, "InD Val Fold":ind_val_fold,
-                                             "OoD Test Fold":ood_test_fold, "OoD Test Fold": ind_test_fold, "Shift":shift, "Shift Intensity":shift_intensity, "tpr": tpr, "tnr": tnr, "ba": ba}
+                                             "OoD Test Fold":ood_test_fold, "InD Test Fold": ind_test_fold, "Shift":shift, "Shift Intensity":shift_intensity, "tpr": tpr, "tnr": tnr, "ba": ba}
                                         )
                                         pbar.set_description(f"Computing for {dataset}, {feature} {ood_perf} {ood_test_fold}; current ba: {ba}")
 
@@ -260,7 +261,7 @@ def ood_detector_correctness_prediction_accuracy(batch_size, shift="normal"):
                         pbar.update(1)
 
             data = pd.DataFrame(data_dict)
-            data.replace(DSD_PRINT_LUT, inplace=True)
+            data["feature_name"].replace(DSD_PRINT_LUT, inplace=True)
             data.to_csv(f"ood_detector_data/ood_detector_correctness_{dataset}_{batch_size}.csv", index=False)
 
 def get_all_ood_detector_data(batch_size, filter_thresholding_method=False, filter_ood_correctness=False, filter_correctness_calibration=False, filter_organic=False, filter_best=False):
@@ -345,10 +346,15 @@ def ood_accuracy_vs_pred_accuacy_plot(batch_size):
     #get only the shifts that affect the performance of the OOD detector
     df_raw = load_all(1, shift="")
     acc_by_dataset_and_shift = df_raw.groupby(["Dataset", "shift"])["correct_prediction"].mean().reset_index()
+
+    ind_accs = df.groupby(["Dataset", "InD Test Fold"])["tnr"].mean().reset_index()
+    ind_accs.rename(columns={"InD Test Fold":"shift"}, inplace=True)
+
     ood_accs = df.groupby(["Dataset", "OoD Test Fold"])["tpr"].mean().reset_index()
     ood_accs.rename(columns={"OoD Test Fold":"shift"}, inplace=True)
 
     merged = acc_by_dataset_and_shift.merge(ood_accs, on=["Dataset", "shift"])
+    merged = merged.merge(ind_accs, on=["Dataset", "shift"])
     print(merged)
     g = sns.FacetGrid(merged, col="Dataset", col_wrap=3, sharex=False, sharey=False)
     g.map_dataframe(sns.regplot, x="correct_prediction", y="tpr", robust=False, scatter=False)
