@@ -1,18 +1,10 @@
 # from albumentations.random_utils import normal
-import itertools
 
-import numpy as np
 from scipy.stats import ks_2samp
 from seaborn import FacetGrid
 import warnings
 
-from experiments.runtime_classification import *
-
 warnings.filterwarnings("ignore")
-from simulations import *
-from utils import *
-import pandas as pd
-from components import OODDetector
 from experiments.dataset_analysis import *
 from experiments.runtime_classification import *
 from experiments.pra import *
@@ -266,9 +258,9 @@ def run_rv_experiments():
           Runtime Verification
       """
 
-    for batch_size in BATCH_SIZES:
-        print(f"Running batch size {batch_size}")
-        ood_detector_correctness_prediction_accuracy(batch_size, shift="")
+    # for batch_size in BATCH_SIZES:
+    #     print(f"Running batch size {batch_size}")
+    #     ood_detector_correctness_prediction_accuracy(batch_size, shift="")
 
     # ood_verdict_shiftwise_accuracy_tables(1)
     ood_accuracy_vs_pred_accuacy_plot(1)
@@ -302,12 +294,12 @@ def run_loss_regression_experiments():
     # regplot_by_shift()
     # plot_intensitywise_kdes()
     # plot_variances()
-    # regplots(32)
+    regplots(32)
     # compare_gam_errors()
-    get_gam_data()
+    # get_gam_data()
     # gam_fits(batch_size=32)
     # plot_gam_errors(32)
-    plot_gam_errors_by_batch_size()
+    # plot_gam_errors_by_batch_size()
     # assess_ungrouped_regression_errors()
 
 
@@ -345,7 +337,7 @@ if __name__ == '__main__':
 
     run_rv_experiments()
     # run_loss_regression_experiments()
-    run_pra_experiments()
+    # run_pra_experiments()
 
 
 
