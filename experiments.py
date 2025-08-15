@@ -19,7 +19,7 @@ from experiments.pra import *
 from experiments.loss_regression import *
 
 def simulate_dsd_accuracy_estimation(data, rate, val_set, test_set, ba, tpr, tnr, dsd):
-    sim = UniformBatchSimulator(data, ood_test_shift=test_set, ood_val_shift=val_set, estimator=BernoulliEstimator,
+    sim = UniformBatchSimulator(data, ood_test_shift=test_set, ood_val_shift=val_set, estimator=ErrorAdjustmentEstimator,
                                 use_synth=False)
     results = sim.sim(rate, 600)
     results = results.groupby(["Tree"]).mean().reset_index()
@@ -59,22 +59,7 @@ def get_dsd_verdicts_given_true_trace(trace, tpr, tnr):
 def plot_dsd_accuracies(samples=1000):
     data = []
     for batch_size in BATCH_SIZES:
-        batch_size_df = fetch_dsd_accuracies(batch_size, samples=100)
-        # batch_size_df = batch_size_df.groupby(["Dataset", "DSD", "val_fold", "test_fold"])[["ba"]].mean().reset_index()
-        batch_size_df["batch_size"]=batch_size
-        for dataset in DATASETS:
-            for dsd in DSDS:
-                filt = batch_size_df[(batch_size_df["Dataset"]==dataset)&(batch_size_df["DSD"]==dsd)]
-                print(filt)
-                pivoted = filt.pivot(index=["DSD", "batch_size", "Dataset", "val_fold"],
-                                     columns="test_fold", values="ba")
-                error = xval_errors(pivoted.values)
-                data.append({
-                    "DSD":dsd, "Dataset":dataset, "batch_size":batch_size,
-                    "error":error, "ba":filt["ba"].mean(),
-                })
-
-                # print(pivoted)
+        data = ood_detector_correctness_prediction_accuracy(32)
     df = pd.DataFrame(data)
     g = FacetGrid(df, col="Dataset")
 
@@ -96,54 +81,7 @@ def plot_dsd_accuracies(samples=1000):
     plt.show()
 
 
-def accuracy_by_fold():
-    errors = []
 
-    for batch_size in BATCH_SIZES:
-        print(batch_size)
-        all_data = pd.concat([load_pra_df(dataset_name=dataset_name, feature_name="knn", batch_size=batch_size, samples=100) for dataset_name in
-                              DATASETS])
-        table = all_data.groupby(["Dataset", "shift"])["correct_prediction"].mean()
-
-        fold_wise_error = table.reset_index()
-
-        fold_wise_error_ood = fold_wise_error[~fold_wise_error["shift"].isin(["ind_val", "ind_test", "train"])]
-        fold_wise_error_ind = fold_wise_error[fold_wise_error["shift"].isin(["ind_val", "ind_test", "train"])]
-
-        # Calculate the difference matrix
-
-        for dataset_name in DATASETS:
-            filt = fold_wise_error_ind[fold_wise_error_ind["Dataset"]==dataset_name]
-            error = np.abs(filt[filt["shift"]=="ind_val"]["correct_prediction"].mean()-filt[filt["shift"]=="ind_test"]["correct_prediction"].mean())
-            errors.append({"ood":False, "Dataset": dataset_name, "batch_size":batch_size, "Error":error})
-
-        diff_matrices = {}
-        for dataset, group in fold_wise_error_ood.groupby('Dataset'):
-            group.set_index('shift', inplace=True)
-            accuracy_values = group['correct_prediction'].to_numpy()
-            diff_matrix = pd.DataFrame(
-                data=np.subtract.outer(accuracy_values, accuracy_values),
-                index=group.index,
-                columns=group.index
-            )
-            # Store the matrix for each dataset
-
-            diff_matrices[dataset] = diff_matrix
-            try:
-                [errors.append({"ood": True, "Dataset":dataset, "Error":np.abs(error), "batch_size":batch_size}) for error in np.unique(diff_matrix[diff_matrix!=0])]
-            except:
-                print("no non-zero values in OoD matrix; setting zero error...")
-                errors.append({"ood": True, "Dataset":dataset, "Error":0, "batch_size":batch_size})
-
-            # Display the difference matrices for each dataset
-    errors = pd.DataFrame(errors)
-    g = sns.FacetGrid(errors, col="Dataset")
-    g.map_dataframe(sns.lineplot, x="batch_size", y="Error", hue="ood",  errorbar=("pi", 100) )
-    for ax in g.axes.flat:
-        ax.set_yscale("log")
-    plt.savefig("tree1_errors.pdf")
-    plt.show()
-    return errors
 
 
 
@@ -332,7 +270,8 @@ def run_rv_experiments():
         print(f"Running batch size {batch_size}")
         ood_detector_correctness_prediction_accuracy(batch_size, shift="")
 
-    # ood_verdict_accuracy_tables(1)
+    # ood_verdict_shiftwise_accuracy_tables(1)
+    ood_accuracy_vs_pred_accuacy_plot(1)
 
     #single batch size
 
@@ -346,8 +285,6 @@ def run_rv_experiments():
 
     # for batch_size in BATCH_SIZES[1:-1]:
     #     debiased_ood_detector_correctness_prediction_accuracy(batch_size)
-    # eval_debiased_ood_detectors()
-    # debiased_plots()
 
 
 
@@ -359,6 +296,7 @@ def run_rv_experiments():
     # loss_verdict_histogram(1)
 
     # ood_verdict_plots_batched()
+    # get_error_rate_given_rv()
 
 def run_loss_regression_experiments():
     # regplot_by_shift()
@@ -376,32 +314,38 @@ def run_loss_regression_experiments():
 
 
 
+
 def run_pra_experiments():
+
+    #parameter estimation
+
+    #rate estimation
     # collect_rate_estimator_data()
     # eval_rate_estimator()
-    # plot_dsd_accuracies(1000)
-    plot_rate_estimation_errors_for_dsds()
+    # plot_rate_estimation_errors_for_dsds()
 
-    # accuracy_by_fold_and_dsd_verdict()
-    # print(data)
+    #accuracy estimation
+    # assess_re_tree_predaccuracy_estimation_errors()
 
-    # collect_tpr_tnr_sensitivity_data()
-    # collect_dsd_accuracy_estimation_data()
+    # dsd accuracy estimation
+    ood_detector_accuracy_estimation_errors()
+    # accuracy estimation
+    # collect_re_accuracy_estimation_data()
     # plot_dsd_acc_errors()
-    # plot_dsd_accuracies()
-    # uniform_bernoulli(data, load = False)
+
+
     # show_rate_risk()
     # cost_benefit_analysis()
     # get_datasetwise_risk()
-    get_risk_tables()
-    # get_error_rate_given_rv()
+    # get_risk_tables()
+
 
 if __name__ == '__main__':
     #accuracies on each dataset
 
     run_rv_experiments()
     # run_loss_regression_experiments()
-    # run_pra_experiments()
+    run_pra_experiments()
 
 
 

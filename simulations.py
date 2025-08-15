@@ -3,7 +3,7 @@ import pandas as pd
 from decimal import getcontext
 
 from components import Trace, SyntheticOODDetector, OODDetector
-from rateestimators import BernoulliEstimator
+from rateestimators import ErrorAdjustmentEstimator
 from riskmodel import DetectorEventTree, BaseEventTree
 
 np.set_printoptions(precision=4, suppress=True)
@@ -22,7 +22,7 @@ class Simulator:
     Abstract simulator class
 """
 
-    def __init__(self, df, ood_test_shift, ood_val_shift, estimator=BernoulliEstimator, trace_length=100,
+    def __init__(self, df, ood_test_shift, ood_val_shift, estimator=ErrorAdjustmentEstimator, trace_length=100,
                  use_synth=True, **kwargs):
         self.df = df
 
@@ -94,7 +94,7 @@ class UniformBatchSimulator(Simulator):
     """
     permits conditional data collection simulating model + ood detector
     """
-    def __init__(self, df, ood_test_shift, ood_val_shift,  estimator=BernoulliEstimator, trace_length=100, use_synth=True, **kwargs):
+    def __init__(self, df, ood_test_shift, ood_val_shift, estimator=ErrorAdjustmentEstimator, trace_length=100, use_synth=True, **kwargs):
         super().__init__(df, ood_test_shift, ood_val_shift, estimator, trace_length, use_synth, **kwargs)
 
 

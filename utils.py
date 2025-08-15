@@ -6,7 +6,14 @@ import pandas as pd
 from tqdm import tqdm
 
 from components import OODDetector
+import itertools
 
+def mean_pairwise_abs_diff(values):
+    vals = list(values)
+    if len(vals) < 2:
+        return np.nan
+    diffs = [abs(a - b) for a, b in itertools.combinations(vals, 2)]
+    return float(np.mean(diffs))
 
 def sample_loss_feature(group, n_samples, n_size, stratisfication=False):
     samples = []
@@ -244,12 +251,11 @@ def load_pra_df(dataset_name, feature_name, model="" , batch_size=1, samples=100
     if groupbyfolds:
         df["ood"] = ~df["fold"].isin(["train", "ind_val", "ind_test"])
 
-    if not groupbyfolds:
-        df["shift"] = df["fold"].apply(
-            lambda x: x.split("_")[0] if "_0." in x else x)  # what kind of shift has occured?
-        df["shift_intensity"] = df["fold"].apply(
-            lambda x: x.split("_")[
-                1] if "0." in x else "InD" if "ind" in x else "Train" if "train" in x else "OoD")  # what intensity?
+    df["shift"] = df["fold"].apply(
+        lambda x: x.split("_")[0] if "_0." in x else x)  # what kind of shift has occured?
+    df["shift_intensity"] = df["fold"].apply(
+        lambda x: x.split("_")[
+            1] if "0." in x else "InD" if "ind" in x else "Train" if "train" in x else "OoD")  # what intensity?
 
     df["batch_size"]=batch_size
 
