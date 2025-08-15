@@ -272,7 +272,7 @@ def run_rv_experiments():
 
     # ood_verdict_shiftwise_accuracy_tables(1)
     ood_accuracy_vs_pred_accuacy_plot(1)
-
+    ood_accuracy_vs_pred_accuacy_plot(16)
     #single batch size
 
     # simple batching
