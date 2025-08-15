@@ -335,8 +335,8 @@ def run_pra_experiments():
 if __name__ == '__main__':
     #accuracies on each dataset
 
-    # run_rv_experiments()
-    run_loss_regression_experiments()
+    run_rv_experiments()
+    # run_loss_regression_experiments()
     # run_pra_experiments()
 
 

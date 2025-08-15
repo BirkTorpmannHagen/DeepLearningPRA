@@ -417,11 +417,10 @@ def ood_accuracy_vs_pred_accuacy_plot(batch_size):
 
     merged = pd.concat([ood_accs, ind_accs], ignore_index=True)
     merged = merged.merge(acc_by_dataset_and_shift, on=["Dataset", "fold"])
-    print(merged)
-    input()
+    merged["Shift"] = merged["fold"].apply(lambda x: x.split("_")[0] if "_" in x else "Organic")
     g = sns.FacetGrid(merged, col="Dataset", row="OoD==f(x)=y", sharex=False, sharey=False)
     g.map_dataframe(sns.regplot, x="correct_prediction", y="Detection Rate", robust=False, scatter=False)
-    g.map_dataframe(sns.scatterplot, x="correct_prediction", y="Detection Rate", alpha=0.5, edgecolor=None)
+    g.map_dataframe(sns.scatterplot, x="correct_prediction", y="Detection Rate", hue="Shift", alpha=0.5, edgecolor=None)
     for ax in g.axes.flat:
         ax.plot([0, 1], [1, 0], color="red", linestyle="--", label="Ideal")
 
