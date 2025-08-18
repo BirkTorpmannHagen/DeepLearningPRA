@@ -33,6 +33,8 @@ class BaseTestBed:
         self.mode=mode
         self.num_workers=5
         self.noise_range = np.arange(0.0, 0.2525, 0.025)[1:]
+        self.noise_range = np.linspace(0,0.5, 21)[1:]
+
 
         self.batch_size = batch_size
         self.sampler = sampler

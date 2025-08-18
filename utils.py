@@ -276,10 +276,17 @@ DATASETWISE_RANDOM_LOSS = {
     "NICO": -np.log(1/60),
     "Polyp": 1 #segmentation task; never incidentally correct
 }
+DATASETWISE_RANDOM_CORRECTNESS = {
+    "CCT": 1/15,
+    "OfficeHome": 1/65,
+    "Office31": 1/31,
+    "NICO": 1/60,
+    "Polyp": 0 #segmentation task; never incidentally correct
+}
 COLUMN_PRINT_LUT = {"feature_name":"Feature", "loss":"Loss", "rate":"p(E)", "shift_intensity":"Shift Intensity", "shift":"Shift", "feature": "Feature Value"}
 BIAS_TYPES = ["Unbiased", "Class", "Synthetic", "Temporal"]
 SAMPLERS = ["RandomSampler",  "ClassOrderSampler", "ClusterSampler", "SequentialSampler",]
-SYNTHETIC_SHIFTS = ["noise", "multnoise", "hue", "saltpepper", "saturation", "brightness", "contrast", "smear", "shift"]
+SYNTHETIC_SHIFTS = ["noise", "multnoise", "hue", "saltpepper", "saturation", "brightness", "contrast", "smear"]
 SHIFT_PRINT_LUT= {"normal": "Organic", "noise": "Additive Noise", "multnoise": "Multiplicative Noise",
              "hue": "Hue", "saltpepper": "Salt+Pepper Noise", "brightness":"Brightness", "contrast":"Contrast", "smear":"Smear"}
 

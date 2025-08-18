@@ -264,7 +264,8 @@ def run_rv_experiments():
 
     # ood_verdict_shiftwise_accuracy_tables(1)
     ood_accuracy_vs_pred_accuacy_plot(1)
-    ood_accuracy_vs_pred_accuacy_plot(16)
+    # ood_accuracy_vs_pred_accuacy_plot(16)
+    # ood_accuracy_vs_pred_accuacy_plot(64)
     #single batch size
 
     # simple batching
@@ -320,21 +321,20 @@ def run_pra_experiments():
     # assess_re_tree_predaccuracy_estimation_errors()
 
     # dsd accuracy estimation
-    ood_detector_accuracy_estimation_errors()
+    # ood_detector_accuracy_estimation_errors()
     # accuracy estimation
     # collect_re_accuracy_estimation_data()
     # plot_dsd_acc_errors()
 
 
-    # show_rate_risk()
+    # get_ratewise_risk_data()
     # cost_benefit_analysis()
-    # get_datasetwise_risk()
+    get_datasetwise_risk()
     # get_risk_tables()
 
 
 if __name__ == '__main__':
     #accuracies on each dataset
-
     run_rv_experiments()
     # run_loss_regression_experiments()
     # run_pra_experiments()

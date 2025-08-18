@@ -3,7 +3,7 @@ import pandas as pd
 from decimal import getcontext
 
 from components import Trace, SyntheticOODDetector, OODDetector
-from rateestimators import ErrorAdjustmentEstimator
+from rateestimators import ErrorAdjustmentEstimator, SimpleEstimator
 from riskmodel import DetectorEventTree, BaseEventTree
 
 np.set_printoptions(precision=4, suppress=True)
@@ -38,10 +38,16 @@ class Simulator:
         self.ind_val_acc = self.get_predictor_accuracy("ind_val")
         self.ind_test_acc = self.get_predictor_accuracy("ind_test")
         dsd_tnr, dsd_tpr = self.ood_detector.get_likelihood()
+        if dsd_tnr+dsd_tpr <= 1:
+            print("Using simple estimator due to low TNR+TPR")
+            estimator = SimpleEstimator
+
         ind_ndsd_acc = self.get_conditional_prediction_likelihood_estimates("ind_val", False)
         ind_dsd_acc = self.get_conditional_prediction_likelihood_estimates("ind_val", True)
         ood_ndsd_acc = self.get_conditional_prediction_likelihood_estimates(ood_val_shift, False)
         ood_dsd_acc = self.get_conditional_prediction_likelihood_estimates(ood_val_shift, True)
+
+
         self.detector_tree = DetectorEventTree(dsd_tpr, dsd_tnr, ind_ndsd_acc, ind_dsd_acc, ood_ndsd_acc, ood_dsd_acc,
                                                estimator=estimator)
         self.base_tree = BaseEventTree(dsd_tpr=dsd_tpr, dsd_tnr=dsd_tnr, ood_acc=self.ood_val_acc,

@@ -1,3 +1,4 @@
+import os.path
 from multiprocessing import Pool
 
 import seaborn as sns
@@ -182,23 +183,28 @@ def plot_rate_estimates():
     plt.show()
 
 
-def show_rate_risk():
-    data = load_pra_df("Polyp", "knn", batch_size=16, samples=100)
-    oods = data[~data["shift"].isin(["ind_val", "ind_test", "train"])]["shift"].unique()
-    rates = np.linspace(0, 1, 11)
-    dfs = []
-    with tqdm(total=len(oods)*(len(oods)-1)*len(rates)) as pbar:
-        for ood_val_set, ood_test_set, rate in itertools.product(oods, oods, rates):
-            if ood_val_set == ood_test_set:
-                continue
-            sim = UniformBatchSimulator(data, ood_test_shift=ood_test_set, ood_val_shift=ood_val_set, maximum_loss=0.5, estimator=ErrorAdjustmentEstimator, use_synth=True, dsd_tpr=0.9, dsd_tnr=0.9)
-            results = sim.sim(rate, 600)
-            results["Rate"] = rate
-            results["Risk Error"]=results["Risk Estimate"]-results["True Risk"]
-            dfs.append(results)
-            pbar.update()
+def get_ratewise_risk_data(load=True):
 
-    df = pd.concat(dfs)
+    if load and os.path.exists("pra_data/ratewise_risk_data.csv"):
+        df = pd.read_csv("pra_data/ratewise_risk_data.csv")
+    else:
+        data = load_pra_df("Polyp", "knn", batch_size=16, samples=100)
+        oods = data[~data["shift"].isin(["ind_val", "ind_test", "train"])]["shift"].unique()
+        rates = np.linspace(0, 1, 11)
+        dfs = []
+        with tqdm(total=len(oods)*(len(oods)-1)*len(rates)) as pbar:
+            for ood_val_set, ood_test_set, rate in itertools.product(oods, oods, rates):
+                if ood_val_set == ood_test_set:
+                    continue
+                sim = UniformBatchSimulator(data, ood_test_shift=ood_test_set, ood_val_shift=ood_val_set, maximum_loss=0.5, estimator=ErrorAdjustmentEstimator, use_synth=True, dsd_tpr=0.9, dsd_tnr=0.9)
+                results = sim.sim(rate, 600)
+                results["Rate"] = rate
+                results["Risk Error"]=results["Risk Estimate"]-results["True Risk"]
+                dfs.append(results)
+                pbar.update()
+        df = pd.concat(dfs)
+        df.to_csv("pra_data/ratewise_risk_data.csv", index=False)
+
     df = df.groupby(["Tree", "Rate"]).mean().reset_index()
     df.replace({"Base Tree": "Estimated Risk w/o RV", "Detector Tree": "Estimated Risk w/RV"}, inplace=True)
     sns.lineplot(df, x="Rate", y="Risk Estimate", hue="Tree")
@@ -494,21 +500,26 @@ def plot_sensitivity_errors():
 
 def get_datasetwise_risk():
     results_list = []
-    for dsd in DSDS:
-        df = load_pra_df("Polyp", dsd, batch_size=1)
-        for dataset in ["ind_test", "EndoCV2020", "EtisLaribDB", "CVC-ClinicDB" ]:
-            for ood_val_shift in ["EndoCV2020", "EtisLaribDB", "CVC-ClinicDB"]:
-                sim = UniformBatchSimulator(df, ood_test_shift=dataset, ood_val_shift=ood_val_shift, maximum_loss=0.5, use_synth=False)
-                results = sim.sim(1, 600)
+    with tqdm(total=(len(DSDS)-1)*4*3) as pbar:
+        for dsd in DSDS:
+            if dsd =="rabanser" or dsd=="softmax":
+                continue
+            df = load_pra_df("Polyp", dsd, batch_size=1)
+            print(df["feature_name"].unique())
+            for dataset in ["ind_test", "EndoCV2020", "EtisLaribDB", "CVC-ClinicDB" ]:
+                for ood_val_shift in ["EndoCV2020", "EtisLaribDB", "CVC-ClinicDB"]:
+                    sim = UniformBatchSimulator(df, ood_test_shift=dataset, ood_val_shift=ood_val_shift, maximum_loss=0.5, use_synth=False)
+                    results = sim.sim(1, 600)
 
-                results["Dataset"]=dataset
-                results["Model"]=model_name
-                results["ood_val_shift"]=ood_val_shift
-                results = results.groupby(["Model", "Tree",  "Dataset"])[["True Risk", "Accuracy"]].mean().reset_index()
-                results["DSD"]=dsd
-                results_list.append(results)
+                    results["Dataset"]=dataset
+                    results["ood_val_shift"]=ood_val_shift
+                    results = results.groupby(["Tree",  "Dataset"])[["True Risk", "Accuracy"]].mean().reset_index()
+                    results["DSD"]=dsd
+                    results_list.append(results)
+
+                    pbar.update(1)
     results = pd.concat(results_list)
-    print(results.groupby(["Model", "DSD", "Dataset", "Tree"])[["True Risk", "Accuracy"]].mean())
+    print(results.groupby(["DSD", "Dataset", "Tree"])[["True Risk", "Accuracy"]].mean())
     results.to_csv("datasetwise_risk.csv")
 
 
@@ -519,7 +530,7 @@ def get_risk_tables():
     df_base = df[df["Tree"]=="Base Tree"]
     df_dsd = df[df["Tree"]!="Base Tree"]
 
-    print(df_base.groupby(["Model", "Dataset"])["True Risk"].mean())
+    print(df_base.groupby([ "Dataset"])["True Risk"].mean())
     print(df_dsd.groupby(["Model", "DSD", "Dataset"])["True Risk"].mean())
 
 def assess_re_tree_predaccuracy_estimation_errors():

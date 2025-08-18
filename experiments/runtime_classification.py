@@ -9,7 +9,6 @@ from matplotlib import pyplot
 from matplotlib.lines import Line2D
 from multiprocessing import Pool, cpu_count
 from matplotlib.patches import Patch
-from thop.utils import prRed
 from tqdm import tqdm
 from multiprocessing import Pool, cpu_count
 
@@ -20,7 +19,7 @@ from itertools import product
 from rateestimators import ErrorAdjustmentEstimator
 from simulations import UniformBatchSimulator
 from utils import load_pra_df, load_all, DSD_PRINT_LUT, DATASETWISE_RANDOM_LOSS, DATASETS, DSDS, THRESHOLD_METHODS, \
-    SYNTHETIC_SHIFTS, BATCH_SIZES, load_all_biased, SAMPLERS, SAMPLER_LUT
+    SYNTHETIC_SHIFTS, BATCH_SIZES, load_all_biased, SAMPLERS, SAMPLER_LUT, DATASETWISE_RANDOM_CORRECTNESS
 
 
 def cost_benefit_analysis():
@@ -268,7 +267,7 @@ def _make_jobs_for_feature(data_filtered, dataset, feature):
 
 # ---- main entry ----
 def ood_detector_correctness_prediction_accuracy(batch_size, shift="normal"):
-    df = load_all(prefix="final_data", batch_size=batch_size, shift=shift, samples=100)
+    df = load_all(prefix="fine_data", batch_size=batch_size, shift=shift, samples=100)
     df = df[df["fold"] != "train"]
 
     # Precompute total jobs for progress bar
@@ -403,31 +402,55 @@ def ood_verdict_shiftwise_accuracy_tables(batch_size):
 def ood_accuracy_vs_pred_accuacy_plot(batch_size):
     df = get_all_ood_detector_data(batch_size, filter_thresholding_method=True, filter_ood_correctness=False,
                                    filter_correctness_calibration=True, filter_organic=False, filter_best=True)
+    df = df[df["OoD==f(x)=y"] == True]  # only OOD performance
 
 
+    # df = df[~((df["OoD==f(x)=y"] == True)&(~df["Performance Calibrated"]))]  # only OOD performance
     #get only the shifts that affect the performance of the OOD detector
-    df_raw = load_all(1, shift="")
+    df_raw = load_all(batch_size, shift="")
+
     acc_by_dataset_and_shift = df_raw.groupby(["Dataset", "fold"])["correct_prediction"].mean().reset_index()
 
     ood_accs = df.groupby(["Dataset", "OoD Test Fold", "OoD==f(x)=y"])["tpr"].mean().reset_index()
     ind_accs = df.groupby(["Dataset", "InD Test Fold", "OoD==f(x)=y"])["tnr"].mean().reset_index()
-
+    ind_accs["tnr"]=1-ind_accs["tnr"]
     ind_accs.rename(columns={"InD Test Fold":"fold", "tnr":"Detection Rate"}, inplace=True)
     ood_accs.rename(columns={"OoD Test Fold":"fold", "tpr":"Detection Rate"}, inplace=True)
 
     merged = pd.concat([ood_accs, ind_accs], ignore_index=True)
     merged = merged.merge(acc_by_dataset_and_shift, on=["Dataset", "fold"])
     merged["Shift"] = merged["fold"].apply(lambda x: x.split("_")[0] if "_" in x else "Organic")
-    g = sns.FacetGrid(merged, col="Dataset", row="OoD==f(x)=y", sharex=False, sharey=False)
-    g.map_dataframe(sns.regplot, x="correct_prediction", y="Detection Rate", robust=False, scatter=False)
-    g.map_dataframe(sns.scatterplot, x="correct_prediction", y="Detection Rate", hue="Shift", alpha=0.5, edgecolor=None)
-    for ax in g.axes.flat:
-        ax.plot([0, 1], [1, 0], color="red", linestyle="--", label="Ideal")
+    merged["Organic"] = merged["Shift"].apply(lambda x: "Synthetic" if x in SYNTHETIC_SHIFTS else "Organic")
 
-    g.set_axis_labels("Prediction Accuracy", "OoD Detection Rate")
+    acc = merged.groupby(["Dataset", "fold"], as_index=False)["correct_prediction"].mean()
+
+    # pull the per-dataset ind_val baseline
+    ind = (acc.loc[acc["fold"] == "ind_val", ["Dataset", "correct_prediction"]]
+           .rename(columns={"correct_prediction": "ind_val_acc"}))
+
+    # join baseline back to every shift of the same dataset
+    acc = acc.merge(ind, on="Dataset", how="left")
+
+    # absolute and relative differences vs ind_val
+    acc["acc_diff"] = acc["correct_prediction"] - acc["ind_val_acc"]
+    acc["Generalization Gap"] = acc["acc_diff"] / acc["ind_val_acc"]  # e.g., 0.10 == +10%
+    acc["Generalization Gap"] = - acc["Generalization Gap"] * 100  # convert to percentage
+    merged = merged.merge(acc, on=["Dataset", "fold"], how="left")
+    print(merged)
+
+    def plot_ideal_line(data, color=None, **kwargs):
+        # Plot a diagonal line from (0, 0) to (1, 1)
+        dataset = data["Dataset"].unique()[0]
+        plt.axhline(1-DATASETWISE_RANDOM_CORRECTNESS[dataset], color="blue", linestyle="--", label="Maximum Detection Rate")
+    g = sns.FacetGrid(merged, col="Dataset", sharex=False, sharey=False, col_wrap=3)
+    # g.map_dataframe(sns.regplot, x="Generalization Gap", y="Detection Rate", robust=False, scatter=False)
+    g.map_dataframe(sns.scatterplot, x="Generalization Gap", y="Detection Rate", hue="Shift", style="Organic", alpha=0.5, style_order = ["Synthetic","Organic"], edgecolor=None)
+    g.map_dataframe(plot_ideal_line)
+
+    g.set_axis_labels("Generalization Gap (\%)", "OoD Detection Rate")
     for ax in g.axes.flat:
         ax.set_ylim(0,1.1)
-        ax.set_xlim(0,1.1)
+        # ax.set_xlim(0,1.1)
     plt.savefig("figures/tpr_v_acc.pdf")
     plt.show()
 

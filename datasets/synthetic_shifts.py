@@ -48,7 +48,7 @@ def multiplicative_noise(x, intensity):
     noise = 1+torch.randn_like(x) * intensity*2
     return x * noise
 
-def salt_and_pepper(x, intensity, scale=0.5):
+def salt_and_pepper(x, intensity, scale=0.25):
     seed_all(0)
     noise = torch.rand_like(x)
     x = x.clone()

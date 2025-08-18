@@ -14,15 +14,20 @@ def compute_stats_no_ind(ood_features, ood_losses, fname, feature_names):
     for df, feature_name in zip(dfs, feature_names):
         df.to_csv(f"{fname}_{feature_name}.csv")
 
-def collect_data(testbed_constructor, dataset_name, mode="noise"):
-    bench = testbed_constructor("classifier", mode=mode, batch_size=16)
+def collect_data(testbed_constructor, dataset_name, prefix="final_data", mode="noise"):
+    print("Collecting data for", dataset_name, "in", mode, "mode")
+    bench = testbed_constructor("classifier", mode=mode, batch_size=8)
     # features = [mahalanobis]
     features = [cross_entropy, grad_magnitude, energy,knn, typicality, softmax]
 
     # features = [knn]
     tsd = FeatureSD(bench.classifier,features)
     tsd.register_testbed(bench)
-    compute_stats_no_ind(*tsd.compute_pvals_and_loss(noind=True),fname=f"final_data/{dataset_name}_{mode}", feature_names=[f.__name__ for f in features])
+    if mode=="normal": #just compute ind and organic oods for normal mode; saves on computation time
+        compute_stats(*tsd.compute_pvals_and_loss(),
+                      fname=f"{prefix}/{dataset_name}_{mode}", feature_names=[f.__name__ for f in features])
+    else:
+        compute_stats_no_ind(*tsd.compute_pvals_and_loss(noind=True),fname=f"{prefix}/{dataset_name}_{mode}", feature_names=[f.__name__ for f in features])
     # compute_stats(*tsd.compute_pvals_and_loss(),
     #               fname=f"final_data/{dataset_name}_{mode}", feature_names=[f.__name__ for f in features])
 
@@ -130,8 +135,15 @@ def collect_bias_data():
 
 
 def collect_single_data(testbed):
-    for mode in ["brightness", "smear"]:
-        collect_data(testbed, testbed.__name__.split("TestBed")[0], mode=mode)
+    dataset_name = testbed.__name__.split("TestBed")[0]
+    if not os.path.exists(f"fine_data/{dataset_name}_normal_knn.csv"):
+        print("Skipping Normal")
+        collect_data(testbed, dataset_name, mode="normal", prefix="fine_data")
+    for mode in SYNTHETIC_SHIFTS:
+        if os.path.exists(f"fine_data/{dataset_name}_{mode}_knn.csv"):
+            continue
+        print(mode)
+        collect_data(testbed, dataset_name, mode=mode, prefix="fine_data")
 
 
 
@@ -139,16 +151,20 @@ if __name__ == '__main__':
     from features import *
     # torch.multiprocessing.set_start_method('spawn')
     # collect_bias_data(-1)
-    collect_bias_data()
+    # collect_bias_data()
 
     # collect_data(CCTTestBed, "CCT",mode="normal")
     # collect_bias_data(5)
 
-    # collect_single_data(OfficeHomeTestBed)
-    # collect_single_data(Office31TestBed)
-    # collect_single_data(NICOTestBed)
-    # collect_single_data(CCTTestBed)
-    # collect_single_data(PolypTestBed)
+    collect_single_data(OfficeHomeTestBed)
+    collect_single_data(Office31TestBed)
+    collect_single_data(NICOTestBed)
+    collect_single_data(CCTTestBed)
+    collect_single_data(PolypTestBed)
+    from experiments.runtime_classification import ood_detector_correctness_prediction_accuracy
+    for batch_size in BATCH_SIZES:
+        print(f"Running batch size {batch_size}")
+        ood_detector_correctness_prediction_accuracy(batch_size, shift="")
     # bench = NjordTestBed(10)
     # collect_bias_data(5)
     # collect_bias_data(-1)

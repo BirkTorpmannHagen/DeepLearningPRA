@@ -8,6 +8,10 @@ class RateEstimator:
     def get_rate(self):
         return self.rate
 
+    def update_tpr_tnr(self, tpr, tnr):
+        self.tpr = float(tpr)
+        self.tnr = float(tnr)
+
     def sample(self, n, rate_groundtruth):
         event = np.random.binomial(1, rate_groundtruth, n)
         return event
@@ -19,9 +23,6 @@ class ErrorAdjustmentEstimator(RateEstimator):
         self.tnr = float(tnr)
         self.rate = 0.5  # last batch estimate (informational)
 
-    def update_tpr_tnr(self, tpr, tnr):
-        self.tpr = float(tpr)
-        self.tnr = float(tnr)
 
     def update(self, trace_list, return_ci=False, alpha=0.05):
         y = np.asarray(trace_list, dtype=float)
@@ -60,6 +61,7 @@ class SimpleEstimator(RateEstimator):
         trace = np.array(trace_list)
         self.rate = trace.mean()
         return self.rate
+
 
     def get_posterior_mean(self):
         """Return the mean of the posterior distribution."""
