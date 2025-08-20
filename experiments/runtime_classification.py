@@ -407,7 +407,7 @@ def ood_accuracy_vs_pred_accuacy_plot(batch_size):
 
     # df = df[~((df["OoD==f(x)=y"] == True)&(~df["Performance Calibrated"]))]  # only OOD performance
     #get only the shifts that affect the performance of the OOD detector
-    df_raw = load_all(batch_size, shift="")
+    df_raw = load_all(batch_size, shift="", prefix="fine_data")
 
     acc_by_dataset_and_shift = df_raw.groupby(["Dataset", "fold"])["correct_prediction"].mean().reset_index()
 
@@ -432,12 +432,14 @@ def ood_accuracy_vs_pred_accuacy_plot(batch_size):
     acc = acc.merge(ind, on="Dataset", how="left")
 
     # absolute and relative differences vs ind_val
-    acc["acc_diff"] = acc["correct_prediction"] - acc["ind_val_acc"]
-    acc["Generalization Gap"] = acc["acc_diff"] / acc["ind_val_acc"]  # e.g., 0.10 == +10%
-    acc["Generalization Gap"] = - acc["Generalization Gap"] * 100  # convert to percentage
+
+    acc["Generalization Gap"] = acc["correct_prediction"] - acc["ind_val_acc"]
+    acc["Accuracy"] = acc["correct_prediction"]
+    # acc["Generalization Gap"] = acc["acc_diff"] / acc["ind_val_acc"]  # e.g., 0.10 == +10%
+    # acc["Generalization Gap"] = - acc["Generalization Gap"] * 100  # convert to percentage
     merged = merged.merge(acc, on=["Dataset", "fold"], how="left")
     print(merged)
-
+    print(merged["fold"].unique())
     def plot_ideal_line(data, color=None, **kwargs):
         # Plot a diagonal line from (0, 0) to (1, 1)
         dataset = data["Dataset"].unique()[0]
@@ -447,7 +449,7 @@ def ood_accuracy_vs_pred_accuacy_plot(batch_size):
     g.map_dataframe(sns.scatterplot, x="Generalization Gap", y="Detection Rate", hue="Shift", style="Organic", alpha=0.5, style_order = ["Synthetic","Organic"], edgecolor=None)
     g.map_dataframe(plot_ideal_line)
 
-    g.set_axis_labels("Generalization Gap (\%)", "OoD Detection Rate")
+    g.set_axis_labels("Generalization Gap", "OoD Detection Rate")
     for ax in g.axes.flat:
         ax.set_ylim(0,1.1)
         # ax.set_xlim(0,1.1)
@@ -804,3 +806,4 @@ def get_error_rate_given_rv():
     results = pd.DataFrame(results_list)
     print(results.groupby(["Dataset", "Feature", "Fold"])[["RV Proportion", "Vanilla Prop"]].mean())
     results.to_csv("datasetwise_incorrect_detections.csv")
+
