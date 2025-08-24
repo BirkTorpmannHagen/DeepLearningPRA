@@ -187,11 +187,25 @@ def plot_gam_errors_by_batch_size():
     all_gam_results = pd.concat(all_gam_results)
     all_gam_preds = pd.concat(all_gam_preds)
     all_dfs = pd.concat(all_dfs)
+    def plot_baseline(data, **kwargs):
+        dataset = data["Dataset"].iloc[0]
+        df_dataset = all_dfs[all_dfs["Dataset"]==dataset]
+        print(df_dataset.columns)
+
+        ind_loss = df_dataset[df_dataset["fold"]=="ind_test"].groupby("batch_size")["loss"].mean().reset_index()
+        df = df_dataset.groupby("batch_size")["loss"].mean().reset_index()
+        merged = df.merge(ind_loss, on="batch_size", suffixes=("", "_ind_val"))
+        print(merged)
+        merged["Baseline Error"] = np.abs(merged["loss"] - merged["loss_ind_val"])
+        sns.lineplot(data=merged, x=range(5), y="Baseline Error", color="red", label="Baseline Error", ax=plt.gca())
+        plt.ylim(0, np.percentile(df_dataset["loss"],95))
+
 
     g = sns.FacetGrid(all_gam_results, col="Dataset", margin_titles=True, sharex=False, sharey=False, col_wrap=3)
-    g.map_dataframe(sns.boxenplot, x="Batch Size", y="MAE", palette=sns.color_palette())
-    for ax in g.axes.flat:
-        ax.set_yscale("log")
+    g.map_dataframe(sns.boxenplot, x="Batch Size", y="MAE", hue="Method", palette=sns.color_palette())
+    g.map_dataframe(plot_baseline)
+
+    plt.savefig("figures/batch_size_regression_errors.pdf")
     plt.show()
 
 
@@ -271,11 +285,15 @@ def get_gam_data():
                             preds_monotonic = gam_monotonic.predict(X_test)
                             # preds_monotonic = np.clip(preds_monotonic, 0, DATASETWISE_RANDOM_LOSS[dataset])  # clip to random guess loss
                             for y, yhat in zip(y_test, preds_monotonic):
-
                                 mape_monotonic = np.abs((y-yhat)/y)
                                 mae_monotonic = np.abs(y-yhat)
-                                data = {"Dataset":dataset, "Feature Name":feature_name, "Train Shift":regressor_training_shift, "Test Shift":test_shift, "Shift Intensity":intensity, "Batch Size":batch_size, "Loss":y, "Prediction":yhat, "MAPE": mape_monotonic, "MAE": mae_monotonic}
+                                data = {"Dataset":dataset, "Feature Name":feature_name, "Train Shift":regressor_training_shift,
+                                        "Test Shift":test_shift, "Shift Intensity":intensity, "Batch Size":batch_size,
+                                        "Loss":y, "Prediction":yhat, "MAPE": mape_monotonic, "MAE": mae_monotonic,
+                                        "Baseline MAE": np.abs(y - df[df["shift"] == "ind_test"]["loss"].mean())
+}  # baseline is the mean loss on ind_test}
                                 metric_data.append(data)
+
                     pred_errors = pd.DataFrame(metric_data)
                     pred_errors.to_csv(f"gam_data/gam_prediction_errors_{dataset}_{feature_name}_{batch_size}.csv")
                     print("saved errors!")

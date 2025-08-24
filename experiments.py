@@ -9,6 +9,7 @@ from experiments.dataset_analysis import *
 from experiments.runtime_classification import *
 from experiments.pra import *
 from experiments.loss_regression import *
+from experiments.appendices import *
 
 def simulate_dsd_accuracy_estimation(data, rate, val_set, test_set, ba, tpr, tnr, dsd):
     sim = UniformBatchSimulator(data, ood_test_shift=test_set, ood_val_shift=val_set, estimator=ErrorAdjustmentEstimator,
@@ -217,33 +218,7 @@ def examine_aggregated_feature_distributions(batch_size):
     df = pd.DataFrame(p_value_data)
     print(df.groupby(["Dataset", "feature_name", "bias"])["p"].mean())
 
-def examine_rabanser_feature_distributions(batch_size):
-    dfs = load_all_rabanser(batch_size=batch_size, prefix="old_debiased_data", k=0)
-    dfs = dfs[dfs["fold"]=="ind_val"]
-    dfs
-    for dataset in DATASETS:
-        subdf = dfs[(dfs["Dataset"]==dataset)]
-        if subdf.empty:
-            print(f"Empty dataframe for {dataset} {fold}")
-            continue
-        for bias in SAMPLERS:
-            p_val = subdf["feature"].mean()
-            p_value_data.append({"Dataset": dataset, "feature_name":"Rabanser", "fold":fold, "bias": SAMPLER_LUT[bias], "p": p_val})
-    df = pd.DataFrame(p_value_data)
-    print(df.groupby(["Dataset", "fold", "feature_name", "bias"])["p"].mean())
 
-def examine_latent_space_bias(batch_size):
-    data = []
-    for bench in [CCTTestBed, NicoTestBed, PolypTestBed, Office31TestBed, OfficeHomeTestBed]:
-        bench_instances = dict(zip(SAMPLERS, [bench("classifier", mode="normal", sampler=sampler, batch_size=batch_size) for sampler in SAMPLERS]))
-        random = bench_instances["RandomSampler"]
-        train_encodings = random.get_encodings(random.ind_train())
-        for sampler, instance in bench_instances.items():
-            sampler_encodings = instance.get_encodings(instance.ind_val())
-            for batch_idx in range(0, len(sampler_encodings), batch_size)[::-1]:
-                batch = sampler_encodings[batch_idx:batch_idx+batch_size]
-                pval = np.mean([ks_2samp(batch[:, z], random[:, z]).pvalue for z in range(sampler_encodings.shape[-1])])
-                data.append({"Dataset": bench.__name__().split("TestBed")[0], "Bias": SAMPLER_LUT[sampler], "p": pval})
 
 
 
@@ -252,6 +227,10 @@ def examine_latent_space_bias(batch_size):
 def run_methodological_experiments():
     accuracy_table()
     dataset_summaries()
+
+def run_appendix_experiments():
+    # investigate_training_wise_thresholding(1, shift="normal")
+    plot_ind_correctness_by_ood_feature()
 
 def run_rv_experiments():
     """
@@ -262,8 +241,11 @@ def run_rv_experiments():
     #     print(f"Running batch size {batch_size}")
     #     ood_detector_correctness_prediction_accuracy(batch_size, shift="")
 
-    # ood_verdict_shiftwise_accuracy_tables(1)
-    ood_accuracy_vs_pred_accuacy_plot(1)
+    # print(df.groupby(["Dataset", "feature_name"])["ba"].mean().reset_index())
+
+
+
+    # ood_accuracy_vs_pred_accuacy_plot(1)
     # ood_accuracy_vs_pred_accuacy_plot(16)
     # ood_accuracy_vs_pred_accuacy_plot(64)
     #single batch size
@@ -295,12 +277,12 @@ def run_loss_regression_experiments():
     # regplot_by_shift()
     # plot_intensitywise_kdes()
     # plot_variances()
-    regplots(32)
+    # regplots(32)
     # compare_gam_errors()
-    # get_gam_data()
+    get_gam_data()
     # gam_fits(batch_size=32)
     # plot_gam_errors(32)
-    # plot_gam_errors_by_batch_size()
+    plot_gam_errors_by_batch_size()
     # assess_ungrouped_regression_errors()
 
 
@@ -335,9 +317,9 @@ def run_pra_experiments():
 
 if __name__ == '__main__':
     #accuracies on each dataset
-    run_rv_experiments()
-    # run_loss_regression_experiments()
+    # run_rv_experiments()
+    run_loss_regression_experiments()
     # run_pra_experiments()
-
+    # run_appendix_experiments()
 
 
