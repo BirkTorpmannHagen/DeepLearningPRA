@@ -6,7 +6,7 @@ from torchvision.transforms import ToTensor
 from torch.utils import data
 import albumentations
 import random
-
+import torch.nn.functional as F
 
 def seed_all(seed):
     random.seed(seed)
@@ -67,30 +67,75 @@ def smear(img, intensity):
     return transformed
 
 
-def targeted_fgsm(model, x, intensity):
-    seed_all(0)
-    #adversarial attack to generate high-confidence false predictions
-    input_sample = x.clone().detach().requires_grad_(True)
-    with torch.no_grad():
-        output = model(input_sample)
-    target_label = torch.zeros_like(output)
-    target_label[:, torch.randint(0, output.shape[1], (1,))] = 1
+@torch.no_grad()
+def _pick_targets(model, x, target=None):
+    # Called under no_grad to avoid building a graph just to pick targets
+    logits = model(x)
+    if target is None:
+        target = logits.argmin(dim=1)  # least-likely targeted attack
+    return target
 
-    for _ in range(5):
-        output = model(input_sample)
-        loss = torch.nn.CrossEntropyLoss()(output, target_label)
+def targeted_fgsm(model, x, eps=1.0, clamp=(0,1), target=None):
+    """
+    Safe to call from DataLoader __getitem__.
+    Produces a *CPU* tensor in [0,1].
+    """
+    # Ensure float input
+    if not torch.is_floating_point(x):
+        x = x.float()
+    lo, hi = clamp
 
-        model.zero_grad()
+    # Make sure we’re on the same device as the model
+    dev = next(model.parameters()).device
+
+    # — Important for DataLoader context —
+    # Some training scripts have global autocast/no_grad in weird places.
+    # We explicitly enable grads and disable autocast here.
+    torch.set_grad_enabled(True)
+    autocast_enabled = torch.is_autocast_enabled()
+    try:
+        if autocast_enabled:
+            torch.set_autocast_enabled(False)
+
+        model_was_training = model.training
+        model.eval()  # deterministic BN/Dropout; still differentiable
+
+        x_adv = x.to(dev).detach().requires_grad_(True)
+
+        # Pick target labels without tracking grads
+        with torch.no_grad():
+            target = _pick_targets(model, x_adv, target)
+
+        logits = model(x_adv)
+        loss = F.cross_entropy(logits, target, reduction='sum')
+
+        # Clean any stale grads in case this gets called repeatedly
+        if x_adv.grad is not None:
+            x_adv.grad.zero_()
+
+        # Prefer backward + .grad for clearer debugging
         loss.backward()
+        grad = x_adv.grad
+        # print(grad)
+        # Diagnostics you can temporarily print if needed:
+        # print("grad dtype:", grad.dtype, "max abs:", grad.abs().max().item())
 
-        # Apply perturbation
-        input_sample.data = input_sample.data - intensity * input_sample.grad.sign()
+        # If grad is None or zero, bail early with the original image (no change)
+        if grad is None or grad.abs().max().item() == 0.0:
+            # Return as CPU in [0,1]
+            return x.clamp(lo, hi).cpu()
 
-        # Check if the sample has crossed the decision boundary
-        if model(input_sample).argmax(1) == target_label:
-            break
-
-    return input_sample
+        # Targeted FGSM minimizes CE to the target → step in *negative* grad direction
+        g = (-grad).sign()            # <- this is the sign vector you care about
+        x_adv = x_adv + eps * g
+        x_adv = x_adv.clamp_(lo, hi).detach().to("cpu").squeeze(0)
+        return x_adv
+    finally:
+        # Restore autocast if we changed it
+        if autocast_enabled:
+            torch.set_autocast_enabled(True)
+        # (Don’t flip model back to train here; DataLoader shouldn’t mutate model state)
+        torch.set_grad_enabled(False)
 
 def random_occlusion(img, intensity):
     seed_all(0)
@@ -104,20 +149,23 @@ def random_occlusion(img, intensity):
 
 class TransformedDataset(data.Dataset):
     #generic wrapper for adding noise to datasets
-    def __init__(self, dataset, transform, transform_name, transform_param):
+    def __init__(self, dataset, transform, transform_name, transform_param, model=None):
         super().__init__()
         self.dataset = dataset
         self.transform = transform
         self.transform_param = transform_param
         self.transform_name = transform_name
-        print(transform_name)
-        print(transform_param)
+        self.model = model
+
     def __getitem__(self, index):
 
         batch = self.dataset.__getitem__(index)
         x = batch[0]
         rest = batch[1:]
-        x = torch.clip(self.transform(x, self.transform_param), 0, 1)
+        if self.transform_name=="fgsm":
+            x = torch.clip(self.transform(self.model, x.unsqueeze(0), self.transform_param).squeeze(0).cpu(), 0, 1)
+        else:
+            x = torch.clip(self.transform(x, self.transform_param), 0, 1)
         # if index==0:
         #     plt.imshow(x.permute(1,2,0))
         #     plt.savefig(f"test_plots/{self.transform_name}_{self.transform_param}.png")

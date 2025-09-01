@@ -139,7 +139,8 @@ class UniformBatchSimulator(Simulator):
                                            "True Risk": [true_dsd_risk, true_base_risk], "E[f(x)=y]":[current_expected_accuracy, current_base_expected_accuracy],
                                            "Accuracy": [accuracy, accuracy], "ood_pred": [ood_pred, ood_pred], "is_ood": [shifted, shifted],
                                            "Estimated Rate":[self.detector_tree.rate, self.base_tree.rate],
-                 "ind_acc": [self.ind_val_acc, self.ind_val_acc], "ood_val_acc": [self.ood_val_acc, self.ood_val_acc], "ood_test_acc": [self.ood_test_acc, self.ood_test_acc]})
+                 "ind_acc": [self.ind_val_acc, self.ind_val_acc], "ood_val_acc": [self.ood_val_acc, self.ood_val_acc], "ood_test_acc": [self.ood_test_acc, self.ood_test_acc],
+                                  "tpr": [self.detector_tree.dsd_tpr, self.detector_tree.dsd_tpr], "tnr": [self.detector_tree.dsd_tnr, self.detector_tree.dsd_tnr]})
             return data
 
 

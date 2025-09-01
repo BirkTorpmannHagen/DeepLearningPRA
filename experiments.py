@@ -236,6 +236,9 @@ def run_rv_experiments():
     """
           Runtime Verification
       """
+    # ood_detector_correctness_prediction_accuracy(1, shift="")
+
+
 
     # for batch_size in BATCH_SIZES:
     #     print(f"Running batch size {batch_size}")
@@ -245,9 +248,7 @@ def run_rv_experiments():
 
 
 
-    # ood_accuracy_vs_pred_accuacy_plot(1)
-    # ood_accuracy_vs_pred_accuacy_plot(16)
-    # ood_accuracy_vs_pred_accuacy_plot(64)
+    ood_accuracy_vs_pred_accuacy_plot(1)
     #single batch size
 
     # simple batching
@@ -282,7 +283,7 @@ def run_loss_regression_experiments():
     get_gam_data()
     # gam_fits(batch_size=32)
     # plot_gam_errors(32)
-    plot_gam_errors_by_batch_size()
+    # plot_gam_errors_by_batch_size()
     # assess_ungrouped_regression_errors()
 
 
@@ -304,21 +305,22 @@ def run_pra_experiments():
 
     # dsd accuracy estimation
     # ood_detector_accuracy_estimation_errors()
+
     # accuracy estimation
     # collect_re_accuracy_estimation_data()
-    # plot_dsd_acc_errors()
+    plot_dsd_acc_errors()
 
 
     # get_ratewise_risk_data()
     # cost_benefit_analysis()
-    get_datasetwise_risk()
+    # get_datasetwise_risk()
     # get_risk_tables()
 
 
 if __name__ == '__main__':
     #accuracies on each dataset
-    # run_rv_experiments()
-    run_loss_regression_experiments()
+    run_rv_experiments()
+    # run_loss_regression_experiments()
     # run_pra_experiments()
     # run_appendix_experiments()
 

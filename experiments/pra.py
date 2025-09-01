@@ -18,16 +18,15 @@ pd.set_option('display.expand_frame_repr', False)
 np.set_printoptions(precision=3)
 np.set_printoptions(suppress=True)
 plt.rcParams['text.usetex'] = True  # Enable LaTeX rendering
-def simulate_dsd_accuracy_estimation(data, rate, val_set, test_set, ba, tpr, tnr, dsd):
+def simulate_dsd_accuracy_estimation(data, rate, val_set, test_set, tpr, tnr, ba, feature_name):
     sim = UniformBatchSimulator(data, ood_test_shift=test_set, ood_val_shift=val_set, estimator=ErrorAdjustmentEstimator,
                                 use_synth=False)
     results = sim.sim(rate, 600)
     results = results.groupby(["Tree"]).mean().reset_index()
     # results = results.mean()
-    results["dsd"] = dsd
-    results["ba"] = ba
-    results["tpr"] = tpr
-    results["tnr"] = tnr
+    if not (tpr+tnr)/2==ba:
+        print("Warning: TPR and TNR do not match BA")
+    results["dsd"] = feature_name
     results["rate"] = rate
     results["test_set"] = test_set
     results["val_set"] = val_set
@@ -261,14 +260,17 @@ def collect_tpr_tnr_sensitivity_data():
 def collect_re_accuracy_estimation_data():
     bins=11
 
-    for batch_size in BATCH_SIZES[1:]:
-        best = get_all_ood_detector_data(batch_size=batch_size, filter_thresholding_method=True, filter_ood_correctness=True, filter_correctness_calibration=True, filter_best=True, filter_organic=True)
+    for batch_size in BATCH_SIZES:
+        best = get_all_ood_detector_data(batch_size=batch_size, filter_thresholding_method=True,
+                                         filter_ood_correctness=True, filter_correctness_calibration=True,
+                                         filter_best=True, filter_organic=True)
         for dataset in DATASETS:
             dsd_accuracies = best[best["Dataset"]==dataset]
             dfs = []
             config = dsd_accuracies.groupby(["feature_name"])[["tpr", "tnr", "ba"]].mean().reset_index()
-            feature_name, tpr, tnr, ba = config.iloc[0]
-
+            feature_name, tpr, tnr, _ = config.iloc[0]
+            ba = (tpr+tnr)/2
+            print(feature_name, tpr, tnr, ba)
             data = load_pra_df(dataset, DSD_LUT[feature_name], batch_size=batch_size, samples=1000)
             if data.empty:
                 continue
@@ -410,7 +412,7 @@ def plot_dsd_acc_errors():
         for ax in g.axes[-last_row_plots:]:
             pos = ax.get_position()
             ax.set_position([pos.x0 + left_padding / fig_width, pos.y0, pos.width, pos.height])
-    plt.savefig("dsd_acc_errors_by_rate.pdf")
+    plt.savefig("figures/dsd_acc_errors_by_rate.pdf")
     plt.show()
 
 
@@ -421,7 +423,7 @@ def plot_dsd_acc_errors():
     g.map_dataframe(sns.lineplot, x="lineplot_idx", y="best_guess_error", hue="test_set", linestyle="--", marker="o", palette=sns.color_palette(), legend=False)
     # g.map_dataframe(sns.lineplot, x="batch_size", y="Accuracy Error", hue="test_set")
     for ax, dataset in zip(g.axes.flat, sorted_datasets):
-        ax.set_title(dataset)
+        # ax.set_title(dataset)
         ax.set_xlabel("Batch Size")
         ax.set_ylabel("Accuracy Error")
         ax.set_xticklabels(BATCH_SIZES)
@@ -447,7 +449,7 @@ def plot_dsd_acc_errors():
         for ax in g.axes[-last_row_plots:]:
             pos = ax.get_position()
             ax.set_position([pos.x0 + left_padding / fig_width, pos.y0, pos.width, pos.height])
-    plt.savefig("dsd_acc_errors.pdf")
+    plt.savefig("figures/dsd_acc_errors.pdf")
     plt.show()
 
 
@@ -564,28 +566,26 @@ def assess_re_tree_predaccuracy_estimation_errors():
     plt.savefig("figures/tree1_errors.pdf")
     plt.show()
 
-def ood_detector_accuracy_estimation_errors(batch_size=1):
-    ood_results = ood_verdict_shiftwise_accuracy_tables(batch_size=batch_size).reset_index()
+def ood_detector_accuracy_estimation_errors():
     errors = []
 
+    for batch_size in BATCH_SIZES:
+        tprs, tnrs = ood_verdict_shiftwise_accuracy_tables(batch_size=batch_size)
 
-    table = ood_results.groupby(["Dataset", "shift"])[["tpr", "tnr"]].mean()
-    fold_wise_error = table.reset_index()
+        # compute per-dataset
+        for dataset in DATASETS:
+            ind_vals = tnrs.loc[tnrs["Dataset"] == dataset, "tnr"]
+            ood_vals = tprs.loc[tprs["Dataset"] == dataset, "tpr"]
 
-    fold_wise_error_ood = fold_wise_error[~fold_wise_error["shift"].isin(["ind_val", "ind_test", "train"])]
-    fold_wise_error_ind = fold_wise_error[fold_wise_error["shift"].isin(["ind_val", "ind_test"])]
+            ind_diff = mean_pairwise_abs_diff(ind_vals)
+            ood_diff = mean_pairwise_abs_diff(ood_vals)
 
-    # compute per-dataset
-    for dataset in fold_wise_error["Dataset"].unique():
-        ind_vals = fold_wise_error_ind.loc[fold_wise_error_ind["Dataset"] == dataset, "tnr"]
-        ood_vals = fold_wise_error_ood.loc[fold_wise_error_ood["Dataset"] == dataset, "tpr"]
-
-        ind_diff = mean_pairwise_abs_diff(ind_vals)
-        ood_diff = mean_pairwise_abs_diff(ood_vals)
-
-        errors.append({"Dataset": dataset, "Batch Size": batch_size, "Type": "OoD", "Error": ood_diff})
-        errors.append({"Dataset": dataset, "Batch Size": batch_size, "Type": "InD", "Error": ind_diff})
-
+            errors.append({"Dataset": dataset, "Batch Size": batch_size, "Type": "OoD", "Error": ood_diff})
+            errors.append({"Dataset": dataset, "Batch Size": batch_size, "Type": "InD", "Error": ind_diff})
 
     errors_df = pd.DataFrame(errors)
+    g = sns.FacetGrid(errors_df, col="Dataset", sharey=True, col_wrap=3, sharex=True)
+    g.map_dataframe(sns.lineplot, x="Batch Size", y="Error", hue="Type", alpha=0.5)
+    plt.savefig("figures/dsd_accuracy.pdf")
+    plt.show()
     print(errors_df)

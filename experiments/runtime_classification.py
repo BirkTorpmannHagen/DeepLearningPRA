@@ -18,8 +18,7 @@ from components import OODDetector
 from itertools import product
 from rateestimators import ErrorAdjustmentEstimator
 from simulations import UniformBatchSimulator
-from utils import load_pra_df, load_all, DSD_PRINT_LUT, DATASETWISE_RANDOM_LOSS, DATASETS, DSDS, THRESHOLD_METHODS, \
-    SYNTHETIC_SHIFTS, BATCH_SIZES, load_all_biased, SAMPLERS, SAMPLER_LUT, DATASETWISE_RANDOM_CORRECTNESS
+from utils import *
 
 
 def cost_benefit_analysis():
@@ -286,6 +285,8 @@ def ood_detector_correctness_prediction_accuracy(batch_size, shift="normal"):
 
     with Pool(processes=n_procs) as pool, tqdm(total=total_jobs, desc="Computing") as pbar:
         for dataset in DATASETS:
+            if dataset=="Polyp":
+                continue
             data_dataset = df[df["Dataset"] == dataset]
             for feature in DSDS:
                 data_filtered = data_dataset[data_dataset["feature_name"] == feature]
@@ -382,20 +383,12 @@ def ood_verdict_shiftwise_accuracy_tables(batch_size):
 
     # Merge to keep only matching Dataset+shift rows
     valid_pairs = set(zip(affective_shifts["Dataset"], affective_shifts["shift"]))
-
-    print(valid_pairs)
-
-
-    print(valid_pairs)
-    print(df["shift"].unique())
     df_filtered = df[df.apply(lambda row: (row["Dataset"], row["shift"]) in valid_pairs, axis=1)]
+    print(df.columns)
+    tprs = df_filtered.groupby(["Dataset", "shift"])[["tpr"]].mean().reset_index()
+    tnrs = df.groupby(["Dataset", "InD Test Fold"])[["tnr"]].mean().reset_index()
+    tnrs.rename(columns={"InD Test Fold":"shift"}, inplace=True)
 
-    tprs = df_filtered.groupby(["Dataset", "shift"])[["tpr"]].mean()
-    tnrs = df.groupby(["Dataset", "Ind Test Fold"])[["tnr"]].mean().reset_index()
-
-    print(tprs)
-    print(tnrs)
-    input()
     return tprs, tnrs
 
 
@@ -439,16 +432,20 @@ def ood_accuracy_vs_pred_accuacy_plot(batch_size):
     # acc["Generalization Gap"] = - acc["Generalization Gap"] * 100  # convert to percentage
     merged = merged.merge(acc, on=["Dataset", "fold"], how="left")
     print(merged)
-    print(merged["fold"].unique())
+    merged["shift"] = merged.replace(SHIFT_PRINT_LUT, inplace=True)
+
+    hue_order = sorted(merged["Shift"].unique().tolist())
+    print(hue_order)
     def plot_ideal_line(data, color=None, **kwargs):
         # Plot a diagonal line from (0, 0) to (1, 1)
         dataset = data["Dataset"].unique()[0]
         plt.axhline(1-DATASETWISE_RANDOM_CORRECTNESS[dataset], color="blue", linestyle="--", label="Maximum Detection Rate")
+
     g = sns.FacetGrid(merged, col="Dataset", sharex=False, sharey=False, col_wrap=3)
     # g.map_dataframe(sns.regplot, x="Generalization Gap", y="Detection Rate", robust=False, scatter=False)
-    g.map_dataframe(sns.scatterplot, x="Generalization Gap", y="Detection Rate", hue="Shift", style="Organic", alpha=0.5, style_order = ["Synthetic","Organic"], edgecolor=None)
+    g.map_dataframe(sns.scatterplot, x="Generalization Gap", y="Detection Rate", hue="Shift", alpha=0.5, edgecolor=None, hue_order=hue_order)
     g.map_dataframe(plot_ideal_line)
-
+    g.add_legend()
     g.set_axis_labels("Generalization Gap", "OoD Detection Rate")
     for ax in g.axes.flat:
         ax.set_ylim(0,1.1)
