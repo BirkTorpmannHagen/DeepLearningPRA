@@ -195,7 +195,7 @@ def load_all_biased(prefix="debiased_data", filter_batch=False):
     return pd.concat(dfs)
 
 
-def load_all(batch_size=30, samples=100, feature="all", shift="normal", prefix="final_data", stratisfication=False, groupbyfolds=True):
+def load_all(batch_size=30, samples=100, feature="all", shift="normal", prefix="fine_data", stratisfication=False, groupbyfolds=True):
     dfs = []
     for dataset in DATASETS:
         if feature!="all":
@@ -210,7 +210,7 @@ def load_pra_df(dataset_name, feature_name, model="" , batch_size=1, samples=100
     if dataset_name=="Polyp" and feature_name=="softmax":
         return pd.DataFrame() #softmax does not work for segmentation
     try:
-        df = pd.concat([pd.read_csv(join(prefix, fname)) for fname in os.listdir(prefix) if dataset_name in fname and feature_name in fname and model in fname  and shift in fname])
+            df = pd.concat([pd.read_csv(join(prefix, fname)) for fname in os.listdir(prefix) if dataset_name in fname and feature_name in fname and model in fname  and shift in fname])
     except:
         print("no data found for ", dataset_name, feature_name)
         return pd.DataFrame()

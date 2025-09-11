@@ -78,68 +78,6 @@ def plot_dsd_accuracies(samples=1000):
 
 
 
-def accuracy_by_fold_and_dsd_verdict():
-    data = []
-    for batch_size in BATCH_SIZES:
-        print("loading")
-        df = load_all(batch_size, samples=100)
-        #filter unneded data
-        df = df[df["shift"]!="train"]
-        df = df[df["shift"]!="noise"]
-
-        for i, dataset in enumerate(DATASETS):
-            for feature in DSDS:
-                filtered  = df[(df["Dataset"]==dataset)&(df["feature_name"]==feature)]
-                shifts = filtered["shift"].unique()
-
-                for ood_val_shift in shifts:
-                    if ood_val_shift in ["train", "ind_val", "ind_test"]:
-                        continue
-                    filtered_copy = filtered.copy()
-                    dsd = OODDetector(filtered, ood_val_shift) #train a dsd for ood_val_shift
-                    filtered_copy["D(ood)"] = filtered_copy.apply(lambda row: dsd.predict(row), axis=1)
-                    filtered_copy["ood_val_shift"]=ood_val_shift
-                    filtered_copy["feature_name"] = feature
-                    accuracy = filtered_copy.groupby(["Dataset", "ood_val_shift", "shift", "feature_name", "D(ood)", "ood"])["correct_prediction"].mean().reset_index()
-                    accuracy["batch_size"]=batch_size
-
-                    data.append(accuracy)
-
-    data = pd.concat(data)
-
-    # print(data)
-    errors = []
-
-    for dataset in DATASETS:
-        for ood in data["ood"].unique():
-            for dood in data["D(ood)"].unique():
-                for batch_size in BATCH_SIZES:
-                    for feature_name in DSDS:
-                        filt = data[(data["Dataset"]==dataset)&(data["ood"]==ood)&(data["batch_size"]==batch_size)&(data["feature_name"]==feature_name)&(data["D(ood)"]==dood)]
-                        if filt.empty:
-                            print(f"No data for combination {dataset} OOD={ood}, batch_size={batch_size}, feature={feature_name}")
-                            continue
-                        pivoted = filt.pivot(index=["feature_name", "batch_size", "Dataset", "D(ood)","ood_val_shift"], columns="shift", values="correct_prediction")
-                        pivoted.fillna(0,inplace=True)
-                        values = pivoted.values
-                        cross_validated_error = xval_errors(values)
-                        if np.isnan(cross_validated_error):
-                            cross_validated_error=0
-                        errors.append({
-                            "Dataset": dataset, "feature_name":feature_name, "ood":ood, "D(ood)":dood,
-                            "batch_size": batch_size, "Error": cross_validated_error
-                        })
-
-    results = pd.DataFrame(errors)
-    results.to_csv("conditional_accuracy_errors")
-    # results = results.groupby(["Dataset", "feature_name", "ood", "D(ood)"]).mean().reset_index()
-    g = sns.FacetGrid(results, col="Dataset", row="ood")
-    g.map_dataframe(sns.boxplot, x="batch_size", y="Error", hue="D(ood)")
-    g.add_legend()
-    for ax in g.axes.flat:
-        ax.set_ylim(0,1)
-    plt.savefig("conditional_accuracy_errors.pdf")
-    plt.show()
 
 
 
@@ -236,20 +174,23 @@ def run_rv_experiments():
     """
           Runtime Verification
       """
-    # ood_detector_correctness_prediction_accuracy(1, shift="")
 
 
 
-    # for batch_size in BATCH_SIZES:
-    #     print(f"Running batch size {batch_size}")
-    #     ood_detector_correctness_prediction_accuracy(batch_size, shift="")
+    for batch_size in BATCH_SIZES:
+        print(f"Running batch size {batch_size}")
+        ood_detector_correctness_prediction_accuracy(batch_size, shift="")
+        ood_rv_accuracy_by_dataset_and_feature(1)
+
 
     # print(df.groupby(["Dataset", "feature_name"])["ba"].mean().reset_index())
 
 
 
-    ood_accuracy_vs_pred_accuacy_plot(1)
+    # ood_accuracy_vs_pred_accuacy_plot(1)
     #single batch size
+
+
 
     # simple batching
     # ood_verdict_plots_batched()
@@ -277,10 +218,9 @@ def run_rv_experiments():
 def run_loss_regression_experiments():
     # regplot_by_shift()
     # plot_intensitywise_kdes()
-    # plot_variances()
-    # regplots(32)
+    regplots(32)
     # compare_gam_errors()
-    get_gam_data()
+    # get_gam_data()
     # gam_fits(batch_size=32)
     # plot_gam_errors(32)
     # plot_gam_errors_by_batch_size()
@@ -300,8 +240,9 @@ def run_pra_experiments():
     # eval_rate_estimator()
     # plot_rate_estimation_errors_for_dsds()
 
-    #accuracy estimation
+    #prediction accuracy estimation
     # assess_re_tree_predaccuracy_estimation_errors()
+    # accuracy_by_fold_and_dsd_verdict()
 
     # dsd accuracy estimation
     # ood_detector_accuracy_estimation_errors()

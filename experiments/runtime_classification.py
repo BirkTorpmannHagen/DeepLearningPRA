@@ -198,7 +198,7 @@ def verdictwise_proportions(cal_idx=0, batch_size=1):
 
 def parallel_compute_ood_detector_prediction_accuracy(data_filtered, threshold_method, dataset, feature, ood_perf, perf_calibrated):
     data_dict = []
-    for ind_val_fold in ["ind_val", "ind_test"]:
+    for ind_val_fold, ind_test_fold in itertools.product(["ind_val", "ind_test"],repeat=2) :
         for ood_val_fold in data_filtered["shift"].unique():
             data_copy = data_filtered.copy()
             if ood_val_fold in ["train", "ind_val", "ind_test"] or ood_val_fold in SYNTHETIC_SHIFTS:
@@ -206,19 +206,19 @@ def parallel_compute_ood_detector_prediction_accuracy(data_filtered, threshold_m
                 continue
             data_train = data_copy[
                 (data_copy["shift"] == ood_val_fold) | (data_copy["shift"] == ind_val_fold)]
-            dsd = OODDetector(data_train, ood_val_fold, threshold_method=threshold_method)
+            dsd = OODDetector(data_train, threshold_method=threshold_method)
             # dsd.kde()
             for ood_test_fold in data_filtered["fold"].unique():
-
                 if ood_test_fold in ["train", "ind_val", "ind_test"]:
-                    continue
+                    continue # not ood
                 if perf_calibrated:
                     data_copy["ood"] = ~data_copy["correct_prediction"]
-                ind_test_fold = "ind_test" if ind_val_fold == "ind_val" else "ind_val"
+
                 data_test = data_copy[(data_copy["fold"] == ood_test_fold) | (data_copy["fold"] == ind_test_fold)]
                 shift = ood_test_fold.split("_")[0]
                 shift_intensity = ood_test_fold.split("_")[-1] if "_" in ood_test_fold else "Organic"
-                if ood_perf and not perf_calibrated:
+
+                if ood_perf:
                     data_copy["ood"] = ~data_copy["correct_prediction"]
                 tpr, tnr, ba = dsd.get_metrics(data_test)
                 if np.isnan(ba):
@@ -265,10 +265,9 @@ def _make_jobs_for_feature(data_filtered, dataset, feature):
     return jobs
 
 # ---- main entry ----
-def ood_detector_correctness_prediction_accuracy(batch_size, shift="normal"):
-    df = load_all(prefix="fine_data", batch_size=batch_size, shift=shift, samples=100)
+def ood_detector_correctness_prediction_accuracy(batch_size, prefix="fine_data", shift="normal"):
+    df = load_all(prefix=prefix, batch_size=batch_size, shift=shift, samples=100)
     df = df[df["fold"] != "train"]
-
     # Precompute total jobs for progress bar
     total_jobs = 0
     for dataset in DATASETS:
@@ -285,8 +284,7 @@ def ood_detector_correctness_prediction_accuracy(batch_size, shift="normal"):
 
     with Pool(processes=n_procs) as pool, tqdm(total=total_jobs, desc="Computing") as pbar:
         for dataset in DATASETS:
-            if dataset=="Polyp":
-                continue
+
             data_dataset = df[df["Dataset"] == dataset]
             for feature in DSDS:
                 data_filtered = data_dataset[data_dataset["feature_name"] == feature]
@@ -338,13 +336,11 @@ def get_all_ood_detector_data(batch_size, filter_thresholding_method=False, filt
     if filter_correctness_calibration:
         df = df[df["Performance Calibrated"] == False]
     if filter_organic:
-        df = df[~(df["OoD Val Fold"].isin(SYNTHETIC_SHIFTS) )&(~df["OoD Test Fold"].isin(SYNTHETIC_SHIFTS))]
+        df = df[df["Shift Intensity"] == "Organic"]
     if filter_best:
         meaned_ba = df.groupby(["Dataset", "feature_name"])["ba"].mean().reset_index()
         best_ba = meaned_ba.loc[meaned_ba.groupby("Dataset")["ba"].idxmax()]
         df = df.merge(best_ba[["Dataset", "feature_name"]], on=["Dataset", "feature_name"], how="inner")
-
-
 
     return df
 
@@ -354,6 +350,12 @@ def ood_rv_accuracy_by_thresh_and_stuff(batch_size):
 
 def ood_rv_accuracy_by_dataset_and_feature(batch_size):
     df = get_all_ood_detector_data(batch_size, filter_organic=True, filter_thresholding_method=True, filter_correctness_calibration=True)
+
+    df = df[df["OoD Val Fold"]==df["OoD Test Fold"]]
+
+    print(df.head(10))
+
+
     print(df.groupby(["OoD==f(x)=y", "Dataset", "feature_name"])["ba"].mean())
 
 def ood_verdict_shiftwise_accuracy_tables(batch_size):
@@ -752,14 +754,15 @@ def ood_verdict_plots_batched():
         dfs.append(df)
     data = pd.concat(dfs)
     data = data[(~data["OoD Test Fold"].isin(SYNTHETIC_SHIFTS))&(~data["OoD Val Fold"].isin(SYNTHETIC_SHIFTS))]
-
+    # data = data[data["OoD==f(x)=y"]==True]
     data = data[(data["Threshold Method"]=="val_optimal")&(data["Performance Calibrated"]==False)]
-    g = sns.FacetGrid(data, col="Dataset", row="OoD==f(x)=y", margin_titles=True, sharex=False, sharey=False)
-    g.map_dataframe(sns.lineplot, x="batch_size", y="ba", hue="feature_name", markers=True, dashes=False)
-    for ax in g.axes.flat:
-        ax.set_ylim(0.4, 1)
+    g = sns.FacetGrid(data, col="feature_name", margin_titles=True, sharex=True, sharey=True, col_wrap=3)
+    g.map_dataframe(sns.lineplot, x="batch_size", y="ba", hue="Dataset", style="OoD==f(x)=y", markers=True, dashes=False)
+    # for ax in g.axes.flat:
+    #     ax.set_ylim(0.4, 1)
 
-    g.add_legend(bbox_to_anchor=(0.7, 0.3), loc='center left', title="Feature", ncol=1)
+    g.add_legend(bbox_to_anchor=(0.85, 0.5), loc='center left', title="Feature", ncol=1)
+    # plt.tight_layout(h_pad=1)
     plt.savefig("batched_ood_verdict_accuracy.pdf")
     plt.show()
 

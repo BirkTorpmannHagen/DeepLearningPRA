@@ -22,7 +22,7 @@ class Simulator:
     Abstract simulator class
 """
 
-    def __init__(self, df, ood_test_shift, ood_val_shift, estimator=ErrorAdjustmentEstimator, trace_length=100,
+    def __init__(self, df, ood_test_shift, ood_val_shift, estimator=ErrorAdjustmentEstimator, calibrate_by_fold=True, trace_length=100,
                  use_synth=True, **kwargs):
         self.df = df
 
@@ -32,14 +32,27 @@ class Simulator:
         if use_synth:
             self.ood_detector = SyntheticOODDetector(kwargs["dsd_tpr"], kwargs["dsd_tnr"])
         else:
-            self.ood_detector = OODDetector(df, ood_val_shift)
+            train_df = df[(df["shift"] == ood_val_shift) | (df["shift"] == "ind_val")]
+
+            if calibrate_by_fold:
+                self.ood_detector = OODDetector(train_df, ood_val_shift)
+
+                dsd_tpr, dsd_tnr = self.ood_detector.get_likelihood()
+            else:
+                df_ood_def_incorrect = df.copy()
+                df_ood_def_incorrect["OoD"] = df_ood_def_incorrect["correct_prediction"].astype(int)
+                self.ood_detector = OODDetector(df_ood_def_incorrect, ood_val_shift)
+                dsd_tpr, dsd_tnr= self.ood_detector.get_likelihood()
+
         self.ood_val_acc = self.get_predictor_accuracy(self.ood_val_shift)
         self.ood_test_acc = self.get_predictor_accuracy(self.ood_test_shift)
         self.ind_val_acc = self.get_predictor_accuracy("ind_val")
         self.ind_test_acc = self.get_predictor_accuracy("ind_test")
-        dsd_tnr, dsd_tpr = self.ood_detector.get_likelihood()
+        print(
+            f"{calibrate_by_fold}-{ood_val_shift}-{ood_test_shift}: {dsd_tpr} {dsd_tnr}")
+
         if dsd_tnr+dsd_tpr <= 1:
-            print("Using simple estimator due to low TNR+TPR")
+            print("Using simple estimator since TPR+TNR<=1")
             estimator = SimpleEstimator
 
         ind_ndsd_acc = self.get_conditional_prediction_likelihood_estimates("ind_val", False)
@@ -100,8 +113,8 @@ class UniformBatchSimulator(Simulator):
     """
     permits conditional data collection simulating model + ood detector
     """
-    def __init__(self, df, ood_test_shift, ood_val_shift, estimator=ErrorAdjustmentEstimator, trace_length=100, use_synth=True, **kwargs):
-        super().__init__(df, ood_test_shift, ood_val_shift, estimator, trace_length, use_synth, **kwargs)
+    def __init__(self, df, ood_test_shift, ood_val_shift, estimator=ErrorAdjustmentEstimator, trace_length=100, use_synth=True, calibrated_by_fold=True, **kwargs):
+        super().__init__(df, ood_test_shift, ood_val_shift, estimator,calibrated_by_fold, trace_length, use_synth, **kwargs)
 
 
     def sample_a_uniform_batch(self, shift):
@@ -123,6 +136,7 @@ class UniformBatchSimulator(Simulator):
         self.dsd_trace.update(int(ood_pred))
 
         if index>self.dsd_trace.trace_length: #update lambda after trace length
+
             self.detector_tree.update_rate(self.dsd_trace.trace)
             self.base_tree.update_rate(self.dsd_trace.trace)
 
