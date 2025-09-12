@@ -43,7 +43,7 @@ def get_optimal_threshold(ind, ood):
     if ood.max()<ind.min() and not higher_is_ood:
         return (ind.max() + ood.min()) / 2
 
-    for t in np.linspace(merged.min(), merged.max(), 100):
+    for t in np.linspace(merged.min(), merged.max(), 500):
         if higher_is_ood:
             ind_acc = (ind<t).mean()
             ood_acc = (ood>t).mean()
@@ -65,22 +65,18 @@ def get_optimal_threshold(ind, ood):
 
 
 class OODDetector:
-    def __init__(self, df, ood_val_shift, threshold_method="val_optimal", eval_correctness=False):
+
+    def __init__(self, df, threshold_method="val_optimal"):
         assert df["feature_name"].nunique() == 1
         assert df["Dataset"].nunique() == 1
         if "k" in df.columns:
             assert df["k"].nunique() == 1, "OODDetector only works with k=1 due to the thresholding scheme"
         self.df = df
         self.threshold_method = threshold_method
-
-        # self.ind_val = df[(df["shift"] == "ind_val")&(~df["ood"])]
-        # self.ood_val = df[(df["shift"] == ood_val_shift)&(df["ood"])]
-        if eval_correctness:
-            df["ood"] = df["correct_prediction"]
-
         self.ind_val = df[~df["ood"]]
         self.ood_val = df[df["ood"]]
         self.higher_is_ood = self.ood_val["feature"].mean() >self.ind_val["feature"].mean()
+
         if threshold_method == "val_optimal":
             self.threshold = get_optimal_threshold(self.ind_val["feature"], self.ood_val["feature"])
         if threshold_method == "ind_span":
@@ -129,8 +125,6 @@ class OODDetector:
             else:
                 return feature < self.threshold
         elif self.threshold_method == "logistic":
-            if feature==np.inf:
-                print(batch)
             output = bool(self.logreg.predict(np.array(feature).reshape(1, -1))[0])
             return output
         else:
@@ -174,7 +168,7 @@ class OODDetector:
         plt.show()
 
     def get_likelihood(self):
-        return self.get_tpr(self.df), self.get_tpr(self.df)
+        return self.get_tpr(self.df), self.get_tnr(self.df)
 
 
 class DebiasedOODDetector(OODDetector):

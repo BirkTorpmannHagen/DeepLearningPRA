@@ -25,6 +25,16 @@ def desaturate(img, intensity):
     transformed = transforms(image=x)["image"]
     transformed = ToTensor()(transformed)
     return transformed
+
+def contrast(img, intensity):
+    seed_all(0)
+    x = img.permute(1, 2, 0).numpy()
+    desat = albumentations.ColorJitter(hue=0, brightness=0, saturation=0, contrast=intensity*3, always_apply=True)
+    transforms = alb.Compose([desat])
+    transformed = transforms(image=x)["image"]
+    transformed = ToTensor()(transformed)
+    return transformed
+
 def hue_shift(img, intensity):
     seed_all(0)
     x = img.permute(1, 2, 0).numpy()

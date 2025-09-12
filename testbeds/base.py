@@ -102,8 +102,11 @@ class BaseTestBed:
             ood_sets = [self.dl(TransformedDataset(self.ind_test, smear, "smear", noise)) for
                         noise in self.noise_range]
             loaders = dict(zip(["smear_{}".format(noise_val) for noise_val in self.noise_range], ood_sets))
+        elif self.mode=="contrast":
+            ood_sets = [self.dl(TransformedDataset(self.ind_test, contrast, "contrast", noise)) for noise in self.noise_range]
+            loaders = dict(zip(["contrast_{}".format(noise_val) for noise_val in self.noise_range], ood_sets))
         else:
-            loaders =  self.get_ood_dict()
+            raise NotImplementedError
         return loaders
 
 

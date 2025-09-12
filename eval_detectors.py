@@ -139,7 +139,7 @@ def collect_single_data(testbed):
     if not os.path.exists(f"fine_data/{dataset_name}_normal_knn.csv"):
         print("Skipping Normal")
         collect_data(testbed, dataset_name, mode="normal", prefix="fine_data")
-    for mode in ["fgsm"]:
+    for mode in ["contrast"]:
         if os.path.exists(f"fine_data/{dataset_name}_{mode}_knn.csv"):
             continue
         print(mode)

@@ -454,23 +454,25 @@ def regplots(batch_size):
         plt.axhline(DATASETWISE_RANDOM_LOSS[data["Dataset"].unique()[0]], color=color, linestyle="--", label="Random Guessing")
     def custom_scatter(data, **kwargs):
         kwargs.pop("color", None)  # Remove auto-passed color to prevent conflict
-        sns.scatterplot(data=data[data["shift"].isin(SYNTHETIC_SHIFTS)], x="feature", y="loss", hue="shift", palette=sns.color_palette(n_colors=len(SYNTHETIC_SHIFTS)+2)[2:], **kwargs)
-        sns.scatterplot(data=data[~data["shift"].isin(SYNTHETIC_SHIFTS)], x="feature", y="loss", hue="ood_label", marker="x",palette=sns.color_palette(n_colors=len(SYNTHETIC_SHIFTS)+2)[:2], alpha=1, **kwargs)
+        sns.scatterplot(data=data[data["shift"].isin(SYNTHETIC_SHIFTS)], x="feature", y="loss", hue="shift", s=8, palette=sns.color_palette(n_colors=len(SYNTHETIC_SHIFTS)+2)[2:], **kwargs)
+        sns.scatterplot(data=data[~data["shift"].isin(SYNTHETIC_SHIFTS)], x="feature", y="loss", hue="ood_label",s=8, marker="x",palette=sns.color_palette(n_colors=len(SYNTHETIC_SHIFTS)+2)[:2], alpha=1, **kwargs)
     df.replace(DSD_PRINT_LUT, inplace=True)
     # df = filter_max_loss(df)
     df["ood_label"] = df["ood"].apply(lambda x: "OoD" if x else "InD")
     # sns.set_context("notebook", font_scale=2)
-    g = sns.FacetGrid(df, row="feature_name", col="Dataset", margin_titles=True, sharex=False, sharey=False)
+    g = sns.FacetGrid(df, row="feature_name", col="Dataset", margin_titles=True, sharex=False, sharey=False, height=1.75, aspect=1)
     g.map_dataframe(custom_scatter)
     # g.map_dataframe(plot_threshold)
     g.map_dataframe(plot_max_loss, color="red")
     g.set_titles(row_template="Feature = {row_name}", col_template="{col_name}")
 
-    for ax, row_val in zip(g.axes[:, 0], g.row_names):
-        if row_val == "feature_name":
-            ax.set_ylabel("Feature")
-        else:
-            ax.set_ylabel(row_val)
+    for ax in g.axes.flat:
+        ax.set_xlabel("Feature Value")
+        ax.set_ylabel("Loss")
+        # ax.set_yscale("log")
+        # ax.set_xscale("log")
+        ax.set_yticks([])
+        ax.set_xticks([])
 
     # g.add_legend(
     #     title="Shift",
@@ -483,13 +485,14 @@ def regplots(batch_size):
     # for ax in g.axes.flat:ood_accuracy_vs_pred_accuacy_plot
         # ax.set_yscale("log")
     #     ax.set_xscale("log")
+    plt.tight_layout()
     plt.savefig(f"figures/regplots_{batch_size}.pdf", dpi=300, bbox_inches='tight')
     plt.show()
 
 
 def regplot_by_shift():
     print("Loading")
-    df = load_all(batch_size=32, shift="", samples=100)
+    df = load_all(batch_size=32, shift="", samples=50)
     df = df[df["fold"]!="train"]
     # df = filter_max_loss(df)
     df = df[~df["shift"].isin(["contrast", "brightness","smear"])]
@@ -497,8 +500,6 @@ def regplot_by_shift():
     print("Loaded!")
     for dataset in DATASETS:
         subdf = df[df["Dataset"]==dataset]
-        if dataset=="Polyp":
-            subdf = subdf[subdf["shift"]!="saltpepper"]
         print(f"Plotting for {dataset}")
         special_intensities = ['InD', 'OoD']
         unique_intensities = subdf["shift_intensity"].unique()
@@ -514,11 +515,12 @@ def regplot_by_shift():
             plt.axhline(DATASETWISE_RANDOM_LOSS[dataset], color=color, linestyle="--", label="Random Guessing")
         subdf.rename(columns=COLUMN_PRINT_LUT, inplace=True)
         subdf.replace(DSD_PRINT_LUT, inplace=True)
-        g = sns.FacetGrid(subdf, row="Feature", col="Shift", margin_titles=True, sharex=False, sharey=False)
-        g.map_dataframe(sns.scatterplot, x="Feature Value", y="Loss", hue="Shift Intensity", palette=palette, hue_order=hue_order)
+        subdf.rename(columns=SHIFT_PRINT_LUT, inplace=True)
+        g = sns.FacetGrid(subdf, row="Feature", col="Shift", margin_titles=True, sharex=False, sharey=False, height=1.75, aspect=1)
+        g.map_dataframe(sns.scatterplot, x="Feature Value", y="Loss", hue="Shift Intensity", palette=palette, hue_order=hue_order, s=12 )
         g.map_dataframe(plot_max_loss)
         # g.add_legend()
-        plt.savefig(f"figures/regplot_by_shift_{dataset}.png", dpi=300, bbox_inches='tight')
+        plt.savefig(f"figures/regplot_by_shift_{dataset}.pdf", dpi=300, bbox_inches='tight')
         plt.show()
 
 def filter_max_loss(df):

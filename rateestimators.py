@@ -23,26 +23,29 @@ class ErrorAdjustmentEstimator(RateEstimator):
         self.tnr = float(tnr)
         self.rate = 0.5  # last batch estimate (informational)
 
-
-    def update(self, trace_list, return_ci=False, alpha=0.05):
+    def update(self, trace_list, return_ci=False, alpha=0.05, tol=1e-6):
         y = np.asarray(trace_list, dtype=float)
         n = len(y)
         if n == 0:
             return self.rate if not return_ci else (self.rate, (self.rate, self.rate))
 
-        ybar = y.mean()
+        ybar = float(y.mean())
         J = self.tpr + self.tnr - 1.0
         if J <= 0:
-            raise ValueError("TPR+TNR must exceed 1 to correct prevalence.")
+            raise ValueError("TPR+TNR must exceed 1 (Youden's J > 0).")
 
-        p_hat = (ybar - (1.0 - self.tnr)) / J
+        fpr = 1.0 - self.tnr
+        if ybar < fpr - tol or ybar > self.tpr + tol:
+            self.rate = ybar # drift detected
+            # print("WARNING: tpr/tnr inconsistency detected, Setting rate to ybar.")
+            return self.rate
+
+        p_hat = (ybar - fpr) / J
         p_hat = float(np.clip(p_hat, 0.0, 1.0))
         self.rate = p_hat
-
         if not return_ci:
             return p_hat
 
-        # delta-method variance conditional on fixed TPR/TNR
         var_ybar = ybar * (1 - ybar) / n
         var_phat = var_ybar / (J * J)
         se = math.sqrt(var_phat)
