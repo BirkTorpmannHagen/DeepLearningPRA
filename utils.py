@@ -202,7 +202,7 @@ def load_all(batch_size=30, samples=100, feature="all", shift="normal", prefix="
             dfs.append(load_pra_df(dataset, feature, model="", batch_size=batch_size, samples=samples, prefix=prefix, stratisfication=stratisfication, shift=shift, groupbyfolds=groupbyfolds))
         else:
             for dsd in DSDS:
-               dfs.append(load_pra_df(dataset, dsd, model="", batch_size=batch_size, samples=samples, prefix=prefix, stratisfication=stratisfication, shift=shift, groupbyfolds=groupbyfolds))
+                dfs.append(load_pra_df(dataset, dsd, model="", batch_size=batch_size, samples=samples, prefix=prefix, stratisfication=stratisfication, shift=shift, groupbyfolds=groupbyfolds))
     return pd.concat(dfs)
 
 
@@ -256,9 +256,8 @@ def load_pra_df(dataset_name, feature_name, model="" , batch_size=1, samples=100
     df["shift_intensity"] = df["fold"].apply(
         lambda x: x.split("_")[
             1] if "0." in x else "InD" if "ind" in x else "Train" if "train" in x else "OoD")  # what intensity?
-
     df["batch_size"]=batch_size
-
+    df["Organic"] = df["shift_intensity"].isin(["InD", "OoD"])
     return df
 
 

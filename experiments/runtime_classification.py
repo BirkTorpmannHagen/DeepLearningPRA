@@ -198,29 +198,34 @@ def verdictwise_proportions(cal_idx=0, batch_size=1):
 
 def parallel_compute_ood_detector_prediction_accuracy(data_filtered, threshold_method, dataset, feature, ood_perf, perf_calibrated):
     data_dict = []
+    ood_val_folds = data_filtered[(data_filtered["Organic"] == True) & (data_filtered["ood"] == True)]["fold"].unique()
+
     for ind_val_fold, ind_test_fold in itertools.product(["ind_val", "ind_test"],repeat=2) :
-        for ood_val_fold in data_filtered["shift"].unique():
+        for ood_val_fold in ood_val_folds:
             data_copy = data_filtered.copy()
-            if ood_val_fold in ["train", "ind_val", "ind_test"] or ood_val_fold in SYNTHETIC_SHIFTS:
+            if ood_val_fold in ["train", "ind_val", "ind_test"] or ood_val_fold.split("_")[0] in SYNTHETIC_SHIFTS:
                 # dont calibrate on ind data or synthetic ood data
                 continue
             data_train = data_copy[
-                (data_copy["shift"] == ood_val_fold) | (data_copy["shift"] == ind_val_fold)]
+                (data_copy["fold"] == ood_val_fold) | (data_copy["fold"] == ind_val_fold)].copy()
+            if perf_calibrated:
+                data_train["ood"] = ~data_train["correct_prediction"]
+
             dsd = OODDetector(data_train, threshold_method=threshold_method)
             # dsd.kde()
-            for ood_test_fold in data_filtered["fold"].unique():
+            for ood_test_fold in data_copy[data_copy["ood"]==True]["fold"].unique():
                 if ood_test_fold in ["train", "ind_val", "ind_test"]:
                     continue # not ood
-                if perf_calibrated:
-                    data_copy["ood"] = ~data_copy["correct_prediction"]
 
-                data_test = data_copy[(data_copy["fold"] == ood_test_fold) | (data_copy["fold"] == ind_test_fold)]
+                data_test = data_copy[(data_copy["fold"] == ood_test_fold) | (data_copy["fold"] == ind_test_fold)].copy()
                 shift = ood_test_fold.split("_")[0]
                 shift_intensity = ood_test_fold.split("_")[-1] if "_" in ood_test_fold else "Organic"
 
                 if ood_perf:
-                    data_copy["ood"] = ~data_copy["correct_prediction"]
+                    data_test["ood"] = ~data_test["correct_prediction"]
                 tpr, tnr, ba = dsd.get_metrics(data_test)
+
+
                 if np.isnan(ba):
                     continue
                 data_dict.append({"Dataset": dataset, "feature_name": feature, "Threshold Method": threshold_method,
@@ -281,10 +286,11 @@ def ood_detector_correctness_prediction_accuracy(batch_size, prefix="fine_data",
     results_all = []
     # choose pool size
     n_procs = max(1, cpu_count() - 1)
-
+    # n_procs=1 #debug
     with Pool(processes=n_procs) as pool, tqdm(total=total_jobs, desc="Computing") as pbar:
         for dataset in DATASETS:
-
+            if dataset!="Office31":
+                continue
             data_dataset = df[df["Dataset"] == dataset]
             for feature in DSDS:
                 data_filtered = data_dataset[data_dataset["feature_name"] == feature]
@@ -311,7 +317,6 @@ def ood_detector_correctness_prediction_accuracy(batch_size, prefix="fine_data",
     flat_errors = [out for out in results_all if isinstance(out, dict) and "error" in out]
 
     data = pd.DataFrame(flat_success)
-    print(data)
     if not data.empty:
         data["feature_name"].replace(DSD_PRINT_LUT, inplace=True)
 
@@ -322,15 +327,16 @@ def ood_detector_correctness_prediction_accuracy(batch_size, prefix="fine_data",
         data_ds = data[data["Dataset"] == dataset]
         if data_ds.empty:
             continue
-        data_ds.to_csv(f"ood_detector_data/ood_detector_correctness_{dataset}_{batch_size}.csv", index=False)
+        data_ds.to_csv(f"test_ood_detector_data/ood_detector_correctness_{dataset}_{batch_size}.csv", index=False)
 
-def get_all_ood_detector_data(batch_size, filter_thresholding_method=False, filter_ood_correctness=False, filter_correctness_calibration=False, filter_organic=False, filter_best=False):
+def get_all_ood_detector_data(batch_size, filter_thresholding_method=False, filter_ood_correctness=False, filter_correctness_calibration=False, filter_organic=False, filter_best=False, prefix="ood_detector_data"):
     dfs = []
     for dataset, feature in itertools.product(DATASETS, DSDS):
-        dfs.append(pd.read_csv(f"ood_detector_data/ood_detector_correctness_{dataset}_{batch_size}.csv"))
+        dfs.append(pd.read_csv(f"{prefix}/ood_detector_correctness_{dataset}_{batch_size}.csv"))
     df = pd.concat(dfs)
     if filter_thresholding_method:
         df = df[df["Threshold Method"] == "val_optimal"]
+
     if filter_ood_correctness:
         df = df[df["OoD==f(x)=y"] == False]
     if filter_correctness_calibration:
@@ -343,20 +349,17 @@ def get_all_ood_detector_data(batch_size, filter_thresholding_method=False, filt
         df = df.merge(best_ba[["Dataset", "feature_name"]], on=["Dataset", "feature_name"], how="inner")
 
     return df
+def ood_rv_accuracy_by_dataset_and_feature(batch_size):
+    df = get_all_ood_detector_data(batch_size, filter_organic=True, filter_thresholding_method=True, filter_correctness_calibration=True, filter_ood_correctness=False, prefix="test_ood_detector_data")
+    # df = df[df["OoD Val Fold"]==df["OoD Test Fold"]]
+    print(df.groupby(["OoD==f(x)=y", "Dataset", "feature_name"])[["tpr", "tnr", "ba"]].mean())
+
 
 def ood_rv_accuracy_by_thresh_and_stuff(batch_size):
     df = get_all_ood_detector_data(batch_size, filter_organic=True)
     print(df.groupby(["Threshold Method", "OoD==f(x)=y", "Performance Calibrated"])[["ba"]].agg(["min", "mean", "max"]))
 
-def ood_rv_accuracy_by_dataset_and_feature(batch_size):
-    df = get_all_ood_detector_data(batch_size, filter_organic=True, filter_thresholding_method=True, filter_correctness_calibration=True)
 
-    df = df[df["OoD Val Fold"]==df["OoD Test Fold"]]
-
-    print(df.head(10))
-
-
-    print(df.groupby(["OoD==f(x)=y", "Dataset", "feature_name"])["ba"].mean())
 
 def ood_verdict_shiftwise_accuracy_tables(batch_size):
     df = get_all_ood_detector_data(batch_size, filter_thresholding_method=True, filter_ood_correctness=True,

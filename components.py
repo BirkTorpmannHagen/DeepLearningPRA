@@ -43,7 +43,7 @@ def get_optimal_threshold(ind, ood):
     if ood.max()<ind.min() and not higher_is_ood:
         return (ind.max() + ood.min()) / 2
 
-    for t in np.linspace(merged.min(), merged.max(), 100):
+    for t in np.linspace(merged.min(), merged.max(), 500):
         if higher_is_ood:
             ind_acc = (ind<t).mean()
             ood_acc = (ood>t).mean()

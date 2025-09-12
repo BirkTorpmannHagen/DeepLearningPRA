@@ -178,12 +178,14 @@ def run_rv_experiments():
 
 
     for batch_size in BATCH_SIZES:
-        print(f"Running batch size {batch_size}")
+        # print(f"Running batch size {batch_size}")
         ood_detector_correctness_prediction_accuracy(batch_size, shift="")
-        ood_rv_accuracy_by_dataset_and_feature(1)
+        # ood_rv_accuracy_by_thresh_and_stuff(1)
+        if batch_size==1:
+            ood_rv_accuracy_by_dataset_and_feature(1)
+    # ood_accuracy_vs_pred_accuacy_plot(1)
 
 
-    # print(df.groupby(["Dataset", "feature_name"])["ba"].mean().reset_index())
 
 
 
