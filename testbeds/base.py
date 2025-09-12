@@ -32,7 +32,6 @@ class BaseTestBed:
     def __init__(self, batch_size, num_workers=5, mode="normal", sampler="RandomSampler"):
         self.mode=mode
         self.num_workers=5
-        self.noise_range = np.arange(0.0, 0.2525, 0.025)[1:]
         self.noise_range = np.linspace(0,0.5, 21)[1:]
 
 
@@ -85,7 +84,8 @@ class BaseTestBed:
                         noise in self.noise_range]
             loaders = dict(zip(["hue_{}".format(noise_val) for noise_val in self.noise_range], ood_sets))
         elif self.mode=="fgsm":
-            ood_sets = [self.dl(TransformedDataset(self.ind_test, targeted_fgsm, "fgsm", noise)) for
+            self.num_workers=1
+            ood_sets = [self.dl(TransformedDataset(self.ind_test, targeted_fgsm, "fgsm", noise, model=self.classifier)) for
                         noise in self.noise_range]
             loaders = dict(zip(["adv_{}".format(noise_val) for noise_val in self.noise_range], ood_sets))
             return loaders

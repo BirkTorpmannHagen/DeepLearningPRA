@@ -18,8 +18,8 @@ def collect_data(testbed_constructor, dataset_name, prefix="final_data", mode="n
     print("Collecting data for", dataset_name, "in", mode, "mode")
     bench = testbed_constructor("classifier", mode=mode, batch_size=8)
     # features = [mahalanobis]
-    features = [cross_entropy, grad_magnitude, energy,knn, typicality, softmax]
-
+    # features = [cross_entropy,energy,knn, typicality, softmax,  grad_magnitude]
+    features = [cross_entropy,energy,knn, typicality, softmax]
     # features = [knn]
     tsd = FeatureSD(bench.classifier,features)
     tsd.register_testbed(bench)
@@ -139,7 +139,7 @@ def collect_single_data(testbed):
     if not os.path.exists(f"fine_data/{dataset_name}_normal_knn.csv"):
         print("Skipping Normal")
         collect_data(testbed, dataset_name, mode="normal", prefix="fine_data")
-    for mode in SYNTHETIC_SHIFTS:
+    for mode in ["fgsm"]:
         if os.path.exists(f"fine_data/{dataset_name}_{mode}_knn.csv"):
             continue
         print(mode)
@@ -149,18 +149,27 @@ def collect_single_data(testbed):
 
 if __name__ == '__main__':
     from features import *
-    # torch.multiprocessing.set_start_method('spawn')
+    torch.multiprocessing.set_start_method('spawn')
     # collect_bias_data(-1)
     collect_bias_data()
 
     # collect_data(CCTTestBed, "CCT",mode="normal")
     # collect_bias_data(5)
+<<<<<<< HEAD
 
     # collect_single_data(OfficeHomeTestBed)
     # collect_single_data(Office31TestBed)
     # collect_single_data(NICOTestBed)
     # collect_single_data(CCTTestBed)
     # collect_single_data(PolypTestBed)
+=======
+    collect_single_data(PolypTestBed)
+    collect_single_data(OfficeHomeTestBed)
+    collect_single_data(Office31TestBed)
+    collect_single_data(NICOTestBed)
+    collect_single_data(CCTTestBed)
+
+>>>>>>> f69b86881703934319a7d08997c7daafebfa0cb0
     # from experiments.runtime_classification import ood_detector_correctness_prediction_accuracy
     # for batch_size in BATCH_SIZES:
     #     print(f"Running batch size {batch_size}")

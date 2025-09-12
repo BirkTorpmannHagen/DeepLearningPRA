@@ -65,7 +65,7 @@ def get_optimal_threshold(ind, ood):
 
 
 class OODDetector:
-    def __init__(self, df, ood_val_shift, threshold_method="val_optimal"):
+    def __init__(self, df, ood_val_shift, threshold_method="val_optimal", eval_correctness=False):
         assert df["feature_name"].nunique() == 1
         assert df["Dataset"].nunique() == 1
         if "k" in df.columns:
@@ -75,6 +75,9 @@ class OODDetector:
 
         # self.ind_val = df[(df["shift"] == "ind_val")&(~df["ood"])]
         # self.ood_val = df[(df["shift"] == ood_val_shift)&(df["ood"])]
+        if eval_correctness:
+            df["ood"] = df["correct_prediction"]
+
         self.ind_val = df[~df["ood"]]
         self.ood_val = df[df["ood"]]
         self.higher_is_ood = self.ood_val["feature"].mean() >self.ind_val["feature"].mean()
