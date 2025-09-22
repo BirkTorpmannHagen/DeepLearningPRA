@@ -155,21 +155,18 @@ if __name__ == '__main__':
 
     # collect_data(CCTTestBed, "CCT",mode="normal")
     # collect_bias_data(5)
-<<<<<<< HEAD
 
     # collect_single_data(OfficeHomeTestBed)
     # collect_single_data(Office31TestBed)
     # collect_single_data(NICOTestBed)
     # collect_single_data(CCTTestBed)
     # collect_single_data(PolypTestBed)
-=======
     collect_single_data(PolypTestBed)
     collect_single_data(OfficeHomeTestBed)
     collect_single_data(Office31TestBed)
     collect_single_data(NICOTestBed)
     collect_single_data(CCTTestBed)
 
->>>>>>> f69b86881703934319a7d08997c7daafebfa0cb0
     # from experiments.runtime_classification import ood_detector_correctness_prediction_accuracy
     # for batch_size in BATCH_SIZES:
     #     print(f"Running batch size {batch_size}")
