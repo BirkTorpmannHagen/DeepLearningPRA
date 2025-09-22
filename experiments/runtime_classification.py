@@ -552,7 +552,7 @@ def debiased_ood_detector_correctness_prediction_accuracy(batch_size):
                 print("continuing...")
                 continue
             for feature in DSDS:
-                for k in [-1, 0, 1, 5]:
+                for k in [-1, 0, 1, 5, 10]:
 
                     if feature == "knn" and k !=-1:
                         continue
@@ -734,8 +734,9 @@ def debiased_plots():
 
 
 
-    g = sns.FacetGrid(df, col="feature_name")
+    g = sns.FacetGrid(df[df["feature_name"]!="kNN"], col="feature_name", col_wrap=3)
     g.map_dataframe(sns.boxenplot, x="k", y="ba", palette=sns.color_palette())
+    plt.savefig("k_wise_boxenplot.pdf")
     plt.show()
     average_for_each_dsd = df.groupby(["Dataset", "k", "feature_name"])["ba"].mean().reset_index()
     best_idx = average_for_each_dsd.groupby(["Dataset", "k"])["ba"].idxmax()
