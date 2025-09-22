@@ -215,7 +215,9 @@ def run_rv_experiments():
     # get_error_rate_given_rv()
 
 def run_loss_regression_experiments():
-    # regplot_by_shift()
+    # verdictwise_proportions()
+
+    regplot_by_shift()
     # plot_intensitywise_kdes()
     regplots(32)
     # compare_gam_errors()
@@ -259,9 +261,9 @@ def run_pra_experiments():
 
 if __name__ == '__main__':
     #accuracies on each dataset
-    run_rv_experiments()
+    # run_rv_experiments()
     # run_loss_regression_experiments()
-    # run_pra_experiments()
+    run_pra_experiments()
     # run_appendix_experiments()
 
 

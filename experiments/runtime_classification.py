@@ -364,9 +364,9 @@ def ood_rv_accuracy_by_thresh_and_stuff(batch_size):
 
 
 
-def ood_verdict_shiftwise_accuracy_tables(batch_size):
+def ood_verdict_shiftwise_accuracy_tables(batch_size, filter_organic=False):
     df = get_all_ood_detector_data(batch_size, filter_thresholding_method=True, filter_ood_correctness=True,
-                                   filter_correctness_calibration=True, filter_organic=False, filter_best=True)
+                                   filter_correctness_calibration=True, filter_organic=filter_organic, filter_best=True)
 
 
     #get only the shifts that affect the performance of the OOD detector
@@ -491,7 +491,7 @@ def get_all_ood_detector_verdicts(data):
 
 
 def loss_verdict_histogram(batch_size, prefix="final_data"):
-    df = load_all(prefix=prefix, compute_ood=False, batch_size=batch_size)
+    df = load_all(prefix=prefix, batch_size=batch_size)
 
     data = get_all_ood_detector_verdicts(df)
 
@@ -501,7 +501,7 @@ def loss_verdict_histogram(batch_size, prefix="final_data"):
 
 
     g = sns.FacetGrid(data, col="Dataset", row="feature_name", sharex=False, sharey=False)
-    g.map_dataframe(sns.histplot, x="loss", hue="Verdict", fill=True)
+    g.map_dataframe(sns.histplot, x="loss", hue="Verdict", fill=True, multiple="stack")
     g.map_dataframe(baseline)
 
     for ax in g.axes.flat:

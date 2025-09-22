@@ -65,6 +65,7 @@ def get_optimal_threshold(ind, ood):
 
 
 class OODDetector:
+
     def __init__(self, df, threshold_method="val_optimal"):
         assert df["feature_name"].nunique() == 1
         assert df["Dataset"].nunique() == 1

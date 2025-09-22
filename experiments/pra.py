@@ -655,7 +655,7 @@ def ood_detector_accuracy_estimation_errors():
     errors = []
 
     for batch_size in BATCH_SIZES:
-        tprs, tnrs = ood_verdict_shiftwise_accuracy_tables(batch_size=batch_size)
+        tprs, tnrs = ood_verdict_shiftwise_accuracy_tables(batch_size=batch_size, filter_organic=True)
 
         # compute per-dataset
         for dataset in DATASETS:

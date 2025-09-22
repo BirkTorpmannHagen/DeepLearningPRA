@@ -24,6 +24,7 @@ class Simulator:
 
     def __init__(self, df, ood_test_shift, ood_val_shift, estimator=ErrorAdjustmentEstimator, calibrate_by_fold=True, trace_length=100,
                  use_synth=True, **kwargs):
+
         self.df = df
 
         self.ood_test_shift = ood_test_shift
@@ -34,6 +35,7 @@ class Simulator:
             dsd_tpr = kwargs["dsd_tpr"]
             dsd_tnr = kwargs["dsd_tnr"]
         else:
+            self.ood_detector = OODDetector(df, ood_val_shift)
             train_df = df[(df["shift"] == ood_val_shift) | (df["shift"] == "ind_val")]
 
             self.ood_detector = OODDetector(train_df, "val_optimal")
