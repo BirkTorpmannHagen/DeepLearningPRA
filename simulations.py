@@ -31,18 +31,14 @@ class Simulator:
         # self.ood_detector = OODDetector(df)
         if use_synth:
             self.ood_detector = SyntheticOODDetector(kwargs["dsd_tpr"], kwargs["dsd_tnr"])
+            dsd_tpr = kwargs["dsd_tpr"]
+            dsd_tnr = kwargs["dsd_tnr"]
         else:
             train_df = df[(df["shift"] == ood_val_shift) | (df["shift"] == "ind_val")]
 
-            if calibrate_by_fold:
-                self.ood_detector = OODDetector(train_df, ood_val_shift)
+            self.ood_detector = OODDetector(train_df, "val_optimal")
+            dsd_tpr, dsd_tnr = self.ood_detector.get_likelihood()
 
-                dsd_tpr, dsd_tnr = self.ood_detector.get_likelihood()
-            else:
-                df_ood_def_incorrect = df.copy()
-                df_ood_def_incorrect["OoD"] = df_ood_def_incorrect["correct_prediction"].astype(int)
-                self.ood_detector = OODDetector(df_ood_def_incorrect, ood_val_shift)
-                dsd_tpr, dsd_tnr= self.ood_detector.get_likelihood()
 
         self.ood_val_acc = self.get_predictor_accuracy(self.ood_val_shift)
         self.ood_test_acc = self.get_predictor_accuracy(self.ood_test_shift)

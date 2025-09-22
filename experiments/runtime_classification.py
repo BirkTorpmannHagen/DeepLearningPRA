@@ -223,6 +223,8 @@ def parallel_compute_ood_detector_prediction_accuracy(data_filtered, threshold_m
 
                 if ood_perf:
                     data_test["ood"] = ~data_test["correct_prediction"]
+
+                # dsd.val_kde(data_test, fname=f"figures/kdes/nico_knn_indval_kde_{ood_val_fold}_{ind_val_fold}_{ood_test_fold}_{ind_test_fold}.png")
                 tpr, tnr, ba = dsd.get_metrics(data_test)
 
 
@@ -289,8 +291,7 @@ def ood_detector_correctness_prediction_accuracy(batch_size, prefix="fine_data",
     # n_procs=1 #debug
     with Pool(processes=n_procs) as pool, tqdm(total=total_jobs, desc="Computing") as pbar:
         for dataset in DATASETS:
-            if dataset!="Office31":
-                continue
+
             data_dataset = df[df["Dataset"] == dataset]
             for feature in DSDS:
                 data_filtered = data_dataset[data_dataset["feature_name"] == feature]
@@ -327,7 +328,7 @@ def ood_detector_correctness_prediction_accuracy(batch_size, prefix="fine_data",
         data_ds = data[data["Dataset"] == dataset]
         if data_ds.empty:
             continue
-        data_ds.to_csv(f"test_ood_detector_data/ood_detector_correctness_{dataset}_{batch_size}.csv", index=False)
+        data_ds.to_csv(f"ood_detector_data/ood_detector_correctness_{dataset}_{batch_size}.csv", index=False)
 
 def get_all_ood_detector_data(batch_size, filter_thresholding_method=False, filter_ood_correctness=False, filter_correctness_calibration=False, filter_organic=False, filter_best=False, prefix="ood_detector_data"):
     dfs = []
@@ -350,8 +351,10 @@ def get_all_ood_detector_data(batch_size, filter_thresholding_method=False, filt
 
     return df
 def ood_rv_accuracy_by_dataset_and_feature(batch_size):
-    df = get_all_ood_detector_data(batch_size, filter_organic=True, filter_thresholding_method=True, filter_correctness_calibration=True, filter_ood_correctness=False, prefix="test_ood_detector_data")
-    # df = df[df["OoD Val Fold"]==df["OoD Test Fold"]]
+    df = get_all_ood_detector_data(batch_size, filter_organic=True, filter_thresholding_method=True, filter_correctness_calibration=True, filter_ood_correctness=False, prefix="ood_detector_data")
+    df = df[df["OoD Val Fold"]!=df["OoD Test Fold"]]
+    df = df[df["InD Val Fold"]!=df["InD Test Fold"]]
+    print(df.head(100))
     print(df.groupby(["OoD==f(x)=y", "Dataset", "feature_name"])[["tpr", "tnr", "ba"]].mean())
 
 
@@ -445,7 +448,8 @@ def ood_accuracy_vs_pred_accuacy_plot(batch_size):
         # Plot a diagonal line from (0, 0) to (1, 1)
         dataset = data["Dataset"].unique()[0]
         plt.axhline(1-DATASETWISE_RANDOM_CORRECTNESS[dataset], color="blue", linestyle="--", label="Maximum Detection Rate")
-
+    sns.scatterplot(data=merged, x="Generalization Gap", y="Detection Rate", hue="Dataset", alpha=0.5, edgecolor=None)
+    plt.show()
     g = sns.FacetGrid(merged, col="Dataset", sharex=False, sharey=False, col_wrap=3)
     # g.map_dataframe(sns.regplot, x="Generalization Gap", y="Detection Rate", robust=False, scatter=False)
     g.map_dataframe(sns.scatterplot, x="Generalization Gap", y="Detection Rate", hue="Shift", alpha=0.5, edgecolor=None, hue_order=hue_order)
@@ -577,7 +581,7 @@ def debiased_ood_detector_correctness_prediction_accuracy(batch_size):
                                     if data_train.empty:
                                         print(f"No training data for {dataset} {feature}, {k}")
                                         continue
-                                    dsd = OODDetector(data_train, ood_val_fold, threshold_method=threshold_method)
+                                    dsd = OODDetector(data_train, threshold_method=threshold_method)
                                     # dsd.kde()
                                     for ood_test_fold in data_filtered["shift"].unique():
                                         if ood_test_fold in ["train", "ind_val", "ind_test"]:

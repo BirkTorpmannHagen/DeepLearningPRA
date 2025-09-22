@@ -100,7 +100,7 @@ class OODDetector:
 
 
 
-    def kde(self):
+    def train_kde(self):
         sns.kdeplot(self.ind_val["feature"], label="ind_val", color="blue")
         sns.kdeplot(self.ood_val["feature"], label="ood_val", color="red")
         if self.threshold_method == "ind_span":
@@ -109,6 +109,15 @@ class OODDetector:
         elif self.threshold_method == "val_optimal":
             plt.axvline(self.threshold, color="red", linestyle="--")
         plt.show()
+
+    def val_kde(self, dataset, fname="kde_plot.png"):
+        assert dataset["ood"].nunique()==2, dataset["ood"]
+        print(dataset.groupby("ood")["feature"].mean())
+        sns.kdeplot(dataset, x=self.ind_val["feature"] ,hue="ood", common_norm=False, alpha=0.5)
+        plt.axvline(self.threshold, color="red", linestyle="--")
+        plt.savefig(fname)
+        plt.show()
+
 
     def predict(self, batch):
         # if isinstance(batch["feature"], pd.Series): #if it is a batch
@@ -127,7 +136,7 @@ class OODDetector:
             output = bool(self.logreg.predict(np.array(feature).reshape(1, -1))[0])
             return output
         else:
-            return NotImplementedError
+            raise NotImplementedError
 
 
 

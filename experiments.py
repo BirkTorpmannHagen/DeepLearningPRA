@@ -177,12 +177,12 @@ def run_rv_experiments():
 
 
 
-    for batch_size in BATCH_SIZES:
-        # print(f"Running batch size {batch_size}")
-        ood_detector_correctness_prediction_accuracy(batch_size, shift="")
+    # for batch_size in BATCH_SIZES:
+    #     print(f"Running batch size {batch_size}")
+    #     ood_detector_correctness_prediction_accuracy(batch_size, shift="")
         # ood_rv_accuracy_by_thresh_and_stuff(1)
-        if batch_size==1:
-            ood_rv_accuracy_by_dataset_and_feature(1)
+        # if batch_size==1:
+        #     ood_rv_accuracy_by_dataset_and_feature(1)
     # ood_accuracy_vs_pred_accuacy_plot(1)
 
 
@@ -202,17 +202,14 @@ def run_rv_experiments():
     # runtime verification
     # plot_batching_effect("NICO", "entropy")
 
-    # for batch_size in BATCH_SIZES[1:-1]:
-    #     debiased_ood_detector_correctness_prediction_accuracy(batch_size)
+    for batch_size in BATCH_SIZES[1:-1]:
+        debiased_ood_detector_correctness_prediction_accuracy(batch_size)
 
-
+    debiased_plots()
 
     # get_datasetwise_risk()
     # iou_distribution()
     # compare_kdes()
-    # for i in range(3):
-    # verdictwise_proportions(cal_idx=1, batch_size=1)
-    # loss_verdict_histogram(1)
 
     # ood_verdict_plots_batched()
     # get_error_rate_given_rv()
@@ -240,18 +237,18 @@ def run_pra_experiments():
     #rate estimation
     # collect_rate_estimator_data()
     # eval_rate_estimator()
-    # plot_rate_estimation_errors_for_dsds()
+    plot_rate_estimation_errors_for_dsds()
 
     #prediction accuracy estimation
     # assess_re_tree_predaccuracy_estimation_errors()
     # accuracy_by_fold_and_dsd_verdict()
 
     # dsd accuracy estimation
-    # ood_detector_accuracy_estimation_errors()
+    ood_detector_accuracy_estimation_errors()
 
     # accuracy estimation
     # collect_re_accuracy_estimation_data()
-    plot_dsd_acc_errors()
+    # plot_dsd_acc_errors()
 
 
     # get_ratewise_risk_data()
