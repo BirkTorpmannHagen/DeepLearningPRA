@@ -183,6 +183,8 @@ def run_rv_experiments():
         # ood_rv_accuracy_by_thresh_and_stuff(1)
         # if batch_size==1:
         #     ood_rv_accuracy_by_dataset_and_feature(1)
+    # ood_rv_accuracy_by_dataset_and_feature(1)
+
     ood_accuracy_vs_pred_accuacy_plot(1)
 
 
@@ -192,10 +194,13 @@ def run_rv_experiments():
     # ood_accuracy_vs_pred_accuacy_plot(1)
     #single batch size
 
-
-
     # simple batching
     # ood_verdict_plots_batched()
+
+    #debiasing
+    # table_bias_effect_on_ood_detectors()
+    # bias_percentagewise_reduction()
+
     # examine_feature_distributions(64)
     # examine_rabanser_feature_distributions(8)
 
@@ -217,12 +222,12 @@ def run_rv_experiments():
 def run_loss_regression_experiments():
     # verdictwise_proportions()
 
-    regplot_by_shift()
+    # regplot_by_shift()
     # plot_intensitywise_kdes()
-    regplots(32)
+    # regplots(32)
     # compare_gam_errors()
     # get_gam_data()
-    # gam_fits(batch_size=32)
+    gam_fits(batch_size=32)
     # plot_gam_errors(32)
     # plot_gam_errors_by_batch_size()
     # assess_ungrouped_regression_errors()
@@ -239,21 +244,21 @@ def run_pra_experiments():
     #rate estimation
     # collect_rate_estimator_data()
     # eval_rate_estimator()
-    plot_rate_estimation_errors_for_dsds()
+    # plot_rate_estimation_errors_for_dsds()
 
     #prediction accuracy estimation
     # assess_re_tree_predaccuracy_estimation_errors()
     # accuracy_by_fold_and_dsd_verdict()
 
     # dsd accuracy estimation
-    ood_detector_accuracy_estimation_errors()
+    # ood_detector_accuracy_estimation_errors()
 
     # accuracy estimation
     # collect_re_accuracy_estimation_data()
-    # plot_dsd_acc_errors()
+    plot_dsd_acc_errors()
 
 
-    # get_ratewise_risk_data()
+    # get_ratewise_risk_data(load=False)
     # cost_benefit_analysis()
     # get_datasetwise_risk()
     # get_risk_tables()

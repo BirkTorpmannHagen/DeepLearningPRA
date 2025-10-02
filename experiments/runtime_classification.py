@@ -330,7 +330,7 @@ def ood_detector_correctness_prediction_accuracy(batch_size, prefix="fine_data",
             continue
         data_ds.to_csv(f"ood_detector_data/ood_detector_correctness_{dataset}_{batch_size}.csv", index=False)
 
-def get_all_ood_detector_data(batch_size, filter_thresholding_method=False, filter_ood_correctness=False, filter_correctness_calibration=False, filter_organic=False, filter_best=False, prefix="ood_detector_data"):
+def get_all_ood_detector_data(batch_size, filter_thresholding_method=False, filter_ood_correctness=False, filter_correctness_calibration=False, filter_organic=False, filter_best=False, prefix="fine_ood_detector_data"):
     dfs = []
     for dataset, feature in itertools.product(DATASETS, DSDS):
         dfs.append(pd.read_csv(f"{prefix}/ood_detector_correctness_{dataset}_{batch_size}.csv"))
@@ -450,16 +450,24 @@ def ood_accuracy_vs_pred_accuacy_plot(batch_size):
         plt.axhline(1-DATASETWISE_RANDOM_CORRECTNESS[dataset], color="blue", linestyle="--", label="Maximum Detection Rate")
     sns.scatterplot(data=merged, x="Generalization Gap", y="Detection Rate", hue="Dataset", alpha=0.5, edgecolor=None)
     plt.show()
-    g = sns.FacetGrid(merged, col="Dataset", sharex=False, sharey=False, col_wrap=3)
-    # g.map_dataframe(sns.regplot, x="Generalization Gap", y="Detection Rate", robust=False, scatter=False)
-    g.map_dataframe(sns.scatterplot, x="Generalization Gap", y="Detection Rate", hue="Shift", alpha=0.5, edgecolor=None, hue_order=hue_order)
-    # g.map_dataframe(plot_ideal_line)
-    g.add_legend()
+    g = sns.FacetGrid(
+        merged, col="Dataset", sharex=False, sharey=False, col_wrap=2, aspect=1, height=2.5
+    )
+    g.map_dataframe(sns.scatterplot, x="Generalization Gap", y="Detection Rate",
+                    hue="Shift", alpha=0.5, edgecolor=None, hue_order=hue_order)
+    g.map_dataframe(plot_ideal_line)
+
+    # Place legend inside (or wherever you want) without reserving right margin
+    g.add_legend(bbox_to_anchor=(0.6, 0.20), loc='center left', frameon=True, title="Shift Type")
+
+    # If any residual padding remains:
+    g.figure.subplots_adjust(right=0.98)  # or 1.0
     g.set_axis_labels("Generalization Gap", "OoD Detection Rate")
     for ax in g.axes.flat:
         ax.set_ylim(0,1.1)
         # ax.set_xlim(0,1.1)
     plt.savefig("figures/tpr_v_acc.pdf")
+    # plt.tight_layout()
     plt.show()
     print(merged.columns)
     g = sns.FacetGrid(merged, col="Dataset", sharex=False, sharey=False, col_wrap=3)
@@ -494,53 +502,6 @@ def get_all_ood_detector_verdicts(data):
     return data
 
 
-def loss_verdict_histogram(batch_size, prefix="final_data"):
-    df = load_all(prefix=prefix, batch_size=batch_size)
-
-    data = get_all_ood_detector_verdicts(df)
-
-    def baseline(data, color=None, ax=None, **kwargs):
-        dataset = data["Dataset"].unique()[0]
-        plt.axvline(DATASETWISE_RANDOM_LOSS[dataset], color="red", linestyle="--", label="Random Guessing")
-
-
-    g = sns.FacetGrid(data, col="Dataset", row="feature_name", sharex=False, sharey=False)
-    g.map_dataframe(sns.histplot, x="loss", hue="Verdict", fill=True, multiple="stack")
-    g.map_dataframe(baseline)
-
-    for ax in g.axes.flat:
-        dataset_name_for_ax = ax.get_title().split(" = ")[-1]
-        # ax.set_ylim(1, 1e3)
-        ax.set_xlim(0, data[data["Dataset"]==dataset_name_for_ax]["loss"].quantile(0.99))
-        # ax.set_yscale("log")
-    plt.legend()
-    plt.show()
-
-
-def loss_correctness_test():
-    data = load_all(1)
-
-    def plot_accs(data, color=None, **kwargs):
-        bins = 10
-        bin_edges = np.linspace(data["loss"].min(), data["loss"].quantile(0.99), bins + 1)
-        bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
-
-        data["bin"] = pd.cut(data["loss"], bins=bin_edges, include_lowest=True)
-        count_df = data.groupby(["bin", "correct_prediction"]).size().unstack(fill_value=0)
-        print(data["Dataset"].unique())
-
-
-        proportion_df = count_df.div(count_df.sum(axis=1), axis=0).fillna(0)
-        bottom = np.zeros(len(proportion_df))
-        for label in proportion_df.columns:
-            plt.bar(bin_centers, proportion_df[label], bottom=bottom,
-                    width=bin_edges[1] - bin_edges[0], label=label,
-                    edgecolor='white', align='center', alpha=0.5)
-            bottom += proportion_df[label].values
-
-    g = sns.FacetGrid(data, col="Dataset", margin_titles=True, sharex=False, sharey=False)
-    g.map_dataframe(plot_accs)
-    plt.show()
 
 
 def debiased_ood_detector_correctness_prediction_accuracy(batch_size):
@@ -704,8 +665,6 @@ def debiased_plots():
 
     bias_effect = df[(df["k"].isin([0,-1])) & (df["OoD==f(x)=y"]==False)]
 
-    print(bias_effect.groupby(["Dataset", "feature_name", "bias"])[["ba"]].agg(["mean"]).reset_index())
-    input()
     bias_effect["ba"] = bias_effect["ba"] - bias_effect[bias_effect["bias"]=="Unbiased"]["ba"].mean()
 
     bias_effect = bias_effect[bias_effect["bias"]!="Unbiased"]
@@ -719,11 +678,8 @@ def debiased_plots():
     unbiased = vanilla[vanilla["bias"]=="Unbiased"]
     meaned = unbiased.groupby(["Dataset", "feature_name", "Aggregation"])["ba"].mean().reset_index()
     best_features_idx = meaned.groupby(["Dataset", "Aggregation"])["ba"].idxmax().reset_index()
-    print(best_features_idx)
     best_features = meaned.loc[best_features_idx["ba"]]
-    print(best_features)
     filtered_unbiased = unbiased.merge(best_features[["Dataset", "feature_name"]], on=["Dataset", "feature_name"])
-    print(filtered_unbiased.head(10))
     g = sns.FacetGrid(filtered_unbiased, col="Dataset", row="OoD Label", margin_titles=True, sharex=False, sharey=False)
     g.map_dataframe(sns.lineplot, x="batch_size", y="ba", hue="Aggregation", palette = sns.color_palette())
     for ax in g.axes.flat:

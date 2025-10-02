@@ -198,7 +198,7 @@ def get_ratewise_risk_data(load=True):
     if load and os.path.exists("pra_data/ratewise_risk_data.csv"):
         df = pd.read_csv("pra_data/ratewise_risk_data.csv")
     else:
-        data = load_pra_df("Polyp", "energy", batch_size=1, samples=100)
+        data = load_pra_df("Polyp", "knn", batch_size=1, samples=100)
         oods = data[~data["shift"].isin(["ind_val", "ind_test", "train"])]["shift"].unique()
         rates = np.linspace(0, 1, 11)
         dfs = []
@@ -226,7 +226,7 @@ def get_ratewise_risk_data(load=True):
     plt.axhline(UNNECESSARY_INTERVENTION, color="red", label="Manual Intervention")
     plt.xlabel("p(E)")
     plt.legend()
-    plt.savefig("rate_risk.pdf")
+    plt.savefig("figures/rate_risk.pdf")
     plt.show()
 
 
@@ -371,7 +371,8 @@ def plot_dsd_acc_errors():
     # df = df[df["batch_size"]==1]
     df["rate"] = df["rate"].round(2)
     g = sns.FacetGrid(df[(df["batch_size"] == 1) & (~df["test_set"].isin(SYNTHETIC_SHIFTS)) & (
-        ~df["val_set"].isin(SYNTHETIC_SHIFTS))], col="Dataset", sharex=False, sharey=False, col_wrap=3, height=3, aspect=1)
+        ~df["val_set"].isin(SYNTHETIC_SHIFTS))], col="Dataset", sharex=False, sharey=False, col_wrap=3, height=3, aspect=1,
+                      )
     g.map_dataframe(
         sns.pointplot,
         x="rate",
@@ -383,6 +384,7 @@ def plot_dsd_acc_errors():
         dodge=1,
         alpha=0.5,
     )
+
     g.map_dataframe(sns.lineplot, x="lineplot_rate_idx", y="best_guess_error", hue="test_set", linestyle="--",
                     marker="o", palette=sns.color_palette(), legend=False)
     sorted_datasets = sorted(df["Dataset"].unique())
@@ -393,7 +395,38 @@ def plot_dsd_acc_errors():
         # ax.set_xticks(range(len(df["rate"].unique())))
         ax.set_yscale("log")
         ax.legend(title="Test Set", ncols=2, fontsize=8, frameon=True)
+    g.fig.subplots_adjust(hspace=0.3)  # tweak this value as needed
+
     plt.savefig("figures/dsd_acc_errors_by_rate_absolute.pdf")
+    plt.show()
+    input()
+
+    g = sns.FacetGrid(df[(~df["test_set"].isin(SYNTHETIC_SHIFTS)) & (
+        ~df["val_set"].isin(SYNTHETIC_SHIFTS))], col="Dataset", row="batch_size", sharex=False, sharey=False, height=3,
+                      aspect=1)
+    g.map_dataframe(
+        sns.pointplot,
+        x="rate",
+        y="Accuracy Error",
+        hue="test_set",
+        palette=sns.color_palette(),
+        errorbar=("pi", 100),
+        join=False,
+        dodge=1,
+        alpha=0.5,
+    )
+
+    g.map_dataframe(sns.lineplot, x="lineplot_rate_idx", y="best_guess_error", hue="test_set", linestyle="--",
+                    marker="o", palette=sns.color_palette(), legend=False)
+    sorted_datasets = sorted(df["Dataset"].unique())
+    for ax in g.axes.flat:
+        ax.set_xlabel("P(E)")
+        ax.set_ylabel("$$\delta$$ Error")
+        # ax.set_xticklabels(df["rate"].unique())
+        # ax.set_xticks(range(len(df["rate"].unique())))
+        ax.set_yscale("log")
+        ax.legend(title="Test Set", ncols=2, fontsize=8, frameon=True)
+    plt.savefig("figures/dsd_acc_errors_by_rate_absolute_and_batch_size.pdf")
     plt.show()
 
     g = sns.FacetGrid(df[df["batch_size"] == 1], col="Dataset", sharex=False, sharey=False, col_wrap=3)
@@ -429,8 +462,27 @@ def plot_dsd_acc_errors():
     plt.savefig("figures/dsd_acc_errors_by_rate.pdf")
     plt.show()
 
-    g = sns.FacetGrid(df[df["batch_size"] == 1], col="Dataset", height=3, aspect=1, col_wrap=3, sharey=False)
+    print(df.columns)
+    print(df["Distributional Shift"].unique())
+    g = sns.FacetGrid(df[df["Distributional Shift"]=="Organic"], col="Dataset", height=3, aspect=1, col_wrap=3, sharey=False)
+    g.map_dataframe(sns.boxplot, x="batch_size", y="Accuracy Error", hue="test_set", showfliers=False,
+                    palette=sns.color_palette())
+    g.map_dataframe(sns.lineplot, x="lineplot_idx", y="best_guess_error", hue="test_set", linestyle="--",
+                    marker="o", palette=sns.color_palette(), legend=False)
+    for ax, dataset in zip(g.axes.flat, sorted_datasets):
+        # ax.set_title(dataset)
+        ax.set_xlabel("Batch Size")
+        ax.set_ylabel("Accuracy Error")
+        ax.set_yscale("log")
+        ax.set_ylim(1e-3, 1)
+        ax.set_xticklabels(BATCH_SIZES)
+        ax.set_xticks(range(len(BATCH_SIZES)))
+        ax.legend(title="Test Set", ncols=3, fontsize=8)
+        # ax.set_yscale("log")
+    plt.savefig("figures/dsd_acc_errors_by_batch_size.pdf")
+    plt.show()
 
+    g = sns.FacetGrid(df[df["batch_size"] == 1], col="Dataset", height=3, aspect=1, col_wrap=3, sharey=False)
     df = df[df["val_set"] != df["test_set"]]
     g.map_dataframe(sns.boxplot, x="rate", y="Accuracy Error", hue="Distributional Shift", hue_order=["Synthetic", "Organic"], showfliers=False,
                     palette=sns.color_palette())
@@ -611,13 +663,15 @@ def accuracy_by_fold_and_dsd_verdict():
     results = pd.DataFrame(errors)
     results.to_csv("conditional_accuracy_errors")
     # results = results.groupby(["Dataset", "feature_name", "ood", "D(ood)"]).mean().reset_index()
-    g = sns.FacetGrid(results, row="OoD", col="D(OoD)", sharey=False)
+    g = sns.FacetGrid(results, row="OoD", col="D(OoD)", sharey=True)
     g.map_dataframe(sns.boxplot, x="batch_size", y="Error", hue="Dataset", palette=sns.color_palette())
     g.add_legend()
-    g.set_axis_labels("Batch Size", "Cross-Validated Prediction Accuracy Estimation MAE")
+    g.set_axis_labels("Batch Size", "Prediction Accuracy MAE")
     # for ax in g.axes.flat:
-    #     ax.set_ylim(0,1)
-    plt.savefig("conditional_accuracy_errors.pdf")
+    #     ax.set_yscale("log")
+    #     ax.set_ylim(1-3,1)
+
+    plt.savefig("figures/conditional_accuracy_errors.pdf")
     plt.show()
 
 
@@ -645,8 +699,16 @@ def assess_re_tree_predaccuracy_estimation_errors():
     errors_df = pd.DataFrame(errors)
     print(errors_df[errors_df["Dataset"] == "OfficeHome"])
     g = sns.FacetGrid(errors_df, col="Dataset", sharey=False, col_wrap=3)
-    g.map_dataframe(sns.lineplot, x="Batch Size", y="Error", hue="Type", palette=sns.color_palette())
+    g.map_dataframe(sns.lineplot, x="Batch Size", y="Error", hue="Type", palette=sns.color_palette(), hue_order = ["InD", "OoD"])
     g.add_legend(bbox_to_anchor=(0.7, 0.5), loc="upper center")
+    plt.savefig("figures/tree1_errors.pdf")
+    plt.show()
+
+    g = sns.FacetGrid(errors_df, col="Type", sharey=True)
+    g.map_dataframe(sns.lineplot, x="Batch Size", y="Error", hue="Dataset", palette=sns.color_palette())
+    g.add_legend()
+    for ax in g.axes.flat:
+        ax.set_xticks(BATCH_SIZES)
     plt.savefig("figures/tree1_errors.pdf")
     plt.show()
 
@@ -669,8 +731,10 @@ def ood_detector_accuracy_estimation_errors():
             errors.append({"Dataset": dataset, "Batch Size": batch_size, "Type": "InD", "Error": ind_diff})
 
     errors_df = pd.DataFrame(errors)
-    g = sns.FacetGrid(errors_df, col="Dataset", sharey=True, col_wrap=3, sharex=True)
-    g.map_dataframe(sns.lineplot, x="Batch Size", y="Error", hue="Type", alpha=0.5)
+    g = sns.FacetGrid(errors_df, col="Type", sharey=True, sharex=True)
+    g.map_dataframe(sns.lineplot, x="Batch Size", y="Error", hue="Dataset")
+    for ax in g.axes.flat:
+        ax.set_xticks(BATCH_SIZES)
+    g.add_legend()
     plt.savefig("figures/dsd_accuracy.pdf")
     plt.show()
-    print(errors_df)
