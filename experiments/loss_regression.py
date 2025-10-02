@@ -18,8 +18,8 @@ def get_baseline_loss_estimate(df):
     loss_by_fold["baseline_error"] = np.abs(loss_by_fold["loss_x"] - loss_by_fold["loss_y"])
     return loss_by_fold.groupby(["Dataset"])["baseline_error"].mean().reset_index()
 
-def get_best_gam_data(batch_size=32):
-    df = load_all(batch_size, shift="", samples=20)
+def get_best_gam_data(batch_size=32, prefix="final_data"):
+    df = load_all(batch_size, shift="", prefix=prefix, samples=20)
     df = df[df["fold"] != "train"]
     # df = filter_max_loss(df)
     all_gams = []
@@ -167,7 +167,7 @@ def gam_fits(batch_size=32):
         # ax[i,j].scatter(subdf["feature"], subdf["loss"], alpha=0.5)
         ax[i].plot(subdf_preds["feature"], subdf_preds["monotonic_pred_loss"], color="red")
         ax[i].fill_between(subdf_preds["feature"], subdf_preds["monotonic_pred_loss_lower"], subdf_preds["monotonic_pred_loss_upper"], color="red", alpha=0.3)
-        ax[i].set_title(f"{dataset}|{DSD_PRINT_LUT[feature_name]}: MAE={round(metric,2)}, Rho={round(correlation,2)}")
+        ax[i].set_title(f"{dataset}|{DSD_PRINT_LUT[feature_name]}: MAE={round(metric,2)}")
         ax[i].set_ylim(bottom=0
                          )
         # ax[i].scatter(subdf_train["feature"], subdf_train["loss"], alpha=0.5, label="train")
