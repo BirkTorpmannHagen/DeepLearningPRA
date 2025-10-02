@@ -404,8 +404,21 @@ def ood_accuracy_vs_pred_accuacy_plot(batch_size):
     df = get_all_ood_detector_data(batch_size, filter_thresholding_method=True, filter_ood_correctness=False,
                                    filter_correctness_calibration=True, filter_organic=False, filter_best=True)
     df = df[df["OoD==f(x)=y"] == False]  # only OOD performance
+    print(df.columns)
+    print()
+    df_synth = df[df["Shift Intensity"]!="Organic"]
+    df_synth["Shift"].apply(lambda x: SHIFT_PRINT_LUT[x] if x in SHIFT_PRINT_LUT else x)
+    unique_shifts  = df_synth["Shift"].unique().tolist()
 
+    g = sns.FacetGrid(df_synth, col="Dataset", sharex=False, sharey=False)
+    g.map_dataframe(sns.lineplot, x="Shift Intensity", y="ba", hue="Shift", hue_order=sorted(unique_shifts), marker="o", alpha=0.7)
+    g.set_axis_labels("Shift Intensity", "Balanced Accuracy")
+    g.add_legend()
+    for ax in g.axes.flat:
+        ax.set_xticks([])
+    plt.show()
 
+    input()
     # df = df[~((df["OoD==f(x)=y"] == True)&(~df["Performance Calibrated"]))]  # only OOD performance
     #get only the shifts that affect the performance of the OOD detector
     df_raw = load_all(batch_size, shift="", prefix="fine_data")
@@ -468,10 +481,6 @@ def ood_accuracy_vs_pred_accuacy_plot(batch_size):
         # ax.set_xlim(0,1.1)
     plt.savefig("figures/tpr_v_acc.pdf")
     # plt.tight_layout()
-    plt.show()
-    print(merged.columns)
-    g = sns.FacetGrid(merged, col="Dataset", sharex=False, sharey=False, col_wrap=3)
-    g.map_dataframe(sns.boxplot, x="Accuracy", y="Shift Intensity", hue="Shift", alpha=0.5, edgecolor=None, hue_order=hue_order)
     plt.show()
 
 
