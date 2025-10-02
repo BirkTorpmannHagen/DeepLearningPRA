@@ -183,7 +183,7 @@ def run_rv_experiments():
         # ood_rv_accuracy_by_thresh_and_stuff(1)
         # if batch_size==1:
         #     ood_rv_accuracy_by_dataset_and_feature(1)
-    # ood_accuracy_vs_pred_accuacy_plot(1)
+    ood_accuracy_vs_pred_accuacy_plot(1)
 
 
 
@@ -202,10 +202,10 @@ def run_rv_experiments():
     # runtime verification
     # plot_batching_effect("NICO", "entropy")
 
-    for batch_size in BATCH_SIZES[1:-1]:
-        debiased_ood_detector_correctness_prediction_accuracy(batch_size)
+    # for batch_size in BATCH_SIZES[1:-1]:
+    #     debiased_ood_detector_correctness_prediction_accuracy(batch_size)
 
-    debiased_plots()
+    # debiased_plots()
 
     # get_datasetwise_risk()
     # iou_distribution()

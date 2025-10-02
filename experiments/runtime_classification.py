@@ -403,7 +403,7 @@ def ood_verdict_shiftwise_accuracy_tables(batch_size, filter_organic=False):
 def ood_accuracy_vs_pred_accuacy_plot(batch_size):
     df = get_all_ood_detector_data(batch_size, filter_thresholding_method=True, filter_ood_correctness=False,
                                    filter_correctness_calibration=True, filter_organic=False, filter_best=True)
-    df = df[df["OoD==f(x)=y"] == True]  # only OOD performance
+    df = df[df["OoD==f(x)=y"] == False]  # only OOD performance
 
 
     # df = df[~((df["OoD==f(x)=y"] == True)&(~df["Performance Calibrated"]))]  # only OOD performance
@@ -453,13 +453,17 @@ def ood_accuracy_vs_pred_accuacy_plot(batch_size):
     g = sns.FacetGrid(merged, col="Dataset", sharex=False, sharey=False, col_wrap=3)
     # g.map_dataframe(sns.regplot, x="Generalization Gap", y="Detection Rate", robust=False, scatter=False)
     g.map_dataframe(sns.scatterplot, x="Generalization Gap", y="Detection Rate", hue="Shift", alpha=0.5, edgecolor=None, hue_order=hue_order)
-    g.map_dataframe(plot_ideal_line)
+    # g.map_dataframe(plot_ideal_line)
     g.add_legend()
     g.set_axis_labels("Generalization Gap", "OoD Detection Rate")
     for ax in g.axes.flat:
         ax.set_ylim(0,1.1)
         # ax.set_xlim(0,1.1)
     plt.savefig("figures/tpr_v_acc.pdf")
+    plt.show()
+    print(merged.columns)
+    g = sns.FacetGrid(merged, col="Dataset", sharex=False, sharey=False, col_wrap=3)
+    g.map_dataframe(sns.boxplot, x="Accuracy", y="Shift Intensity", hue="Shift", alpha=0.5, edgecolor=None, hue_order=hue_order)
     plt.show()
 
 
@@ -548,9 +552,9 @@ def debiased_ood_detector_correctness_prediction_accuracy(batch_size):
         if dataset=="Polyp":
             print(data_dataset.head(10))
         with tqdm(total=df["feature_name"].nunique()*2 * 2, desc=f"Computing for {dataset}") as pbar:
-            if os.path.exists(f"ood_detector_data/debiased_ood_detector_correctness_{dataset}_{batch_size}.csv"):
-                print("continuing...")
-                continue
+            # if os.path.exists(f"ood_detector_data/debiased_ood_detector_correctness_{dataset}_{batch_size}.csv"):
+            #     print("continuing...")
+            #     continue
             for feature in DSDS:
                 for k in [-1, 0, 1, 5, 10]:
 
