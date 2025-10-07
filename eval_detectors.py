@@ -18,8 +18,8 @@ def collect_data(testbed_constructor, dataset_name, prefix="final_data", mode="n
     print("Collecting data for", dataset_name, "in", mode, "mode")
     bench = testbed_constructor("classifier", mode=mode, batch_size=8)
     # features = [mahalanobis]
-    # features = [cross_entropy,energy,knn, typicality, softmax,  grad_magnitude]
-    features = [cross_entropy,energy,knn, typicality, softmax]
+    features = [cross_entropy,energy,knn, typicality, softmax,  grad_magnitude]
+    # features = [cross_entropy,energy,knn, typicality, softmax]
     # features = [knn]
     tsd = FeatureSD(bench.classifier,features)
     tsd.register_testbed(bench)
@@ -121,7 +121,7 @@ def collect_model_wise_data(testbed_constructor, dataset_name, mode="noise"):
 
 def collect_bias_data():
     for k in [0, 5, 1, 10]:
-        for batch_size in BATCH_SIZES[1:]:
+        for batch_size in BATCH_SIZES[1:-1]:
         # for sampler in ["RandomSampler","ClusterSampler",  "ClassOrderSampler"]:
             for sampler in [ "RandomSampler","ClusterSampler", "SequentialSampler", "ClassOrderSampler"]:
                 if sampler!="ClassOrderSampler":
@@ -161,11 +161,11 @@ if __name__ == '__main__':
     # collect_single_data(NICOTestBed)
     # collect_single_data(CCTTestBed)
     # collect_single_data(PolypTestBed)
-    collect_single_data(PolypTestBed)
-    collect_single_data(OfficeHomeTestBed)
-    collect_single_data(Office31TestBed)
-    collect_single_data(NICOTestBed)
-    collect_single_data(CCTTestBed)
+    # collect_single_data(PolypTestBed)
+    # collect_single_data(OfficeHomeTestBed)
+    # collect_single_data(Office31TestBed)
+    # collect_single_data(NICOTestBed)
+    # collect_single_data(CCTTestBed)
 
     # from experiments.runtime_classification import ood_detector_correctness_prediction_accuracy
     # for batch_size in BATCH_SIZES:

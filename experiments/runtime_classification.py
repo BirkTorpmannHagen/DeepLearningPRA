@@ -403,22 +403,23 @@ def ood_verdict_shiftwise_accuracy_tables(batch_size, filter_organic=False):
 def ood_accuracy_vs_pred_accuacy_plot(batch_size):
     df = get_all_ood_detector_data(batch_size, filter_thresholding_method=True, filter_ood_correctness=False,
                                    filter_correctness_calibration=True, filter_organic=False, filter_best=True)
-    df = df[df["OoD==f(x)=y"] == False]  # only OOD performance
+    df = df[df["OoD==f(x)=y"] == True]  # only OOD performance
     print(df.columns)
     print()
     df_synth = df[df["Shift Intensity"]!="Organic"]
-    df_synth["Shift"].apply(lambda x: SHIFT_PRINT_LUT[x] if x in SHIFT_PRINT_LUT else x)
+    df_synth.replace(SHIFT_PRINT_LUT, inplace=True)
     unique_shifts  = df_synth["Shift"].unique().tolist()
 
-    g = sns.FacetGrid(df_synth, col="Dataset", sharex=False, sharey=False)
+    g = sns.FacetGrid(df_synth, col="Dataset", sharex=False, sharey=False, col_wrap=3)
     g.map_dataframe(sns.lineplot, x="Shift Intensity", y="ba", hue="Shift", hue_order=sorted(unique_shifts), marker="o", alpha=0.7)
     g.set_axis_labels("Shift Intensity", "Balanced Accuracy")
-    g.add_legend()
+    g.add_legend(bbox_to_anchor=(0.7, 0.25), loc='center left', frameon=True, title="Shift Type")
     for ax in g.axes.flat:
         ax.set_xticks([])
+    plt.tight_layout()
+    plt.savefig("figures/shift_intensity_vs_ba.pdf")
     plt.show()
 
-    input()
     # df = df[~((df["OoD==f(x)=y"] == True)&(~df["Performance Calibrated"]))]  # only OOD performance
     #get only the shifts that affect the performance of the OOD detector
     df_raw = load_all(batch_size, shift="", prefix="fine_data")
@@ -471,7 +472,7 @@ def ood_accuracy_vs_pred_accuacy_plot(batch_size):
     g.map_dataframe(plot_ideal_line)
 
     # Place legend inside (or wherever you want) without reserving right margin
-    g.add_legend(bbox_to_anchor=(0.6, 0.20), loc='center left', frameon=True, title="Shift Type")
+    g.add_legend(bbox_to_anchor=(0.6, 0.17), loc='center left', frameon=True, title="Shift Type")
 
     # If any residual padding remains:
     g.figure.subplots_adjust(right=0.98)  # or 1.0
