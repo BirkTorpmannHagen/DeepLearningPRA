@@ -1,13 +1,18 @@
 import numpy as np
 import pandas as pd
+from h5py.h5p import PropDXID
 from sklearn.linear_model import LogisticRegression
 from matplotlib import pyplot as plt
 from pygam import LinearGAM
 import seaborn as sns
+from sklearn.metrics import roc_curve
+from sklearn.metrics import balanced_accuracy_score
+
 from sklearn.neighbors import KernelDensity
 from scipy.stats import ks_2samp
-
-from vae.utils.general import check_python
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import make_pipeline
+from sklearn.linear_model import LogisticRegression
 
 
 def l2_distance(a, b):
@@ -67,7 +72,7 @@ def get_optimal_threshold(ind, ood):
 class OODDetector:
 
     def __init__(self, df, threshold_method="val_optimal"):
-        assert df["feature_name"].nunique() == 1
+        assert df["feature_name"].nunique() == 1, df["feature_name"].unique()
         assert df["Dataset"].nunique() == 1
         if "k" in df.columns:
             assert df["k"].nunique() == 1, "OODDetector only works with k=1 due to the thresholding scheme"
@@ -119,6 +124,15 @@ class OODDetector:
         plt.savefig(fname)
         plt.show()
 
+    def forward(self, batch):
+        feature = batch["feature"]
+
+        if self.threshold_method=="logistic":
+            output = self.logreg.predict(np.array(feature))
+            print(output)
+            return output
+        else:
+            return self.predict(batch)
 
     def predict(self, batch):
         # if isinstance(batch["feature"], pd.Series): #if it is a batch
@@ -277,8 +291,161 @@ class SyntheticOODDetector:
         return self.tpr, self.tnr
 
 
+class EnsembleOODDetector(OODDetector):
+    def __init__(self, df, detector_list):
+        self.detector_list = detector_list
+        self.meta_head = make_pipeline(
+            StandardScaler(),
+            LogisticRegression(class_weight="balanced", max_iter=1000)
+        )
+        X = df[detector_list].values
+        y = df["ood"].astype(int).values
+        self.meta_head.fit(X, y)
+
+        # choose threshold on this training/val split to maximize BA
+        proba = self.meta_head.predict_proba(X)[:, 1]
+        fpr, tpr, thr = roc_curve(y, proba)
+        ba = (tpr + (1 - fpr)) / 2
+        print(max(ba))
+        self.threshold_ = float(thr[np.argmax(ba)])
+
+    def predict(self, batch):
+        # batch is a Series (row) or dict with the feature names as keys
+        X = pd.DataFrame([batch])[self.detector_list]  # <-- align by index, THEN pick columns
+        proba = self.meta_head.predict_proba(X)[:, 1]
+        return bool(proba[0] >= self.threshold_)
+
+    def get_balanced_accuracy(self, df):
+        """
+        Compute balanced accuracy on a given dataframe.
+        """
+        X = df[self.detector_list].values
+        y_true = df["ood"].astype(int).values
+        y_pred = (self.meta_head.predict_proba(X)[:, 1] >= self.threshold_).astype(int)
+        return balanced_accuracy_score(y_true, y_pred)
+
+    def show_weights(self, original_scale=True, sort=True):
+        """
+        Display the logistic regression coefficients from the meta-head.
+
+        Parameters
+        ----------
+        original_scale : bool, optional
+            If True, rescales coefficients back to the original (unstandardized) feature scale.
+            If False, shows the weights learned on standardized features.
+        sort : bool, optional
+            If True, sort by absolute weight magnitude.
+        """
+        logreg = self.meta_head.named_steps["logisticregression"]
+        scaler = self.meta_head.named_steps["standardscaler"]
+
+        if original_scale:
+            coefs = logreg.coef_.ravel() / scaler.scale_
+            intercept = logreg.intercept_ - np.sum(
+                (scaler.mean_ / scaler.scale_) * logreg.coef_.ravel()
+            )
+        else:
+            coefs = logreg.coef_.ravel()
+            intercept = logreg.intercept_
+
+        weights = pd.Series(coefs, index=self.detector_list)
+        if sort:
+            weights = weights.reindex(weights.abs().sort_values(ascending=False).index)
+
+        print("Intercept:", intercept[0] if hasattr(intercept, "__len__") else intercept)
+        print("\nFeature Weights:")
+        print(weights.to_string(float_format=lambda x: f"{x: .4f}"))
+
+        return weights, intercept
 
 
+class LogisticRiskCalibrator:
+    """
+    Learn g(s) = P(error | OOD score s) with logistic regression,
+    then abstain when g(s) >= epsilon.
+
+    Expects a calibration dataframe with:
+      - 'feature': OOD score (scalar)
+      - 'correct_prediction': 1 if model was correct, 0 if incorrect
+    """
+
+    def __init__(self, C=1.0, max_iter=2000):
+        self.lr = LogisticRegression(class_weight="balanced", C=C, max_iter=max_iter)
+        self.fitted_ = False
+
+    def fit(self, calib_df: pd.DataFrame):
+        """Fit logistic regression on calibration pairs (score -> is_error)."""
+        assert "feature" in calib_df.columns and "correct_prediction" in calib_df.columns
+        X = calib_df["feature"].values.reshape(-1, 1)
+        # Convert to is_error = 1 - correct_prediction
+        y = (1 - calib_df["correct_prediction"].astype(int)).values
+        self.lr.fit(X, y)
+        self.fitted_ = True
+        return self
+
+    def predict_error_prob(self, score):
+        """Map OOD score -> P(error). Works on scalar or array-like."""
+        assert self.fitted_, "Call fit() first."
+        s = np.asarray(score).reshape(-1, 1)
+        p = self.lr.predict_proba(s)[:, 1]
+        return p if p.size > 1 else float(p[0])
+
+    def abstain(self, score, epsilon=0.10):
+        """
+        Return True (abstain) if predicted error >= epsilon; False otherwise.
+        Accepts scalar score; for arrays, returns a boolean array.
+        """
+        p = self.predict_error_prob(score)
+        return (p >= float(epsilon)) if isinstance(p, np.ndarray) else bool(p >= float(epsilon))
+
+    # --- Evaluation helpers (on a labeled test set) ---
+
+    def risk_coverage(self, test_df: pd.DataFrame, epsilons=None):
+        """
+        Compute realized risk vs coverage on a labeled test set.
+        test_df columns: 'feature', 'correct_prediction' (1/0)
+        Returns a DataFrame with columns: epsilon, coverage, realized_risk.
+        """
+        assert self.fitted_, "Call fit() first."
+        if epsilons is None:
+            epsilons = np.linspace(0.01, 0.5, 25)
+
+        S = test_df["feature"].values
+        # 1 - correct_prediction = 1 if error
+        E = (1 - test_df["correct_prediction"].astype(int)).values
+        P = self.predict_error_prob(S)  # vector
+
+        rows = []
+        for eps in epsilons:
+            keep = P < eps
+            coverage = float(keep.mean())
+            realized_risk = float(E[keep].mean()) if keep.any() else 0.0
+            rows.append(dict(epsilon=float(eps),
+                             coverage=coverage,
+                             realized_risk=realized_risk))
+        return pd.DataFrame(rows)
+
+    def choose_threshold_for_target_risk(self, calib_df: pd.DataFrame, target_epsilon=0.10):
+        """
+        On the calibration set, return the p_err threshold tau s.t.
+        realized risk among kept samples ≈ target_epsilon.
+        Use this tau at runtime: abstain if g(score) >= tau.
+        """
+        S = calib_df["feature"].values
+        E = (1 - calib_df["correct_prediction"].astype(int)).values
+        P = self.predict_error_prob(S)
+
+        candidates = np.unique(np.concatenate([[0.0], P, [1.0]]))
+        best_tau, best_gap = 0.0, float("inf")
+        for tau in candidates:
+            keep = P < tau
+            if not keep.any():
+                continue
+            risk = E[keep].mean()
+            gap = abs(risk - target_epsilon)
+            if gap < best_gap:
+                best_tau, best_gap = float(tau), gap
+        return best_tau
 
 class Trace:
     """

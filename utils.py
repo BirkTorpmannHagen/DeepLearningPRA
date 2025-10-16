@@ -205,6 +205,28 @@ def load_all(batch_size=30, samples=100, feature="all", shift="normal", prefix="
                 dfs.append(load_pra_df(dataset, dsd, model="", batch_size=batch_size, samples=samples, prefix=prefix, stratisfication=stratisfication, shift=shift, groupbyfolds=groupbyfolds))
     return pd.concat(dfs)
 
+def load_as_ensemble(batch_size=30, samples=100, feature="all", shift="normal",
+                     prefix="fine_data", stratisfication=False, groupbyfolds=True):
+    df = load_all(batch_size, samples, feature, shift, prefix, stratisfication, groupbyfolds)
+
+    key = ["Dataset", "fold", "idx"]  # <- idx unique per fold
+    base_cols = ["idx","fold","class","Dataset","batch_size","shift",
+                 "shift_intensity","correct_prediction","ood","Organic"]
+
+    base = df.drop_duplicates(key)[base_cols]
+
+    pivoted = (df.pivot_table(
+                 index=key,
+                 columns="feature_name",
+                 values="feature",
+                 aggfunc="first")
+               .reset_index())
+
+    # flatten columns
+    pivoted.columns = [c[1] if isinstance(c, tuple) else c for c in pivoted.columns]
+
+    df_wide = base.merge(pivoted, on=key, how="left")
+    return df_wide
 
 def load_pra_df(dataset_name, feature_name, model="" , batch_size=1, samples=1000, prefix="final_data", shift="normal", stratisfication=False, groupbyfolds=True):
     if dataset_name=="Polyp" and feature_name=="softmax":
@@ -285,9 +307,9 @@ DATASETWISE_RANDOM_CORRECTNESS = {
 COLUMN_PRINT_LUT = {"feature_name":"Feature", "loss":"Loss", "rate":"p(E)", "shift_intensity":"Shift Intensity", "shift":"Shift", "feature": "Feature Value"}
 BIAS_TYPES = ["Unbiased", "Class", "Synthetic", "Temporal"]
 SAMPLERS = ["RandomSampler",  "ClassOrderSampler", "ClusterSampler", "SequentialSampler",]
-SYNTHETIC_SHIFTS = ["noise", "multnoise", "hue", "saltpepper", "saturation", "brightness", "contrast", "smear", "adv", "fgsm"]
+SYNTHETIC_SHIFTS = ["noise", "multnoise", "hue", "saltpepper", "saturation", "brightness", "contrast", "smear", "fgsm", "fog", "autoattack", "jpeg"]
 SHIFT_PRINT_LUT= {"normal": "Organic", "noise": "Additive Noise", "multnoise": "Multiplicative Noise",
-             "hue": "Hue", "saltpepper": "Salt+Pepper Noise", "brightness":"Brightness", "contrast":"Contrast", "smear":"Smear", "adv": "FGSM"}
+             "hue": "Hue", "saltpepper": "Salt+Pepper Noise", "brightness":"Brightness", "contrast":"Contrast", "smear":"Smear", "fgsm": "FGSM"}
 
 SAMPLER_LUT = dict(zip(SAMPLERS, BIAS_TYPES))
 # BATCH_SIZES = np.arange(1, 64)
@@ -295,18 +317,22 @@ def load_polyp_data():
     dfs = []
     for dsd_name in ["energy", "knn", "grad_magnitude", "cross_entropy", "mahalanobis"]:
         for model in ["deeplabv3plus", "unet", "segformer"]:
-            for ood_val in ["CVC-ClinicDB", "EndoCV2020", "EtisLaribDB"]:
-                df = load_pra_df(dataset_name="Polyp", feature_name=dsd_name, model=model, batch_size=1, samples=1000)
-                print(df.head(10))
-                dsd = OODDetector(df, ood_val)
-                df["verdict"] = df.apply(lambda row: dsd.predict(row), axis=1)
-                df["ood_val"] = ood_val
-                df["IoU"] = 1 - df["loss"]
-                df["model"] = model
-                df["feature_name"] = dsd_name
-                dfs.append(df)
+            for ood_val, ood_test in itertools.permutations(["CVC-ClinicDB", "EndoCV2020", "EtisLaribDB"], 2):
+
+                df = load_pra_df(dataset_name="Polyp", feature_name=dsd_name, model=model, batch_size=1, samples=1000, prefix="polyp_data")
+                train_df = df[(df["fold"]==ood_val)|(df["fold"]=="ind_val")]
+                test_df = df[(df["fold"]==ood_test)|(df["fold"]=="ind_test")]
+                print(test_df["fold"].unique())
+
+                dsd = OODDetector(train_df, threshold_method="val_optimal")
+                test_df["Calibration Fold"] = ood_val
+                test_df["verdict"] = test_df.apply(lambda row: dsd.predict(row), axis=1)
+                test_df["IoU"] = 1 - test_df["loss"]
+                test_df["model"] = model
+                test_df["feature_name"] = dsd_name
+                dfs.append(test_df)
     df = pd.concat(dfs)
-    # df = df[df["shift"] != "train"]
-    print(df.head(10))
+    df = df[df["shift"] != "train"]
+
     df.replace(DSD_PRINT_LUT, inplace=True)
     return df

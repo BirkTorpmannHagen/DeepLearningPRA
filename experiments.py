@@ -162,6 +162,27 @@ def examine_aggregated_feature_distributions(batch_size):
 
 
 
+def polyp_tables_and_plots():
+    # df = load_polyp_data()
+
+    #data passthrough
+    # ood_data = df[(df["ood"]==True)&(df["fold"]!=df["Calibration Fold"])] # unseen ood data
+    # print(ood_data.groupby("model", "fold", "feature_name", "correct_prediction")["Verdict"].mean())
+
+    #accuracy table
+    # print(df.groupby(["fold", "model"])[["correct_prediction", "IoU"]].mean())
+
+    #ood detector effect
+
+
+    # risk plot
+    get_datasetwise_risk()
+    get_risk_tables()
+
+
+
+    # print(df)
+
 def run_methodological_experiments():
     accuracy_table()
     dataset_summaries()
@@ -174,8 +195,9 @@ def run_rv_experiments():
     """
           Runtime Verification
       """
-
-
+    # test_ensembling()
+    # test_logistic_risk_calibrator()
+    test_generalization_gap_estimation(1)
 
     # for batch_size in BATCH_SIZES:
     #     print(f"Running batch size {batch_size}")
@@ -185,7 +207,7 @@ def run_rv_experiments():
         #     ood_rv_accuracy_by_dataset_and_feature(1)
     # ood_rv_accuracy_by_dataset_and_feature(1)
 
-    ood_accuracy_vs_pred_accuacy_plot(1)
+    # ood_accuracy_vs_pred_accuacy_plot(1)
 
 
 
@@ -260,13 +282,13 @@ def run_pra_experiments():
 
     # get_ratewise_risk_data(load=False)
     # cost_benefit_analysis()
-    # get_datasetwise_risk()
-    # get_risk_tables()
+
 
 
 if __name__ == '__main__':
     #accuracies on each dataset
-    run_rv_experiments()
+    polyp_tables_and_plots()
+    # run_rv_experiments()
     # run_loss_regression_experiments()
     # run_pra_experiments()
     # run_appendix_experiments()

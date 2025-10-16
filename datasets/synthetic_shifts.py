@@ -1,7 +1,9 @@
 import albumentations as alb
+import imgaug as ia
 import matplotlib.pyplot as plt
 import torch
 import numpy as np
+from autoattack import AutoAttack
 from torchvision.transforms import ToTensor
 from torch.utils import data
 import albumentations
@@ -53,6 +55,26 @@ def brightness_shift(img, intensity):
     transformed = ToTensor()(transformed)
     return transformed
 
+def snow(img, intensity):
+    seed_all(0)
+    x = img.permute(1, 2, 0).numpy()
+    snow = albumentations.RandomSnow(snow_point_lower=int(intensity*100), snow_point_upper=int(intensity*200), always_apply=True)
+    transforms = alb.Compose([snow])
+    transformed = transforms(image=x)["image"]
+    transformed = ToTensor()(transformed)
+    return transformed
+
+def fog(img, intensity):
+    seed_all(0)
+    x = img.permute(1, 2, 0).numpy()
+    fog = albumentations.RandomFog(fog_coef_lower=0.1, fog_coef_upper=0.3+intensity*0.7, alpha_coef=0.08, always_apply=True)
+    transforms = alb.Compose([fog])
+    transformed = transforms(image=x)["image"]
+    transformed = ToTensor()(transformed)
+    return transformed
+
+
+
 def multiplicative_noise(x, intensity):
     seed_all(0)
     noise = 1+torch.randn_like(x) * intensity*2
@@ -76,6 +98,22 @@ def smear(img, intensity):
     transformed = ToTensor()(transformed)
     return transformed
 
+def autoattack(model, x, eps=1.0, target=None):
+    seed_all(0)
+    adversary = AutoAttack(model, norm='Linf', eps=eps/255, version='standard')
+    x_adv = adversary.run_standard_evaluation(x, target)
+    return x_adv
+
+def jpeg(x, intensity):
+    seed_all(0)
+    alb.JpegCompression(quality_lower=int(100-intensity*50), quality_upper=100-int(intensity*50), always_apply=True)
+    x = x.permute(1, 2, 0).numpy()
+    transforms = alb.Compose([alb.JpegCompression(quality_lower=int(100-intensity*50), quality_upper=100-int(intensity*50), always_apply=True)])
+    transformed = transforms(image=x)["image"]
+    transformed = ToTensor()(transformed)
+    return transformed
+
+
 
 @torch.no_grad()
 def _pick_targets(model, x, target=None):
@@ -84,6 +122,8 @@ def _pick_targets(model, x, target=None):
     if target is None:
         target = logits.argmin(dim=1)  # least-likely targeted attack
     return target
+
+
 
 def targeted_fgsm(model, x, eps=1.0, clamp=(0,1), target=None):
     """

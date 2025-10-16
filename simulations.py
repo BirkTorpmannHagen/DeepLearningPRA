@@ -46,8 +46,6 @@ class Simulator:
         self.ood_test_acc = self.get_predictor_accuracy(self.ood_test_shift)
         self.ind_val_acc = self.get_predictor_accuracy("ind_val")
         self.ind_test_acc = self.get_predictor_accuracy("ind_test")
-        print(
-            f"{calibrate_by_fold}-{ood_val_shift}-{ood_test_shift}: {dsd_tpr} {dsd_tnr}")
 
         if dsd_tnr+dsd_tpr <= 1:
             print("Using simple estimator since TPR+TNR<=1")

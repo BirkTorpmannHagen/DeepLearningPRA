@@ -89,6 +89,12 @@ class BaseTestBed:
                         noise in self.noise_range]
             loaders = dict(zip(["adv_{}".format(noise_val) for noise_val in self.noise_range], ood_sets))
             return loaders
+        elif self.mode=="autoattack":
+            self.num_workers=1
+            ood_sets = [self.dl(TransformedDataset(self.ind_test, autoattack, "autoattack", noise, model=self.classifier)) for
+                        noise in self.noise_range]
+            loaders = dict(zip(["autoattackk_{}".format(noise_val) for noise_val in self.noise_range], ood_sets))
+            return loaders
         elif self.mode=="multnoise":
             ood_sets = [self.dl(TransformedDataset(self.ind_test, multiplicative_noise, "multnoise", noise)) for
                         noise in self.noise_range]
@@ -105,6 +111,16 @@ class BaseTestBed:
         elif self.mode=="contrast":
             ood_sets = [self.dl(TransformedDataset(self.ind_test, contrast, "contrast", noise)) for noise in self.noise_range]
             loaders = dict(zip(["contrast_{}".format(noise_val) for noise_val in self.noise_range], ood_sets))
+        elif self.mode=="fog":
+            ood_sets = [self.dl(TransformedDataset(self.ind_test, fog, "fog", noise)) for noise in self.noise_range]
+            loaders = dict(zip(["fog_{}".format(noise_val) for noise_val in self.noise_range], ood_sets))
+        elif self.mode=="snow":
+            ood_sets = [self.dl(TransformedDataset(self.ind_test, snow, "snow", noise)) for noise in self.noise_range]
+            loaders = dict(zip(["snow_{}".format(noise_val) for noise_val in self.noise_range], ood_sets))
+        elif self.mode=="jpeg":
+            ood_sets = [self.dl(TransformedDataset(self.ind_test, jpeg, "jpeg", noise)) for noise in self.noise_range]
+            loaders = dict(zip(["jpeg_{}".format(noise_val) for noise_val in self.noise_range], ood_sets))
+
         elif self.mode=="normal":
             loaders =  self.get_ood_dict()
         else:

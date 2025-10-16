@@ -1,6 +1,8 @@
 import itertools
 import os.path
 
+from pygam.penalties import monotonic_dec
+from sklearn.metrics import mean_absolute_error, mean_absolute_percentage_error
 import numpy as np
 import pandas
 import pandas as pd
@@ -9,12 +11,13 @@ from matplotlib import pyplot
 from matplotlib.lines import Line2D
 from multiprocessing import Pool, cpu_count
 from matplotlib.patches import Patch
+from pygam import LinearGAM
 from tqdm import tqdm
 from multiprocessing import Pool, cpu_count
 
 import seaborn as sns
 import matplotlib.pyplot as plt
-from components import OODDetector
+from components import OODDetector, EnsembleOODDetector, LogisticRiskCalibrator
 from itertools import product
 from rateestimators import ErrorAdjustmentEstimator
 from simulations import UniformBatchSimulator
@@ -351,7 +354,7 @@ def get_all_ood_detector_data(batch_size, filter_thresholding_method=False, filt
 
     return df
 def ood_rv_accuracy_by_dataset_and_feature(batch_size):
-    df = get_all_ood_detector_data(batch_size, filter_organic=True, filter_thresholding_method=True, filter_correctness_calibration=True, filter_ood_correctness=False, prefix="ood_detector_data")
+    df = get_all_ood_detector_data(batch_size, filter_organic=True, filter_thresholding_method=True, filter_correctness_calibration=True, filter_ood_correctness=False, prefix="fine_ood_detector_data")
     df = df[df["OoD Val Fold"]!=df["OoD Test Fold"]]
     df = df[df["InD Val Fold"]!=df["InD Test Fold"]]
     print(df.head(100))
@@ -483,6 +486,116 @@ def ood_accuracy_vs_pred_accuacy_plot(batch_size):
     plt.savefig("figures/tpr_v_acc.pdf")
     # plt.tight_layout()
     plt.show()
+
+def test_ensembling():
+    df = load_as_ensemble(1, shift="normal", prefix="fine_data")
+    df = df[df["fold"] != "train"]
+    xval_data = []
+    for dataset in DATASETS:
+        data = df[df["Dataset"] == dataset]
+        ood_folds = data[data["ood"]]["fold"].unique()
+        for train_set, val_set in itertools.product(ood_folds, repeat=2):
+            if train_set==val_set:
+                continue
+            data_train = data[(data["fold"]==train_set)|(data["fold"]=="ind_val")]
+            data_test = data[(data["fold"]==val_set)|(data["fold"]=="ind_test")]
+            ensemble =  EnsembleOODDetector(data_train, ["knn", "cross_entropy", "energy", "grad_magnitude", "typicality"])
+            ba = ensemble.get_balanced_accuracy(data_test)
+            xval_data.append({"Dataset":dataset, "OoD Val Fold":train_set, "OoD Test Fold":val_set, "ba":ba})
+            ensemble.show_weights()
+    df = pd.DataFrame(xval_data)
+    print(df.groupby("Dataset")["ba"].mean())
+
+def test_logistic_risk_calibrator():
+    df = load_all(1, shift="normal", prefix="fine_data")
+    df = df[df["fold"] != "train"]
+    for dsd in DSDS:
+        for dataset in DATASETS:
+            data = df[(df["Dataset"] == dataset)&(df["feature_name"]==dsd)]
+            ood_folds = data[data["ood"]]["fold"].unique()
+            for train_set, val_set in itertools.product(ood_folds, repeat=2):
+                if train_set==val_set:
+                    continue
+                data_train = data[(data["fold"]==train_set)|(data["fold"]=="ind_val")]
+                data_test = data[(data["fold"]==val_set)|(data["fold"]=="ind_test")]
+                ood_detector = LogisticRiskCalibrator()
+                ood_detector.fit(data_train)
+                print("Dataset:", dataset, "Feature:", dsd, "Train Fold:", train_set, "Val Fold:", val_set)
+                print(ood_detector.risk_coverage(data_test))
+                input()
+
+def test_generalization_gap_estimation(batch_size):
+    df = get_all_ood_detector_data(batch_size, filter_thresholding_method=True, filter_ood_correctness=False,
+                                   filter_correctness_calibration=True, filter_organic=False, filter_best=True)
+    df = df[df["OoD==f(x)=y"] == False]  # only OOD performance
+
+
+    df_synth = df[df["Shift Intensity"]!="Organic"]
+    df_synth.replace(SHIFT_PRINT_LUT, inplace=True)
+    unique_shifts  = df_synth["Shift"].unique().tolist()
+    df_raw = load_all(batch_size, shift="", prefix="fine_data")
+
+    acc_by_dataset_and_shift = df_raw.groupby(["Dataset", "fold"])["correct_prediction"].mean().reset_index()
+
+    ood_accs = df.groupby(["Dataset", "OoD Test Fold", "OoD==f(x)=y"])["tpr"].mean().reset_index()
+    ind_accs = df.groupby(["Dataset", "InD Test Fold", "OoD==f(x)=y"])["tnr"].mean().reset_index()
+    ind_accs["tnr"]=1-ind_accs["tnr"]
+    ind_accs.rename(columns={"InD Test Fold":"fold", "tnr":"Detection Rate"}, inplace=True)
+    ood_accs.rename(columns={"OoD Test Fold":"fold", "tpr":"Detection Rate"}, inplace=True)
+
+    merged = pd.concat([ood_accs, ind_accs], ignore_index=True)
+    merged = merged.merge(acc_by_dataset_and_shift, on=["Dataset", "fold"])
+    merged["Shift"] = merged["fold"].apply(lambda x: x.split("_")[0] if "_" in x else "Organic")
+    merged["Organic"] = merged["Shift"].apply(lambda x: "Synthetic" if x in SYNTHETIC_SHIFTS else "Organic")
+    acc = merged.groupby(["Dataset", "fold"], as_index=False)["correct_prediction"].mean()
+
+    # pull the per-dataset ind_val baseline
+    ind = (acc.loc[acc["fold"] == "ind_val", ["Dataset", "correct_prediction"]]
+           .rename(columns={"correct_prediction": "ind_val_acc"}))
+
+    # join baseline back to every shift of the same dataset
+    acc = acc.merge(ind, on="Dataset", how="left")
+
+    # absolute and relative differences vs ind_val
+
+    acc["Generalization Gap"] = acc["correct_prediction"] - acc["ind_val_acc"]
+    acc["Accuracy"] = acc["correct_prediction"]
+    # acc["Generalization Gap"] = acc["acc_diff"] / acc["ind_val_acc"]  # e.g., 0.10 == +10%
+    # acc["Generalization Gap"] = - acc["Generalization Gap"] * 100  # convert to percentage
+    merged = merged.merge(acc, on=["Dataset", "fold"], how="left")
+
+    g = sns.FacetGrid(merged, col="Dataset", col_wrap=3)
+    g.map_dataframe(sns.scatterplot, x="Detection Rate", y="Generalization Gap", hue="Organic", hue_order=["Organic", "Synthetic"], alpha=0.7, edgecolor=None)
+
+    merged["shift"] = merged.replace(SHIFT_PRINT_LUT, inplace=True)
+    gam_data = []
+    for dataset in DATASETS:
+        for_dataset = merged[merged["Dataset"]==dataset]
+        for shift in for_dataset["Shift"].unique():
+            train = for_dataset[(for_dataset["Shift"]!=shift)&(for_dataset["Shift"]!="FGSM")]
+
+            test = for_dataset[for_dataset["Shift"]==shift]
+
+            gam = LinearGAM(constraints="monotonic_dec")
+            gam.fit(train["Detection Rate"], train["Generalization Gap"])
+            mae = mean_absolute_error(test["Generalization Gap"], gam.predict(test["Detection Rate"]))
+            baseline = mean_absolute_error(test["Generalization Gap"], [0]*len(test))
+            score = gam.score(test["Detection Rate"], test["Generalization Gap"])
+            print(f"{dataset:<15} {shift:<20} {mae:>10.4f} {baseline:>10.4f}k")
+            gam_data.append({"Dataset":dataset, "Shift":shift, "mae":mae, "baseline mae": baseline,  "x":np.linspace(0,1,100), "y":gam.predict(np.linspace(0,1,100)), "score":score})
+    gam_df = pd.DataFrame(gam_data)
+    print(gam_df)
+    def plot_gam_fits(data, color=None, **kwargs):
+        dataset = data["Dataset"].unique()[0]
+        fit_to_plot = gam_df[(gam_df["Shift"]=="Organic")&(gam_df["Dataset"]==dataset)]
+        plt.plot(fit_to_plot["x"].values[0], fit_to_plot["y"].values[0], color="black", linestyle="--", label="GAM Fit (Organic)")
+
+    g.map_dataframe(plot_gam_fits)
+    plt.show()
+
+            # print(gam.summary())
+
+
 
 
 def get_all_ood_detector_verdicts(data):

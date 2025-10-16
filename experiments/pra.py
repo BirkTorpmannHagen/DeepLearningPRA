@@ -522,6 +522,91 @@ def plot_dsd_acc_errors():
     plt.show()
 
 
+def iou_distribution():
+
+    df = load_polyp_data()
+    df = df[df["shift"] != "train"]
+    df = df[df["shift"] != "ind_val"]
+    df.replace({"ind_test":"Kvasir"}, inplace=True)
+    palette = sns.color_palette("tab10", n_colors=df["Model"].nunique())
+    g = sns.FacetGrid(df, col="shift", palette=palette)
+    # g = sns.FacetGrid(df, col="shift")
+    g.map_dataframe(sns.kdeplot, x="IoU", hue="Model", clip=(0, 1), fill=True, multiple="stack", common_norm=False)
+    # manually extract legend from one of the axes
+    # g._legend.remove()  # in case it partially shows
+    df.replace({"deeplabv3plus":"DeepLabV3+", "unet":"UNet++", "segformer":"SegFormer"}, inplace=True)
+    model_names = sorted(df["Model"].unique())
+    colors = sns.color_palette("tab10", n_colors=len(model_names))
+    color_dict = dict(zip(model_names, colors))
+    patches = [mpatches.Patch(color=color_dict[m], label=m) for m in model_names]
+    plt.legend(handles=patches, title="Model", frameon=True,
+               loc="best", ncol=1)
+    plt.savefig("IoU_distributions.pdf")
+    plt.show()
+
+    def get_datasetwise_risk():
+        results_list = []
+        for dsd in DSDS:
+            for model_name in ["deeplabv3plus", "unet", "segformer"]:
+                df = load_pra_df("Polyp", dsd, model=model_name, batch_size=1, samples=1000)
+                for dataset in ["noise", "ind_test", "EndoCV2020", "EtisLaribDB", "CVC-ClinicDB"]:
+                    if dataset not in df["shift"].unique():
+                        print(f"Dataset {dataset} not in df")
+                        continue
+                    print()
+                    for ood_val_shift in ["EndoCV2020", "EtisLaribDB", "CVC-ClinicDB"]:
+                        sim = UniformBatchSimulator(df, ood_test_shift=dataset, ood_val_shift=ood_val_shift,
+                                                    maximum_loss=0.5, use_synth=False)
+                        results = sim.sim(1, 600)
+                        results["Dataset"] = dataset
+                        results["Model"] = model_name
+                        results["ood_val_shift"] = ood_val_shift
+                        results = results.groupby(["Model", "Tree", "Dataset"])[
+                            ["True Risk", "Accuracy"]].mean().reset_index()
+                        results["DSD"] = dsd
+                        results_list.append(results)
+        results = pd.concat(results_list)
+        print(results.groupby(["Model", "DSD", "Dataset", "Tree"])[["True Risk", "Accuracy"]].mean())
+        results.to_csv("datasetwise_risk.csv")
+
+    def conditional_accs():
+        df = load_polyp_data()
+        # Set bin edges globally
+        bins = 20
+        bin_edges = np.linspace(df["IoU"].min(), df["IoU"].max(), bins + 1)
+        bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
+
+        # Prepare FacetGrid
+        g = sns.FacetGrid(df, col="feature_name", margin_titles=True, sharex=True, sharey=True, col_wrap=3)
+
+        # Plot manually in each facet
+        def stacked_bar(data, color=None, **kwargs):
+            data["bin"] = pd.cut(data["IoU"], bins=bin_edges, include_lowest=True)
+            count_df = data.groupby(["bin", "verdict"]).size().unstack(fill_value=0)
+            proportion_df = count_df.div(count_df.sum(axis=1), axis=0).fillna(0)
+
+            bottom = np.zeros(len(proportion_df))
+            for label in proportion_df.columns:
+                plt.bar(bin_centers, proportion_df[label], bottom=bottom,
+                        width=bin_edges[1] - bin_edges[0], label=label,
+                        edgecolor='white', align='center')
+                bottom += proportion_df[label].values
+
+        g.map_dataframe(stacked_bar)
+
+        # Optional: Add legend only once
+        handles, labels = plt.gca().get_legend_handles_labels()
+        g.fig.legend(handles, labels, title="verdict", loc='lower center', fontsize="large", bbox_to_anchor=(0.8, 0.20))
+        # increase size of legend
+
+        g.set_axis_labels("IoU", "Proportion")
+        g.set_titles(col_template="{col_name}")
+        # Check if the total number of facets is more than 3 and adjust accordingly
+        plt.tight_layout()
+
+        plt.savefig("proportions.pdf")
+        plt.show()
+
 def plot_sensitivity_errors():
     dfs = []
     for dataset in DATASETS:
@@ -574,27 +659,29 @@ def plot_sensitivity_errors():
 
 def get_datasetwise_risk():
     results_list = []
-    with tqdm(total=(len(DSDS) - 1) * 4 * 3) as pbar:
-        for dsd in DSDS:
-            if dsd == "rabanser" or dsd == "softmax":
-                continue
-            df = load_pra_df("Polyp", dsd, batch_size=1)
-            print(df["feature_name"].unique())
-            for dataset in ["ind_test", "EndoCV2020", "EtisLaribDB", "CVC-ClinicDB"]:
-                for ood_val_shift in ["EndoCV2020", "EtisLaribDB", "CVC-ClinicDB"]:
-                    sim = UniformBatchSimulator(df, ood_test_shift=dataset, ood_val_shift=ood_val_shift,
-                                                maximum_loss=0.5, use_synth=False)
-                    results = sim.sim(1, 600)
-
-                    results["Dataset"] = dataset
-                    results["ood_val_shift"] = ood_val_shift
-                    results = results.groupby(["Tree", "Dataset"])[["True Risk", "Accuracy"]].mean().reset_index()
-                    results["DSD"] = dsd
-                    results_list.append(results)
-
-                    pbar.update(1)
+    with tqdm(total=len(DSDS)*3*4*3) as pbar:
+        for dsd in  ["energy", "knn", "grad_magnitude", "cross_entropy", "mahalanobis"]:
+            for model_name in ["deeplabv3plus", "unet", "segformer"]:
+                df = load_pra_df("Polyp", dsd, model=model_name, batch_size=1, samples=1000, prefix="polyp_data")
+                if df.empty:
+                    print(f"No data for {dsd} and {model_name}")
+                    continue
+                for dataset in ["ind_test", "EndoCV2020", "EtisLaribDB", "CVC-ClinicDB" ]:
+                    if dataset not in df["shift"].unique():
+                        print(f"Dataset {dataset} not in df")
+                        continue
+                    for ood_val_shift in ["EndoCV2020", "EtisLaribDB", "CVC-ClinicDB"]:
+                        sim = UniformBatchSimulator(df, ood_test_shift=dataset, ood_val_shift=ood_val_shift, maximum_loss=0.5, use_synth=False)
+                        results = sim.sim(1, 600)
+                        results["Dataset"]=dataset
+                        results["Model"]=model_name
+                        results["ood_val_shift"]=ood_val_shift
+                        results = results.groupby(["Model", "Tree",  "Dataset"])[["True Risk", "Accuracy"]].mean().reset_index()
+                        results["DSD"]=dsd
+                        results_list.append(results)
+                        pbar.update(1)
     results = pd.concat(results_list)
-    print(results.groupby(["DSD", "Dataset", "Tree"])[["True Risk", "Accuracy"]].mean())
+    print(results.groupby(["Model", "DSD", "Dataset", "Tree"])[["True Risk", "Accuracy"]].mean())
     results.to_csv("datasetwise_risk.csv")
 
 
@@ -604,9 +691,10 @@ def get_risk_tables():
     df.replace({"ind_test": "Kvasir"}, inplace=True)
     df_base = df[df["Tree"] == "Base Tree"]
     df_dsd = df[df["Tree"] != "Base Tree"]
-
     print(df_base.groupby(["Dataset"])["True Risk"].mean())
+
     print(df_dsd.groupby(["Model", "DSD", "Dataset"])["True Risk"].mean())
+
 
 def accuracy_by_fold_and_dsd_verdict():
     data = []

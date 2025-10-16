@@ -8,6 +8,8 @@ from argparse import ArgumentParser
 import matplotlib.pyplot as plt
 import numpy as np
 
+from classifier.classifier_base import Classifier
+
 warnings.filterwarnings('ignore')
 
 # torch and lightning imports
@@ -22,11 +24,11 @@ from torch.utils.data import DataLoader
 import pytorch_lightning as pl
 from torchmetrics import Accuracy
 
-class ResNetClassifier(pl.LightningModule):
+class ResNetClassifier(Classifier):
     def __init__(self, num_classes, resnet_version,
                  optimizer='adam', lr=1e-6, batch_size=16,
                  transfer=False):
-        super().__init__()
+        super().__init__(num_classes, optimizer, lr, batch_size)
 
         self.__dict__.update(locals())
         resnets = {
@@ -40,67 +42,13 @@ class ResNetClassifier(pl.LightningModule):
         # instantiate loss criterion
         self.criterion = nn.CrossEntropyLoss(reduction="none")
         # Using a pretrained ResNet backbone
-        self.resnet_model = resnets[resnet_version](pretrained=transfer)
+        self.model = resnets[resnet_version](pretrained=transfer)
         # Replace old FC layer with Identity so we can train our own
-        linear_size = list(self.resnet_model.children())[-1].in_features
+        linear_size = list(self.model.children())[-1].in_features
         # replace final layer for fine tuning
-        self.resnet_model.fc = nn.Linear(linear_size, num_classes)
+        self.model.fc = nn.Linear(linear_size, num_classes)
 
         self.latent_dim = self.get_encoding_size(-2)
         self.acc = Accuracy(task="multiclass", num_classes=num_classes, top_k=1)
 
 
-    def forward(self, X):
-        return self.resnet_model(X)
-
-    def get_encoding_size(self, depth):
-        dummy = torch.randn((1,3,512,512))
-        return self.get_encoding(dummy).shape[-1]
-    def get_encoding(self, X, depth=-2):
-        encoding =  torch.nn.Sequential(*list(self.resnet_model.children())[:-1])(X).flatten(1)
-        return encoding
-
-    # def get_funny(self, X):
-    #     return torch.nn.Sequential(*list(self.resnet_model.children())[:-1])(X)
-
-    def compute_loss(self, x, y):
-        return self.criterion(self(x), y)
-
-    def configure_optimizers(self):
-        optimizer = self.optimizer(self.parameters(), lr=self.lr)
-        scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer,100, 2)
-        return {"optimizer": optimizer, "lr_scheduler": scheduler, "monitor": "val_loss"}
-
-
-    def training_step(self, batch, batch_idx):
-        x = batch[0]
-        y = batch[1]
-        preds = self(x)
-        loss = self.criterion(preds, y).mean()
-
-        acc = self.acc(preds, y)
-        # perform logging
-        self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-        self.log("train_acc", acc, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-        return loss
-
-    def validation_step(self, batch, batch_idx):
-        x = batch[0]
-        y = batch[1]
-        preds = self(x)
-        loss = self.criterion(preds,y).mean()
-        acc = self.acc(preds, y)
-        self.log("val_loss", loss, on_epoch=True, prog_bar=True, logger=True)
-        self.log("val_acc", acc, on_epoch=True, prog_bar=True, logger=True)
-
-
-    def test_step(self, batch, batch_idx):
-        x = batch[0]
-        y = batch[1]
-        preds = self(x)
-        loss = self.criterion(preds, y).mean()
-        acc = self.acc(preds, y)
-
-        # perform logging
-        self.log("test_loss", loss, on_step=True, prog_bar=True, logger=True)
-        self.log("test_acc", acc, on_step=True, prog_bar=True, logger=True)
