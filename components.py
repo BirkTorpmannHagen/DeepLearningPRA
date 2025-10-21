@@ -7,8 +7,6 @@ import seaborn as sns
 from sklearn.neighbors import KernelDensity
 from scipy.stats import ks_2samp
 
-from vae.utils.general import check_python
-
 
 def l2_distance(a, b):
     """

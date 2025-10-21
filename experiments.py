@@ -86,10 +86,8 @@ def run_rv_experiments():
 
     for batch_size in BATCH_SIZES:
         print(f"Running batch size {batch_size}")
-        ood_detector_correctness_prediction_accuracy(batch_size, shift="")
-        ood_rv_accuracy_by_thresh_and_stuff(1)
-        if batch_size==1:
-            ood_rv_accuracy_by_dataset_and_feature(1)
+        # ood_detector_correctness_prediction_accuracy(batch_size, shift="")
+    ood_rv_accuracy_by_thresh_and_stuff(1)
     ood_rv_accuracy_by_dataset_and_feature(1)
     get_error_rate_given_rv()
     ood_accuracy_vs_pred_accuacy_plot(1)
@@ -98,8 +96,8 @@ def run_rv_experiments():
     # simple batching
     ood_verdict_plots_batched()
     # debiasing
-    table_bias_effect_on_ood_detectors()
-    bias_percentagewise_reduction()
+    # table_bias_effect_on_ood_detectors()
+    # bias_percentagewise_reduction()
 
 
     # runtime verification
