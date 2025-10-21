@@ -3,9 +3,6 @@ from os.path import join
 
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
-
-from components import OODDetector
 import itertools
 
 def mean_pairwise_abs_diff(values):
@@ -50,99 +47,6 @@ def sample_loss_feature(group, n_samples, n_size, stratisfication=False):
         samples.append({'loss': mean_loss, 'feature': mean_feature, "acc": sample["acc"].mean(), "index": i})
     return pd.DataFrame(samples)
 
-def sample_biased_loss_feature(group, n_samples, n_size, bias="None", reduce=True):
-    samples = []
-    print("Sampling group with bias:", bias)
-    for i in range(n_samples):
-        if bias == "Unbiased":
-            sample = group.sample(n=n_size, replace=True)  # Sampling with replacement
-        elif bias == "Class":
-            sample_class = np.random.choice(group["class"])
-            sample = group[group["class"] == sample_class].sample(n=n_size, replace=True)
-        elif bias == "Synthetic":
-            group["feature_bins"] = pd.cut(group["feature"], bins=len(group) // n_size)
-            random_bin = np.random.choice(group["feature_bins"].unique())
-            sample = group[group["feature_bins"] == random_bin].sample(n=n_size, replace=True)
-            group.drop(columns=["feature_bins"], inplace=True)  # Clean up after sampling
-        elif bias == "Temporal":
-            rand_indx = np.random.choice(group["idx"])
-            group_weights = group["idx"].apply(lambda x: np.abs(x-rand_indx))
-            group_weights = group_weights / group_weights.sum()
-            sample = group.sample(n=n_size, replace=True, weights=group_weights)  # Sampling with replacement
-        else:
-            raise ValueError(f"Unknown bias type: {bias}")
-        sample["index"] = i
-        if reduce:
-            if sample["Dataset"].all() == "Polyp":
-                mean_loss = sample['loss'].median()
-            else:
-                mean_loss = sample['loss'].mean()
-
-            mean_feature = sample['feature'].mean()
-            samples.append({'loss': mean_loss, 'feature': mean_feature, "acc": sample["acc"].mean(), "index": i})
-        else:
-            for _, row in sample.iterrows():
-                samples.append({
-                    'loss': row['loss'],
-                    'feature': row['feature'],
-                    'acc': row['acc'],
-                    'index': i
-                })
-    return pd.DataFrame(samples)
-
-class ArgumentIterator:
-    #add arguments to an iterator for use in parallell processing
-    def __init__(self, iterable, variables):
-        self.iterable = iterable
-        self.index = 0
-        self.variables = variables
-
-    def __next__(self):
-        if self.index >= len(self.iterable):
-            # print("stopping")
-            raise StopIteration
-        else:
-            self.index += 1
-            return self.iterable[self.index-1], *self.variables
-
-    def __iter__(self):
-        return self
-
-    def __len__(self):
-        return len(self.iterable)
-
-def load_all_rabanser(batch_size, prefix="debiased_data", k=0):
-    dfs = []
-    for dataset in DATASETS:
-        for sampler in SAMPLERS:
-            try:
-                df = pd.read_csv(join(prefix, f"{dataset}_normal_{sampler}_{batch_size}_k={k}_rabanser.csv"))
-            except FileNotFoundError:
-                print(f"Could not find  {dataset}_normal_{sampler}_{batch_size}_k={k}_rabanser.csv")
-                continue
-            df["k"]=k
-            df["bias"] = SAMPLER_LUT[sampler]
-            df["feature_name"] = "rabanser"
-            df["Dataset"] = dataset
-            df["batch_size"] = batch_size
-            if dataset == "Polyp":
-                df["correct_prediction"] = df["loss"] < df[df["fold"] == "ind_val"][
-                    "loss"].max()  # maximum observed val mean jaccard
-            else:
-                df["correct_prediction"] = df["loss"] < df[df["fold"] == "ind_val"]["loss"].quantile(
-                    0.95)  # losswise definition
-                # df["correct_prediction"] = df["acc"]>=ind_val_acc   #accuracywise definition
-            df["shift"] = df["fold"].apply(
-                lambda x: x.split("_")[0] if "_0." in x else x)  # what kind of shift has occured?
-            df["shift_intensity"] = df["fold"].apply(
-                lambda x: x.split("_")[1] if "_" in x else x)  # what intensity?
-            df["ood"] = ~df["fold"].isin(["train", "ind_val", "ind_test"])
-            dfs.append(df)
-    try:
-        return pd.concat(dfs)
-    except ValueError:
-        print(f"No data found for and {batch_size}.csv")
-        return []
 
 
 def load_all_biased(prefix="debiased_data", filter_batch=False):
@@ -206,7 +110,7 @@ def load_all(batch_size=30, samples=100, feature="all", shift="normal", prefix="
     return pd.concat(dfs)
 
 
-def load_pra_df(dataset_name, feature_name, model="" , batch_size=1, samples=1000, prefix="final_data", shift="normal", stratisfication=False, groupbyfolds=True):
+def load_pra_df(dataset_name, feature_name, model="" , batch_size=1, samples=1000, prefix="coarse_data", shift="normal", stratisfication=False, groupbyfolds=True):
     if dataset_name=="Polyp" and feature_name=="softmax":
         return pd.DataFrame() #softmax does not work for segmentation
     try:
@@ -265,9 +169,10 @@ DSD_PRINT_LUT = {"grad_magnitude": "GradNorm", "cross_entropy" : "Entropy", "ene
 DSD_LUT = {value: key for key, value in DSD_PRINT_LUT.items()}
 DATASETS = ["CCT", "OfficeHome", "Office31", "NICO", "Polyp"]
 DSDS = ["knn", "grad_magnitude", "cross_entropy", "energy", "typicality", "softmax", "rabanser"]
-# BATCH_SIZES = [32]
+
 BATCH_SIZES = [1, 8, 16, 32, 64]
 THRESHOLD_METHODS = [ "val_optimal", "ind_span", "logistic"]
+
 DATASETWISE_RANDOM_LOSS = {
     "CCT": -np.log(1/15),
     "OfficeHome": -np.log(1/65),
@@ -291,22 +196,3 @@ SHIFT_PRINT_LUT= {"normal": "Organic", "noise": "Additive Noise", "multnoise": "
 
 SAMPLER_LUT = dict(zip(SAMPLERS, BIAS_TYPES))
 # BATCH_SIZES = np.arange(1, 64)
-def load_polyp_data():
-    dfs = []
-    for dsd_name in ["energy", "knn", "grad_magnitude", "cross_entropy", "mahalanobis"]:
-        for model in ["deeplabv3plus", "unet", "segformer"]:
-            for ood_val in ["CVC-ClinicDB", "EndoCV2020", "EtisLaribDB"]:
-                df = load_pra_df(dataset_name="Polyp", feature_name=dsd_name, model=model, batch_size=1, samples=1000)
-                print(df.head(10))
-                dsd = OODDetector(df, ood_val)
-                df["verdict"] = df.apply(lambda row: dsd.predict(row), axis=1)
-                df["ood_val"] = ood_val
-                df["IoU"] = 1 - df["loss"]
-                df["model"] = model
-                df["feature_name"] = dsd_name
-                dfs.append(df)
-    df = pd.concat(dfs)
-    # df = df[df["shift"] != "train"]
-    print(df.head(10))
-    df.replace(DSD_PRINT_LUT, inplace=True)
-    return df

@@ -1,22 +1,14 @@
-import numpy as np
 import torch.nn
-from torch.utils.data import ConcatDataset
 
 from datasets.polyps import build_polyp_dataset
-from vae.vae_experiment import VAEXperiment
 from segmentor.deeplab import SegmentationModel
-import yaml
 from glow.plmodules import GlowPL
 
-from classifier.resnetclassifier import ResNetClassifier
 from ooddetectors import *
 
 from testbeds.base import BaseTestBed
 from datasets.synthetic_shifts import *
-from torch.utils.data import DataLoader, ConcatDataset, random_split, Subset
-import torch.nn as nn
-from vae.models.vanilla_vae import VanillaVAE
-import torchvision.transforms as transforms
+
 # import segmentation_models_pytorch as smp
 DEFAULT_PARAMS = {
     "LR": 0.00005,
@@ -37,12 +29,6 @@ class PolypTestBed(BaseTestBed):
         self.ind_train, self.ind_val, self.ind_test, self.etis, self.cvc, self.endo = build_polyp_dataset("../../Datasets/Polyps")
         self.batch_size=batch_size
         #vae
-        if rep_model=="vae":
-            self.vae = VanillaVAE(in_channels=3, latent_dim=512).to("cuda").eval()
-            vae_exp = VAEXperiment(self.vae, DEFAULT_PARAMS)
-            vae_exp.load_state_dict(
-                torch.load("vae_logs/PolypDataset/version_0/checkpoints/epoch=180-step=7240.ckpt")[
-                    "state_dict"])
 
         #segmodel
         self.classifier = SegmentationModel.load_from_checkpoint(

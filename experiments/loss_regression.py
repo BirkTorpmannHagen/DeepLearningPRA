@@ -18,7 +18,7 @@ def get_baseline_loss_estimate(df):
     loss_by_fold["baseline_error"] = np.abs(loss_by_fold["loss_x"] - loss_by_fold["loss_y"])
     return loss_by_fold.groupby(["Dataset"])["baseline_error"].mean().reset_index()
 
-def get_best_gam_data(batch_size=32, prefix="final_data"):
+def get_best_gam_data(batch_size=32, prefix="coarse_data"):
     df = load_all(batch_size, shift="", prefix=prefix, samples=20)
     df = df[df["fold"] != "train"]
     # df = filter_max_loss(df)
@@ -588,7 +588,7 @@ def filter_max_loss(df):
 
 
 def plot_intensitywise_kdes():
-    df = load_all(batch_size=1, shift="", prefix="final_data")
+    df = load_all(batch_size=1, shift="", prefix="coarse_data")
     g = sns.FacetGrid(df, row="Dataset", col="shift")
     g.map_dataframe(sns.kdeplot, x="feature", y="loss", hue="shift_intensity")
     plt.show()

@@ -60,12 +60,10 @@ class SimpleEstimator(RateEstimator):
         self.rate = prior_rate  # current rate estimate
 
     def update(self, trace_list):
-        """Update the rate estimate based on the trace list."""
         trace = np.array(trace_list)
         self.rate = trace.mean()
         return self.rate
 
 
     def get_posterior_mean(self):
-        """Return the mean of the posterior distribution."""
         return self.rate

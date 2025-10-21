@@ -3,19 +3,14 @@ from segmentation_models_pytorch import DeepLabV3Plus, UnetPlusPlus, Segformer
 from segmentation_models_pytorch.losses import JaccardLoss
 from segmentation_models_pytorch.metrics import get_stats, iou_score
 import warnings
-from segmentation_models_pytorch.base import SegmentationHead
 
 warnings.filterwarnings('ignore')
 
 # torch and lightning imports
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torchvision.models as models
+
 from torch.optim import SGD, Adam
-from torchvision import transforms
-from torchvision.datasets import ImageFolder
-from torch.utils.data import DataLoader
+
 import pytorch_lightning as pl
 
 

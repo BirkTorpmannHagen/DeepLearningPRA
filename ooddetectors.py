@@ -1,10 +1,6 @@
-from itertools import starmap
-
 import matplotlib.pyplot as plt
 import pandas as pd
 from sklearn.decomposition import PCA
-from torch.utils.data import RandomSampler
-
 from tqdm import tqdm
 import pickle as pkl
 import numpy as np
