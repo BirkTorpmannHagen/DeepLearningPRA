@@ -54,7 +54,7 @@ def cost_benefit_analysis():
             sim.detector_tree.dsd_tpr = acc
             sim.detector_tree.update_tree()
             d_risk = sim.detector_tree.get_risk_estimate()
-            cba_data.append({"Component":"Event Detector", "Accuracy":acc, "Risk Estimate":d_risk})
+            cba_data.append({"Component":"OOD Detector", "Accuracy":acc, "Risk Estimate":d_risk})
             pbar.update(1)
 
     df = pd.DataFrame(cba_data).groupby(["Component", "Accuracy"]).mean().reset_index()
@@ -660,11 +660,12 @@ def debiased_plots():
             df_i["Dataset"] = dataset
             df.append(df_i)
         except:
+            print("No data for ", dataset, batch_size)
             continue
     df = pd.concat(df)
 
     df = df[(~df["OoD Test Fold"].isin(SYNTHETIC_SHIFTS))&(~df["OoD Val Fold"].isin(SYNTHETIC_SHIFTS))]
-    df = df[~((df["Dataset"]=="CCT") & (df["bias"]=="SequentialSampler"))]  # CCT has no class order sampler
+    # df = df[~((df["Dataset"]=="CCT") & (df["bias"]=="SequentialSampler"))]  # CCT has no class order sampler
 
     #vanilla comparisons
     vanilla = df[df["k"].isin([0, -1])]
@@ -695,19 +696,21 @@ def debiased_plots():
     for ax in g.axes.flat:
         ax.set_ylim(0.4, 1)
     g.add_legend(bbox_to_anchor=(0.9, 0.3), loc='center left', title="Aggregation", ncol=1)
-    plt.savefig("batched_ood_verdict_accuracy.pdf")
+    plt.savefig("figures/batched_ood_verdict_accuracy.pdf")
     plt.show()
-    input()
     # g = sns.FacetGrid(vanilla, col="Dataset", row="OoD Label")
     # g.map_dataframe(sns.boxplot, x="Bias", y="ba", hue="Aggregation", palette=sns.color_palette())
     # plt.show()
 
 
-
-    g = sns.FacetGrid(df[df["feature_name"]!="kNN"], col="feature_name", col_wrap=3)
+    df.replace({"rabanser":"Rabanser"}, inplace=True)
+    g = sns.FacetGrid(df[df["feature_name"]!="kNN"], col="feature_name", height=2.5, col_wrap=3)
     g.map_dataframe(sns.boxenplot, x="k", y="ba", palette=sns.color_palette())
-    plt.savefig("k_wise_boxenplot.pdf")
+    g.set_titles(template="{col_name}")
+
+    plt.savefig("figures/debiased_boxenplots.pdf")
     plt.show()
+
     average_for_each_dsd = df.groupby(["Dataset", "k", "feature_name"])["ba"].mean().reset_index()
     best_idx = average_for_each_dsd.groupby(["Dataset", "k"])["ba"].idxmax()
     best = average_for_each_dsd.loc[best_idx]
@@ -715,14 +718,28 @@ def debiased_plots():
     sns.boxplot(best, x="k", y="ba", palette=sns.color_palette())
     plt.show()
 
-    # g = sns.FacetGrid(df, col="Dataset", margin_titles=True, sharex=False, sharey=False, col_wrap=3)
-    # g.map_dataframe(sns.boxplot, x="bias", y="balanced_accuracy", hue="Batch Size", palette=sns.color_palette(), order=["Unbiased", "Synthetic", "Temporal", "Class"])
-    # g.add_legend(bbox_to_anchor=(0.7, 0.25), loc='center left', title="Batch Size", ncol=1)
-    # plt.tight_layout()
-    # plt.savefig("ood_detector_bias_boxplots.pdf")
-    # # for ax in g.axes.flat:
-    # #     ax.legend()
-    # plt.show()
+    g = sns.FacetGrid(df[df["feature_name"]!="kNN"], col="Dataset", margin_titles=True, sharex=False, sharey=False, height=2.5, col_wrap=3)
+    g.map_dataframe(sns.boxenplot, x="k", y="ba", hue="k", palette=sns.color_palette())
+    g.set_titles(template="{col_name}")
+    plt.tight_layout()
+    # Get figure width
+    fig_width = g.fig.get_size_inches()[0]
+    num_plots = len(g.axes.flat)
+    num_cols = 3  # Top row columns
+    last_row_plots = num_plots % num_cols
+    # Compute total space occupied by the last row's plots
+    last_row_width = (fig_width / num_cols) * last_row_plots
+
+    # Compute left padding to center the row
+    left_padding = (fig_width - last_row_width) / 2
+
+    # Adjust position of the last row's plots
+    for ax in g.axes[-last_row_plots:]:
+        pos = ax.get_position()
+        ax.set_position([pos.x0 + left_padding / fig_width, pos.y0, pos.width, pos.height])
+    plt.savefig("figures/debiased_dataset_boxenplots.pdf")
+
+    plt.show()
 
 def ood_verdict_plots_batched():
     dfs = []
@@ -731,16 +748,25 @@ def ood_verdict_plots_batched():
         df["batch_size"] = batch_size
         dfs.append(df)
     data = pd.concat(dfs)
-    data = data[(~data["OoD Test Fold"].isin(SYNTHETIC_SHIFTS))&(~data["OoD Val Fold"].isin(SYNTHETIC_SHIFTS))]
+    print(data["Shift Intensity"].unique())
+    data = data[(data["Shift Intensity"]=="Organic")]
+    print(data["OoD Test Fold"].unique())
+    print(data["OoD Val Fold"].unique())
     # data = data[data["OoD==f(x)=y"]==True]
     data = data[(data["Threshold Method"]=="val_optimal")&(data["Performance Calibrated"]==False)]
-    g = sns.FacetGrid(data, col="feature_name", margin_titles=True, sharex=True, sharey=True, col_wrap=3)
-    g.map_dataframe(sns.lineplot, x="batch_size", y="ba", hue="Dataset", style="OoD==f(x)=y", markers=True, dashes=False)
+    data["Labeling"]= data["OoD==f(x)=y"].apply(lambda x: "Correctness" if x else "Partition")
+
+    g = sns.FacetGrid(data, col="feature_name", margin_titles=True, sharex=True, sharey=True, col_wrap=2)
+    print(data.groupby(["batch_size", "Dataset", "feature_name", "Labeling"])["ba"].mean().reset_index().groupby(["Dataset", "Labeling"])["ba"].max())
+    g.map_dataframe(sns.lineplot, x="batch_size", y="ba", hue="Dataset", style="Labeling", style_order=["Correctness", "Partition"], markers=True, dashes=False)
+    g.set_axis_labels("Batch Size", "Balanced Accuracy")
+
     # for ax in g.axes.flat:
     #     ax.set_ylim(0.4, 1)
 
-    g.add_legend(bbox_to_anchor=(0.85, 0.5), loc='center left', title="Feature", ncol=1)
+    g.add_legend(bbox_to_anchor=(0.80, 0.5), loc='center left', title="Feature", ncol=1)
     # plt.tight_layout(h_pad=1)
+
     plt.savefig("batched_ood_verdict_accuracy.pdf")
     plt.show()
 
@@ -765,23 +791,54 @@ def get_error_rate_given_rv():
     results_list = []
     for dataset in DATASETS:
         for dsd in DSDS:
-            if dsd=="rabanser":
-                continue
             df = load_pra_df(dataset, dsd, batch_size=1)
+            if df.empty:
+                print("No data for ", dataset, dsd)
+                continue
+
             ood_folds = df[df["ood"]]["fold"].unique()
             for ood_val, ood_test in itertools.product(ood_folds, ood_folds):
                 data_train = df[(df["fold"]=="ind_val")|(df["fold"]==ood_val)]
-                data_test = df[(df["fold"]=="ind_test")|(df["fold"]==ood_test)]
-                ood_detector = OODDetector(data_train, ood_val)
-                data_test["detected_ood"]=ood_detector.predict(data_test)
-                missed_predictions = data_test[~data_test["correct_prediction"]]
-                missed_ood = missed_predictions[~missed_predictions["detected_ood"]]
-                for fold in data_test["fold"].unique():
-                    rv_prop = len(missed_ood[missed_ood["fold"]==fold])/len(data_test[data_test["fold"]==fold])
-                    vanilla_prop = 1-data_test[data_test["fold"]==fold]["correct_prediction"].mean()
-                    results_list.append({"Dataset":dataset, "Feature":dsd, "Fold":fold, "RV Proportion":rv_prop, "Vanilla Prop":vanilla_prop})
+                # copy() to avoid SettingWithCopyWarning
+                data_test = df[(df["fold"]=="ind_test")|(df["fold"]==ood_test)].copy()
+
+                ood_detector = OODDetector(data_train, threshold_method="val_optimal")
+                data_test["detected_ood"] = ood_detector.predict(data_test)
+
+                counts = (
+                    data_test
+                    .groupby(["fold", "correct_prediction", "detected_ood"])
+                    .size()
+                    .reset_index(name="count")
+                )
+
+                # ensure all 4 cells exist for each fold
+                full_cols = pd.MultiIndex.from_product(
+                    [[False, True], [False, True]],
+                    names=["correct_prediction", "detected_ood"]
+                )
+
+                for fold in counts["fold"].unique():
+                    g = (
+                        counts.loc[counts["fold"] == fold, ["correct_prediction", "detected_ood", "count"]]
+                        .set_index(["correct_prediction", "detected_ood"])["count"]
+                        .reindex(full_cols, fill_value=0)
+                    )
+
+                    # vanilla error rate (incorrect among all samples)
+                    vanilla_error_rate = g.loc[False].sum() / g.sum()
+
+                    # error rate after abstention = incorrect & not-abstained / all not-abstained
+                    error_rate_after_rv = g.loc[(False, False)] / g.sum()
+
+                    # proportion of lost correct predictions = correct & abstained / all correct
+                    rate_dropped_predictions = g.loc[(True, True)] / g.sum()
+
+                    # use/store these three numbers per fold...
+
+                    results_list.append({"Dataset":dataset, "Feature":dsd, "Fold":fold, "Error Rate w/RV":error_rate_after_rv, "Vanilla Error Rate":vanilla_error_rate, "Incorrect Abstention Rate":rate_dropped_predictions})
 
     results = pd.DataFrame(results_list)
-    print(results.groupby(["Dataset", "Feature", "Fold"])[["RV Proportion", "Vanilla Prop"]].mean())
+    print(results.groupby(["Dataset", "Feature", "Fold"])[["Error Rate w/RV", "Incorrect Abstention Rate", "Vanilla Error Rate"]].mean())
     results.to_csv("datasetwise_incorrect_detections.csv")
 

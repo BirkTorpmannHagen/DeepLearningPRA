@@ -46,8 +46,7 @@ class Simulator:
         self.ood_test_acc = self.get_predictor_accuracy(self.ood_test_shift)
         self.ind_val_acc = self.get_predictor_accuracy("ind_val")
         self.ind_test_acc = self.get_predictor_accuracy("ind_test")
-        print(
-            f"{calibrate_by_fold}-{ood_val_shift}-{ood_test_shift}: {dsd_tpr} {dsd_tnr}")
+
 
         if dsd_tnr+dsd_tpr <= 1:
             print("Using simple estimator since TPR+TNR<=1")
@@ -171,7 +170,10 @@ class UniformBatchSimulator(Simulator):
                     results_trace.append(df.groupby(["Tree"]).mean().reset_index())
         results_df = pd.concat(results_trace)
         results_df["Rate Error"] = np.abs(results_df["Estimated Rate"] - rate_groundtruth)
+        results_df["Risk Error"] = results_df["Risk Estimate"] - results_df["True Risk"]
+
         results_df["Accuracy Error"] = np.abs(results_df["E[f(x)=y]"] - results_df["Accuracy"])
+        results_df["% Accuracy Error"] = results_df["Accuracy Error"] / results_df["Accuracy"]
         return results_df
 
 

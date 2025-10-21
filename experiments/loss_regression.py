@@ -94,7 +94,7 @@ def plot_gam_errors(batch_size=32, q=21):
     plot_df["MAE_se"] = plot_df["MAE_std"] / np.sqrt(plot_df["n"])
 
     g = sns.FacetGrid(plot_df, col="Dataset", sharex=False, sharey=False,
-                      height=3, col_wrap=3)
+                      height=2.5, col_wrap=3)
 
     def line_and_refs(data, color, **kwargs):
         data = data.sort_values("loss_mid")
@@ -124,11 +124,13 @@ def plot_gam_errors(batch_size=32, q=21):
 
     g.map_dataframe(line_and_refs)
     g.map_dataframe(add_baseline_line, color="red")
-
+    # g.add_legend()
     g.set_axis_labels("Loss (bin midpoint)", "Mean MAE")
-    for ax in g.axes.flat:
-        ax.legend(loc="best")
+    # g.fig.subplots_adjust(bottom=0.16)
+
+    for i, ax in enumerate(g.axes.flat):
         ax.set_yscale("log")
+    plt.tight_layout()
     plt.savefig("figures/gam_errors.pdf", dpi=300, bbox_inches='tight')
     plt.show()
 
@@ -201,9 +203,26 @@ def plot_gam_errors_by_batch_size():
         plt.ylim(0, np.percentile(df_dataset["loss"],95))
 
 
-    g = sns.FacetGrid(all_gam_results, col="Dataset", margin_titles=True, sharex=False, sharey=False, col_wrap=3)
-    g.map_dataframe(sns.boxenplot, x="Batch Size", y="MAE", hue="Method", palette=sns.color_palette())
+    g = sns.FacetGrid(all_gam_results, col="Dataset", margin_titles=True, sharex=False, sharey=False, col_wrap=3, height=2.5)
+    g.map_dataframe(sns.boxenplot, x="Batch Size", y="MAE", hue="Batch Size", palette=sns.color_palette())
     g.map_dataframe(plot_baseline)
+    for ax in g.axes.flat:
+        ax.set_yscale("log")
+        ax.set_ylim(bottom=1e-3)
+    fig_width = g.fig.get_size_inches()[0]
+    num_plots = len(g.axes.flat)
+    num_cols = 3  # Top row columns
+    last_row_plots = num_plots % num_cols
+    # Compute total space occupied by the last row's plots
+    last_row_width = (fig_width / num_cols) * last_row_plots
+
+    # Compute left padding to center the row
+    left_padding = (fig_width - last_row_width) / 2
+
+    # Adjust position of the last row's plots
+    for ax in g.axes[-last_row_plots:]:
+        pos = ax.get_position()
+        ax.set_position([pos.x0 + left_padding / fig_width, pos.y0, pos.width, pos.height])
 
     plt.savefig("figures/batch_size_regression_errors.pdf")
     plt.show()
@@ -327,61 +346,61 @@ def get_gam_data():
 def assess_ungrouped_regression_errors():
     dfs = []
     baseline = []
-    with tqdm(total=len(DATASETS) * len(DSDS) * len(BATCH_SIZES[1:]), desc="Loading GAM data") as pbar:
-        for dataset, feature_name, batch_size in itertools.product(DATASETS, DSDS, BATCH_SIZES[1:]):
-            try:
-                df = pd.read_csv(f"gam_data/gam_ungrouped_{dataset}_{feature_name}_{batch_size}.csv")
-                dfs.append(df)
-                baseline_df = load_pra_df(dataset, feature_name, batch_size=batch_size, shift="", samples=100)
-                ind_loss = baseline_df[baseline_df["fold"] == "ind_val"]["loss"].mean()
-                # guard against zero baseline for MAPE
-                if ind_loss == 0:
-                    b_mape = np.nan
-                else:
-                    b_mape = np.abs((baseline_df["loss"] - ind_loss) / ind_loss).mean()
+    # with tqdm(total=len(DATASETS) * len(DSDS) * len(BATCH_SIZES[1:]), desc="Loading GAM data") as pbar:
+    #     for dataset, feature_name, batch_size in itertools.product(DATASETS, DSDS, BATCH_SIZES[1:]):
+    #         try:
+    #             df = pd.read_csv(f"gam_data/gam_ungrouped_{dataset}_{feature_name}_{batch_size}.csv")
+    #             dfs.append(df)
+    #             baseline_df = load_pra_df(dataset, feature_name, batch_size=batch_size, shift="", samples=100)
+    #             ind_loss = baseline_df[baseline_df["fold"] == "ind_val"]["loss"].mean()
+    #             # guard against zero baseline for MAPE
+    #             if ind_loss == 0:
+    #                 b_mape = np.nan
+    #             else:
+    #                 b_mape = np.abs((baseline_df["loss"] - ind_loss) / ind_loss).mean()
+    #
+    #             baseline.append({
+    #                 "Dataset": dataset,
+    #                 "Feature Name": feature_name,
+    #                 "Batch Size": batch_size,
+    #                 "Baseline MAE": np.abs(baseline_df["loss"] - ind_loss).mean(),
+    #                 "Baseline MAPE": b_mape,
+    #             })
+    #         except FileNotFoundError:
+    #             print(f"File not found for {dataset}, {feature_name}, {batch_size}")
+    #         finally:
+    #             pbar.update(1)
+    #
+    # baseline_df = pd.DataFrame(baseline)
+    # dfs = pd.concat(dfs, ignore_index=True)
+    #
+    # # Means only used for ranking; keep for annotation
+    # means = (
+    #     dfs.groupby(["Batch Size", "Dataset", "Feature Name"])[["MAE", "MAPE"]]
+    #        .mean()
+    #        .reset_index()
+    #        .rename(columns={"MAE": "MAE_mean", "MAPE": "MAPE_mean"})
+    # )
+    #
+    # # Pick best Feature Name per (Dataset, Batch Size) by lowest MAE_mean
+    # best_idx = means.groupby(["Dataset", "Batch Size"])["MAE_mean"].idxmin()
+    # best_meta = means.loc[best_idx, ["Dataset", "Batch Size", "Feature Name"]]
+    #
+    # # Pull ALL original rows for the best combos
+    # best_rows = dfs.merge(best_meta, on=["Dataset", "Batch Size", "Feature Name"], how="inner")
+    #
+    # # Annotate with group means and baselines
+    # best_rows = (
+    #     best_rows
+    #     .merge(means, on=["Dataset", "Batch Size", "Feature Name"], how="left")
+    #     .merge(baseline_df, on=["Dataset", "Batch Size", "Feature Name"], how="left")
+    #     .sort_values(["Dataset", "Batch Size", "Feature Name"])
+    #     .reset_index(drop=True)
+    # )
+    # feature_names = best_rows["Feature Name"].unique()
+    # palette = dict(zip(feature_names, sns.color_palette(n_colors=len(feature_names))))
 
-                baseline.append({
-                    "Dataset": dataset,
-                    "Feature Name": feature_name,
-                    "Batch Size": batch_size,
-                    "Baseline MAE": np.abs(baseline_df["loss"] - ind_loss).mean(),
-                    "Baseline MAPE": b_mape,
-                })
-            except FileNotFoundError:
-                print(f"File not found for {dataset}, {feature_name}, {batch_size}")
-            finally:
-                pbar.update(1)
-
-    baseline_df = pd.DataFrame(baseline)
-    dfs = pd.concat(dfs, ignore_index=True)
-
-    # Means only used for ranking; keep for annotation
-    means = (
-        dfs.groupby(["Batch Size", "Dataset", "Feature Name"])[["MAE", "MAPE"]]
-           .mean()
-           .reset_index()
-           .rename(columns={"MAE": "MAE_mean", "MAPE": "MAPE_mean"})
-    )
-
-    # Pick best Feature Name per (Dataset, Batch Size) by lowest MAE_mean
-    best_idx = means.groupby(["Dataset", "Batch Size"])["MAE_mean"].idxmin()
-    best_meta = means.loc[best_idx, ["Dataset", "Batch Size", "Feature Name"]]
-
-    # Pull ALL original rows for the best combos
-    best_rows = dfs.merge(best_meta, on=["Dataset", "Batch Size", "Feature Name"], how="inner")
-
-    # Annotate with group means and baselines
-    best_rows = (
-        best_rows
-        .merge(means, on=["Dataset", "Batch Size", "Feature Name"], how="left")
-        .merge(baseline_df, on=["Dataset", "Batch Size", "Feature Name"], how="left")
-        .sort_values(["Dataset", "Batch Size", "Feature Name"])
-        .reset_index(drop=True)
-    )
-    feature_names = best_rows["Feature Name"].unique()
-    palette = dict(zip(feature_names, sns.color_palette(n_colors=len(feature_names))))
-
-    order = np.sort(best_rows["Batch Size"].unique())
+    order = BATCH_SIZES[1:]
 
     def plot_baseline(data, **kwargs):
         ax = plt.gca()
@@ -394,50 +413,58 @@ def assess_ungrouped_regression_errors():
 
         ax.set_xticks(range(len(order)))
         ax.set_xticklabels(order)
-
-    # FacetGrid with col_wrap=3 for 3 plots per row
+    #
+    # # FacetGrid with col_wrap=3 for 3 plots per row
+    # best_rows.to_csv("gam_data/ungrouped_regression_errors_summary.csv", index=False)
+    best_rows = pd.read_csv("gam_data/ungrouped_regression_errors_summary.csv")
     g = sns.FacetGrid(
         best_rows,
         col="Dataset",
         margin_titles=True,
         sharex=True, sharey=False,
-        col_wrap=3
+        col_wrap=3,
+        height=2.5
     )
 
     g.map_dataframe(
-        sns.boxplot,
+        sns.boxenplot,
         x="Batch Size", y="MAE",
         order=order, palette=sns.color_palette()
     )
     g.map_dataframe(plot_baseline)
     # Legend in one row at the bottom
+
+    for ax in g.axes.flat:
+        ax.set_yscale("log")
+        ax.set_ylim(bottom=1e-3)
+
     g.add_legend(title="Feature Name", bbox_to_anchor=(0.8, 0.5), loc="upper left")
-    plt.tight_layout()
+    fig_width = g.fig.get_size_inches()[0]
+    num_plots = len(g.axes.flat)
+    num_cols = 3  # Top row columns
+    last_row_plots = num_plots % num_cols
+    # Compute total space occupied by the last row's plots
+    last_row_width = (fig_width / num_cols) * last_row_plots
+
+    # Compute left padding to center the row
+    left_padding = (fig_width - last_row_width) / 2
+
+    # Adjust position of the last row's plots
+    for ax in g.axes[-last_row_plots:]:
+        pos = ax.get_position()
+        ax.set_position([pos.x0 + left_padding / fig_width, pos.y0, pos.width, pos.height])
+
     plt.savefig("figures/ungrouped_regression_errors.pdf", dpi=300, bbox_inches='tight')
     plt.show()
-    best_rows["Stratification Rate"] = best_rows["Stratification Rate"].round(2)
-    g = sns.FacetGrid(
-        best_rows,
-        col="Dataset",
-        margin_titles=True,
-        sharex=True, sharey=False,
-        col_wrap=3
-    )
 
 
-    g.map_dataframe(
-        sns.boxplot,
-        x="Stratification Rate", y="MAE", palette=sns.color_palette()
-    )
-    # Legend in one row at the bottom
-    plt.tight_layout()
-    plt.savefig("figures/ungrouped_regression_errors_by_rate.pdf", dpi=300, bbox_inches='tight')
-    plt.show()
+
+
 
 
 
 def regplots(batch_size):
-    df = load_all(batch_size=batch_size, prefix="final_data", shift="", samples=40)
+    df = load_all(batch_size=batch_size, prefix="fine_data", shift="", samples=3)
     df = df[df["fold"]!="train"] #exclude training data, to not skew results
     df = df[~df["shift"].isin(["contrast", "brightness", "smear"])]
     for shift in df["shift"].unique():
@@ -454,25 +481,35 @@ def regplots(batch_size):
         plt.axhline(DATASETWISE_RANDOM_LOSS[data["Dataset"].unique()[0]], color=color, linestyle="--", label="Random Guessing")
     def custom_scatter(data, **kwargs):
         kwargs.pop("color", None)  # Remove auto-passed color to prevent conflict
-        sns.scatterplot(data=data[data["shift"].isin(SYNTHETIC_SHIFTS)], x="feature", y="loss", hue="shift", s=8, palette=sns.color_palette(n_colors=len(SYNTHETIC_SHIFTS)+2)[2:], **kwargs)
-        sns.scatterplot(data=data[~data["shift"].isin(SYNTHETIC_SHIFTS)], x="feature", y="loss", hue="ood_label",s=8, marker="x",palette=sns.color_palette(n_colors=len(SYNTHETIC_SHIFTS)+2)[:2], alpha=1, **kwargs)
+        sns.scatterplot(data=data[data["Organic"]==False], x="feature", y="loss", hue="shift", s=12, palette=sns.color_palette(n_colors=len(SYNTHETIC_SHIFTS)+2)[2:], **kwargs)
+        sns.scatterplot(data=data[data["Organic"]==True], x="feature", y="loss", hue="ood_label",s=20, marker="x",palette=sns.color_palette(n_colors=len(SYNTHETIC_SHIFTS)+2)[:2], alpha=1, **kwargs)
     df.replace(DSD_PRINT_LUT, inplace=True)
     # df = filter_max_loss(df)
     df["ood_label"] = df["ood"].apply(lambda x: "OoD" if x else "InD")
     # sns.set_context("notebook", font_scale=2)
-    g = sns.FacetGrid(df, row="feature_name", col="Dataset", margin_titles=True, sharex=False, sharey=False, height=1.75, aspect=1)
+    print(df.columns)
+    g = sns.FacetGrid(df, row="feature_name", col="Dataset", margin_titles=True, sharex=False, sharey=False, height=1.5, aspect=1)
     g.map_dataframe(custom_scatter)
     # g.map_dataframe(plot_threshold)
     g.map_dataframe(plot_max_loss, color="red")
-    g.set_titles(row_template="Feature = {row_name}", col_template="{col_name}")
+    g.set_titles(row_template="{row_name}", col_template="{col_name}")
+
 
     for ax in g.axes.flat:
         ax.set_xlabel("Feature Value")
         ax.set_ylabel("Loss")
-        # ax.set_yscale("log")
+        ax.set_yscale("log")
         # ax.set_xscale("log")
         ax.set_yticks([])
         ax.set_xticks([])
+        # Hide x labels/ticks for all but bottom row
+        if ax not in g.axes[-1, :]:
+            ax.set_xlabel("")
+            ax.set_xticklabels([])
+        # Hide y labels/ticks for all but left column
+        if ax not in g.axes[:, 0]:
+            ax.set_ylabel("")
+            ax.set_yticklabels([])
 
     # g.add_legend(
     #     title="Shift",
@@ -492,12 +529,20 @@ def regplots(batch_size):
 
 def regplot_by_shift():
     print("Loading")
-    df = load_all(batch_size=32, shift="", samples=50)
+    df = load_all(batch_size=32, shift="", samples=30)
     df = df[df["fold"]!="train"]
     # df = filter_max_loss(df)
-    df = df[~df["shift"].isin(["contrast", "brightness","smear"])]
 
-    print("Loaded!")
+    df = df[~df["shift"].isin(["contrast", "brightness","smear"])]
+    print(df["shift"].unique())
+    df["shift"] = df["shift"].apply(lambda x: x if x in SYNTHETIC_SHIFTS else "Organic")
+    print(df["shift"].unique())
+    df.replace(DSD_PRINT_LUT, inplace=True)
+    df.replace(SHIFT_PRINT_LUT, inplace=True)
+
+    print(df["shift"].unique())
+
+
     for dataset in DATASETS:
         subdf = df[df["Dataset"]==dataset]
         print(f"Plotting for {dataset}")
@@ -510,16 +555,20 @@ def regplot_by_shift():
         full_palette = base_colors + mako_colors
         hue_order = special_intensities + remaining_intensities
         palette = {k: c for k, c in zip(hue_order, full_palette)}
-        subdf["shift"] = subdf["shift"].apply(lambda x: x if x in SYNTHETIC_SHIFTS else "Organic")
         def plot_max_loss(data,color=None, **kwargs):
             plt.axhline(DATASETWISE_RANDOM_LOSS[dataset], color=color, linestyle="--", label="Random Guessing")
-        subdf.rename(columns=COLUMN_PRINT_LUT, inplace=True)
-        subdf.replace(DSD_PRINT_LUT, inplace=True)
-        subdf.rename(columns=SHIFT_PRINT_LUT, inplace=True)
-        g = sns.FacetGrid(subdf, row="Feature", col="Shift", margin_titles=True, sharex=False, sharey=False, height=1.75, aspect=1)
-        g.map_dataframe(sns.scatterplot, x="Feature Value", y="Loss", hue="Shift Intensity", palette=palette, hue_order=hue_order, s=12 )
+
+        g = sns.FacetGrid(subdf, row="feature_name", col="shift", margin_titles=True, sharex=False, sharey=False, height=1.75, aspect=1)
+        g.map_dataframe(sns.scatterplot, x="feature", y="loss", hue="shift_intensity", palette=palette, hue_order=hue_order, s=30 )
         g.map_dataframe(plot_max_loss)
+        g.set_titles(row_template="{row_name}", col_template="{col_name}", size=14)
+
         # g.add_legend()
+        for ax in g.axes.flat:
+            ax.set_xlabel("Feature Value", size=12)
+            ax.set_yticks([])
+            ax.set_xticks([])
+        plt.tight_layout()
         plt.savefig(f"figures/regplot_by_shift_{dataset}.pdf", dpi=300, bbox_inches='tight')
         plt.show()
 

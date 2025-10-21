@@ -1,6 +1,8 @@
 import itertools
 import os.path
 from multiprocessing import Pool
+from matplotlib.colors import LinearSegmentedColormap, TwoSlopeNorm
+from matplotlib.colors import Normalize
 
 import seaborn as sns
 from matplotlib import pyplot as plt
@@ -230,10 +232,24 @@ def get_ratewise_risk_data(load=True):
     plt.show()
 
 
+def process(ba, data, test_set, val_set,rate,dataset):
+    sim = UniformBatchSimulator(data, ood_test_shift=test_set, ood_val_shift=val_set,
+                                estimator=ErrorAdjustmentEstimator, dsd_tpr=ba, dsd_tnr=ba)
+    results = sim.sim(rate, 600)
+    results = results.groupby(["Tree"]).mean().reset_index()
+
+    # results = results.mean()
+    results["tpr"] = ba
+    results["tnr"] = ba
+    results["ba"] = ba
+    results["rate"] = rate
+    results["test_set"] = test_set
+    results["val_set"] = val_set
+    results["Dataset"] = dataset
+    return results
+
 def collect_tpr_tnr_sensitivity_data():
-    bins = 10
-    total_num_tpr_tnr = np.sum(
-        [i + j / 2 >= 0.5 for i in np.linspace(0, 1, bins) for j in np.linspace(0, 1, bins)])
+    bins = 11
     for dataset in DATASETS:
         dfs = []
 
@@ -244,29 +260,19 @@ def collect_tpr_tnr_sensitivity_data():
         with tqdm(total=bins ** 2 * (len(ood_sets) - 1) * len(ood_sets)) as pbar:
             for val_set in ood_sets:
                 for test_set in ood_sets:
-                    if test_set == "noise":
+                    if val_set==test_set:
                         continue  #used only to estimate accuracies
                     for rate in np.linspace(0, 1, bins):
-                        for ba in np.linspace(0.5, 1, bins):
-                            sim = UniformBatchSimulator(data, ood_test_shift=test_set, ood_val_shift=val_set,
-                                                        estimator=ErrorAdjustmentEstimator, dsd_tpr=ba, dsd_tnr=ba)
-                            results = sim.sim(rate, 600)
-                            results = results.groupby(["Tree"]).mean().reset_index()
+                        pool = Pool(bins)
 
-                            # results = results.mean()
-                            results["tpr"] = ba
-                            results["tnr"] = ba
-                            results["ba"] = ba
-                            results["rate"] = rate
-                            results["test_set"] = test_set
-                            results["val_set"] = val_set
-                            results["Dataset"] = dataset
                             # results = results.groupby(["tpr", "tnr", "rate", "test_set", "val_set", "Tree"]).mean().reset_index()
+                        results = pool.starmap(process, [(ba, data, test_set, val_set,rate,dataset) for ba in np.linspace(0.5, 1, bins)])
+                        pbar.update(bins)
 
-                            dfs.append(results)
-                            pbar.update(1)
+                        df_for_all_ba = pd.concat(results)
+                        dfs.append(df_for_all_ba)
+
         df_final = pd.concat(dfs)
-        print(df_final.head(10))
         df_final.to_csv(f"pra_data/{dataset}_sensitivity_results.csv")
 
 
@@ -356,6 +362,7 @@ def plot_dsd_acc_errors():
                 df["batch_size"] = batch_size
                 df["lineplot_idx"] = BATCH_SIZES.index(batch_size)
                 df["lineplot_rate_idx"] = pd.factorize(df['rate'])[0]
+                df["batch_idx"] = df['batch_size'].apply(lambda x: BATCH_SIZES.index(x))
                 df["best_guess_error"] = np.abs(df["Accuracy"] - best_guess)
                 dfs.append(df)
             except:
@@ -371,7 +378,7 @@ def plot_dsd_acc_errors():
     # df = df[df["batch_size"]==1]
     df["rate"] = df["rate"].round(2)
     g = sns.FacetGrid(df[(df["batch_size"] == 1) & (~df["test_set"].isin(SYNTHETIC_SHIFTS)) & (
-        ~df["val_set"].isin(SYNTHETIC_SHIFTS))], col="Dataset", sharex=False, sharey=False, col_wrap=3, height=3, aspect=1,
+        ~df["val_set"].isin(SYNTHETIC_SHIFTS))], col="Dataset", sharex=False, sharey=False, col_wrap=3, height=2.5, aspect=1,
                       )
     g.map_dataframe(
         sns.pointplot,
@@ -399,7 +406,6 @@ def plot_dsd_acc_errors():
 
     plt.savefig("figures/dsd_acc_errors_by_rate_absolute.pdf")
     plt.show()
-    input()
 
     g = sns.FacetGrid(df[(~df["test_set"].isin(SYNTHETIC_SHIFTS)) & (
         ~df["val_set"].isin(SYNTHETIC_SHIFTS))], col="Dataset", row="batch_size", sharex=False, sharey=False, height=3,
@@ -428,7 +434,7 @@ def plot_dsd_acc_errors():
         ax.legend(title="Test Set", ncols=2, fontsize=8, frameon=True)
     plt.savefig("figures/dsd_acc_errors_by_rate_absolute_and_batch_size.pdf")
     plt.show()
-
+    df.replace(SHIFT_PRINT_LUT, inplace=True)
     g = sns.FacetGrid(df[df["batch_size"] == 1], col="Dataset", sharex=False, sharey=False, col_wrap=3)
     g.map_dataframe(sns.lineplot, x="rate", y="Baseline Error Improvement", hue="test_set", palette=sns.color_palette())
     # g.map_dataframe(sns.boxplot, x="rate", y="Accuracy Error", hue="Distributional Shift", palette=sns.color_palette())
@@ -482,20 +488,20 @@ def plot_dsd_acc_errors():
     plt.savefig("figures/dsd_acc_errors_by_batch_size.pdf")
     plt.show()
 
-    g = sns.FacetGrid(df[df["batch_size"] == 1], col="Dataset", height=3, aspect=1, col_wrap=3, sharey=False)
+    g = sns.FacetGrid(df, col="Dataset", height=2.5, aspect=1, col_wrap=3, sharey=False)
     df = df[df["val_set"] != df["test_set"]]
-    g.map_dataframe(sns.boxplot, x="rate", y="Accuracy Error", hue="Distributional Shift", hue_order=["Synthetic", "Organic"], showfliers=False,
+    g.map_dataframe(sns.boxplot, x="batch_size", y="Accuracy Error", hue="Distributional Shift", hue_order=["Synthetic", "Organic"], showfliers=False,
                     palette=sns.color_palette())
-    g.map_dataframe(sns.lineplot, x="lineplot_rate_idx", y="best_guess_error", hue="Distributional Shift", linestyle="--",
+    g.map_dataframe(sns.lineplot, x="batch_idx", y="best_guess_error", hue="Distributional Shift", linestyle="--",
                     marker="o", palette=sns.color_palette(), legend=False)
     # g.map_dataframe(sns.lineplot, x="batch_size", y="Accuracy Error", hue="test_set")
     for ax, dataset in zip(g.axes.flat, sorted_datasets):
         # ax.set_title(dataset)
-        ax.set_xlabel("p(E)")
+        ax.set_xlabel("Batch Size")
         ax.set_ylabel("Accuracy Error")
         ax.set_yscale("log")
         ax.set_ylim(1e-3,1)
-        # ax.set_xticklabels(BATCH_SIZES)
+        ax.set_xticklabels(BATCH_SIZES)
         # ax.set_xticks(range(len(BATCH_SIZES)))
         ax.legend(title="Test Set", ncols=3, fontsize=8)
         # ax.set_yscale("log")
@@ -527,48 +533,181 @@ def plot_sensitivity_errors():
     for dataset in DATASETS:
         try:
             df = pd.read_csv(f"pra_data/{dataset}_sensitivity_results.csv")
-            best_guess = (df["ind_acc"].mean() + df["ood_val_acc"].mean()) / 2
+            df = df[df["val_set"] != df["test_set"]]
+            best_guess = df["ind_acc"].mean()
             print(dataset, " : ", best_guess)
             df["Dataset"] = dataset
             df["best_guess_error"] = np.abs(df["Accuracy"] - best_guess)
             dfs.append(df)
-        except:
-            print(f"No data found for {dataset}")
-    df = pd.concat(dfs)
+        except Exception as e:
+            print(f"No data found for {dataset} ({e})")
+
+    if not dfs:
+        print("No datasets loaded.")
+        return
+
+    df = pd.concat(dfs, ignore_index=True)
+
+    # filter and tidy
     df = df[df["Tree"] == "Base Tree"]
     df = df[df["val_set"] != df["test_set"]]
-    df["rate"] = round(df["rate"], 2)
-    df["ba"] = round(df["ba"], 2)
+    df["rate"] = df["rate"].round(2)
+    df["ba"] = df["ba"].round(2)
     df.replace(DSD_PRINT_LUT, inplace=True)
-    print(df.columns)
-    df = df.groupby(["Dataset", "rate", "ba"])[["Accuracy Error", "ind_acc", "ood_val_acc"]].mean().reset_index()
+
+    # aggregate
+    df = (
+        df.groupby(["Dataset", "rate", "ba", "test_set"])[
+            ["Accuracy Error", "ind_acc", "ood_val_acc", "best_guess_error"]
+        ].mean()
+        .reset_index()
+    )
+    df = (
+        df.groupby(["Dataset", "rate", "ba"])[
+            ["Accuracy Error", "ind_acc", "ood_val_acc", "best_guess_error"]
+        ].mean()
+        .reset_index()
+    )
+
+    # pretty labels
     df.rename(columns={"rate": "$P(E)$", "ba": "$p(D_{e}(x)=E)$"}, inplace=True)
-    g = sns.FacetGrid(df, col="Dataset", col_wrap=3)
 
-    #sort by ba increasing order
+    # --- Global normalization for absolute color scaling across all facets ---
+    vmin = np.nanmin(df["Accuracy Error"].values)
+    vmax = np.nanmax(df["Accuracy Error"].values)
+    norm = Normalize(vmin=vmin, vmax=vmax)
+
+    # Facets with square cells and controlled spacing
+    g = sns.FacetGrid(
+        df,
+        col="Dataset",
+        col_wrap=3,
+        sharex=False,
+        sharey=False,
+        height=3.2,
+        aspect=1.0
+    )
+    print(df)
+
     def plot_heatmap(data, **kws):
-        heatmap_data = data.pivot(index="$p(D_{e}(x)=E)$", columns="$P(E)$", values="Accuracy Error")
-        heatmap_data = heatmap_data.loc[::-1]  #higher ba is up
-        sns.heatmap(heatmap_data, **kws, cmap="mako", vmin=0, vmax=(df["ind_acc"] - df["ood_val_acc"]).mean())
+        # main grid (what you color by)
+        heatmap_data = data.pivot(
+            index="$p(D_{e}(x)=E)$",
+            columns="$P(E)$",
+            values="Accuracy Error"
+        )
+        # matching baseline grid
+        baseline_grid = data.pivot(
+            index="$p(D_{e}(x)=E)$",
+            columns="$P(E)$",
+            values="best_guess_error"
+        )
 
+        # sort axes identically for both
+        heatmap_data = heatmap_data.reindex(sorted(heatmap_data.columns), axis=1).sort_index(axis=0).loc[::-1]
+        baseline_grid = baseline_grid.reindex_like(heatmap_data)
+
+        vals = heatmap_data.to_numpy(dtype=float)
+        base = baseline_grid.to_numpy(dtype=float)
+
+        # element-wise masks: "better" means <= baseline; "worse" means > baseline
+        better = np.where(vals <= base, vals, np.nan)
+        worse = np.where(vals > base, vals, np.nan)
+
+        # colormaps with transparent NaNs
+        cmap_low = plt.get_cmap("mako_r").copy()
+        cmap_high = plt.get_cmap("magma_r").copy()
+        try:
+            cmap_low.set_bad((0, 0, 0, 0))
+            cmap_high.set_bad((0, 0, 0, 0))
+        except Exception:
+            pass
+
+        ax = plt.gca()
+        rows, cols = vals.shape
+        extent = [-0.5, cols - 0.5, rows - 0.5, -0.5]
+
+        # draw both layers with your global norm
+        im1 = ax.imshow(better, cmap=cmap_low, norm=norm, origin='upper', aspect='equal', extent=extent)
+        im2 = ax.imshow(worse, cmap=cmap_high, norm=norm, origin='upper', aspect='equal', extent=extent)
+
+        # keep square cells
+        try:
+            ax.set_box_aspect(rows / cols)
+        except Exception:
+            ax.set_aspect('equal', adjustable='box')
+
+        # ticks / labels
+        ax.set_xticks(np.arange(cols))
+        ax.set_yticks(np.arange(rows))
+        ax.set_xticklabels(list(heatmap_data.columns), rotation=0)
+        ax.set_yticklabels(list(heatmap_data.index))
+        ax.tick_params(labelsize=8, pad=2)
+
+        # thin grid
+        ax.set_xticks(np.arange(-.5, cols, 1), minor=True)
+        ax.set_yticks(np.arange(-.5, rows, 1), minor=True)
+        ax.grid(which='minor', linestyle='-', linewidth=0.5, alpha=0.35)
+        ax.tick_params(which='minor', bottom=False, left=False)
+
+        ax.set_xlim(-0.5, cols - 0.5)
+        ax.set_ylim(rows - 0.5, -0.5)
+        ax.margins(0)
+
+        ax._rel_im_better = im1
+        ax._rel_im_worse = im2
     g.map_dataframe(plot_heatmap)
+    g.set_titles(col_template="{col_name}", pad=8)
+
+    # Leave room at right for two colorbars
+    g.fig.subplots_adjust(wspace=0.12, hspace=0.18, top=0.90, right=0.88)
 
     num_plots = len(g.axes.flat)
-    num_cols = 3  # Top row columns
+    num_cols = 3
     last_row_plots = num_plots % num_cols
-
     if last_row_plots > 0:
+        # keep positions consistent without colorbars; only shift x of last-row axes
         fig_width = g.fig.get_size_inches()[0]
         last_row_width = (fig_width / num_cols) * last_row_plots
         left_padding = (fig_width - last_row_width) / 2
-
         for ax in g.axes[-last_row_plots:]:
             pos = ax.get_position()
             ax.set_position([pos.x0 + left_padding / fig_width, pos.y0, pos.width, pos.height])
-            cbar = ax.collections[0].colorbar
-            cbar.ax.set_position([cbar.ax.get_position().x0 + left_padding / fig_width, cbar.ax.get_position().y0,
-                                  cbar.ax.get_position().width, cbar.ax.get_position().height])
-    plt.savefig("sensitivity_errors.pdf")
+
+
+
+    # --- Figure-level colorbars (shared norm, different palettes) ---
+    # Dummy mappables using the same norm/cmaps as the images
+    cmap_low  = plt.get_cmap("mako_r")
+    cmap_high = plt.get_cmap("magma_r")
+    sm_low  = plt.cm.ScalarMappable(norm=norm, cmap=cmap_low)
+    sm_high = plt.cm.ScalarMappable(norm=norm, cmap=cmap_high)
+    sm_low.set_array([])
+    sm_high.set_array([])
+
+    # Add two vertical colorbar axes on the right
+    # positions: [left, bottom, width, height] in figure fractions
+    cbw = 0.015
+    gap = 0.1
+    left = 0.89
+    bottom1, height1 = 0.12, 0.33
+    bottom2, height2 = bottom1 + height1 + gap, 0.33
+
+    cax_low  = g.fig.add_axes([left, bottom1, cbw, height1])
+    cax_high = g.fig.add_axes([left, bottom2, cbw, height2])
+
+    cbar1 = g.fig.colorbar(sm_low, cax=cax_low)
+    cbar1.set_label("Accuracy Error", rotation=90, labelpad=8)
+    cbar1.ax.tick_params(labelsize=8)
+
+    cbar2 = g.fig.colorbar(sm_high, cax=cax_high)
+    cbar2.set_label("Accuracy Error", rotation=90, labelpad=8)
+    cbar2.ax.tick_params(labelsize=8)
+
+    # optional figure title
+    g.fig.suptitle("Sensitivity Errors — Column-relative baseline, absolute color scale", fontsize=12)
+
+    plt.savefig("sensitivity_errors.pdf", bbox_inches="tight")
     plt.show()
 
 
@@ -606,7 +745,7 @@ def get_risk_tables():
     df_dsd = df[df["Tree"] != "Base Tree"]
 
     print(df_base.groupby(["Dataset"])["True Risk"].mean())
-    print(df_dsd.groupby(["Model", "DSD", "Dataset"])["True Risk"].mean())
+    print(df_dsd.groupby(["DSD", "Dataset"])["True Risk"].mean())
 
 def accuracy_by_fold_and_dsd_verdict():
     data = []

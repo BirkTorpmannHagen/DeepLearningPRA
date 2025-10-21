@@ -184,11 +184,8 @@ def run_rv_experiments():
         # if batch_size==1:
         #     ood_rv_accuracy_by_dataset_and_feature(1)
     # ood_rv_accuracy_by_dataset_and_feature(1)
-
-    ood_accuracy_vs_pred_accuacy_plot(1)
-
-
-
+    # get_error_rate_given_rv()
+    # ood_accuracy_vs_pred_accuacy_plot(1)
 
 
     # ood_accuracy_vs_pred_accuacy_plot(1)
@@ -197,7 +194,7 @@ def run_rv_experiments():
     # simple batching
     # ood_verdict_plots_batched()
 
-    #debiasing
+    # debiasing
     # table_bias_effect_on_ood_detectors()
     # bias_percentagewise_reduction()
 
@@ -210,24 +207,23 @@ def run_rv_experiments():
     # for batch_size in BATCH_SIZES[1:-1]:
     #     debiased_ood_detector_correctness_prediction_accuracy(batch_size)
 
-    # debiased_plots()
+    debiased_plots()
 
     # get_datasetwise_risk()
     # iou_distribution()
     # compare_kdes()
 
     # ood_verdict_plots_batched()
-    # get_error_rate_given_rv()
 
 def run_loss_regression_experiments():
     # verdictwise_proportions()
 
-    # regplot_by_shift()
+    regplot_by_shift()
     # plot_intensitywise_kdes()
     # regplots(32)
     # compare_gam_errors()
     # get_gam_data()
-    gam_fits(batch_size=32)
+    # gam_fits(batch_size=32)
     # plot_gam_errors(32)
     # plot_gam_errors_by_batch_size()
     # assess_ungrouped_regression_errors()
@@ -251,23 +247,25 @@ def run_pra_experiments():
     # accuracy_by_fold_and_dsd_verdict()
 
     # dsd accuracy estimation
+    # collect_tpr_tnr_sensitivity_data()
+    # plot_sensitivity_errors()
     # ood_detector_accuracy_estimation_errors()
 
     # accuracy estimation
     # collect_re_accuracy_estimation_data()
     plot_dsd_acc_errors()
 
-
     # get_ratewise_risk_data(load=False)
     # cost_benefit_analysis()
     # get_datasetwise_risk()
+    # print(UNNECESSARY_INTERVENTION)
     # get_risk_tables()
 
 
 if __name__ == '__main__':
     #accuracies on each dataset
-    run_rv_experiments()
-    # run_loss_regression_experiments()
+    # run_rv_experiments()
+    run_loss_regression_experiments()
     # run_pra_experiments()
     # run_appendix_experiments()
 
