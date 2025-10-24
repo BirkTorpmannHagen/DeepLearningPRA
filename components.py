@@ -80,6 +80,9 @@ class OODDetector:
         self.threshold_method = threshold_method
         self.ind_val = df[~df["ood"]]
         self.ood_val = df[df["ood"]]
+        assert not self.ind_val.empty, "No in-distribution validation data"
+        assert not self.ood_val.empty, "No out-of-distribution validation data"
+
         self.higher_is_ood = self.ood_val["feature"].mean() >self.ind_val["feature"].mean()
 
         if threshold_method == "val_optimal":

@@ -2,6 +2,7 @@ import itertools
 import os.path
 
 from pygam.penalties import monotonic_dec
+from pytorch_forecasting.models.base_model import Prediction
 from sklearn.metrics import mean_absolute_error, mean_absolute_percentage_error
 import numpy as np
 import pandas
@@ -552,12 +553,9 @@ def test_generalization_gap_estimation(batch_size):
     # pull the per-dataset ind_val baseline
     ind = (acc.loc[acc["fold"] == "ind_val", ["Dataset", "correct_prediction"]]
            .rename(columns={"correct_prediction": "ind_val_acc"}))
-
     # join baseline back to every shift of the same dataset
     acc = acc.merge(ind, on="Dataset", how="left")
-
     # absolute and relative differences vs ind_val
-
     acc["Generalization Gap"] = acc["correct_prediction"] - acc["ind_val_acc"]
     acc["Accuracy"] = acc["correct_prediction"]
     # acc["Generalization Gap"] = acc["acc_diff"] / acc["ind_val_acc"]  # e.g., 0.10 == +10%
@@ -572,6 +570,7 @@ def test_generalization_gap_estimation(batch_size):
     for dataset in DATASETS:
         for_dataset = merged[merged["Dataset"]==dataset]
         for shift in for_dataset["Shift"].unique():
+
             train = for_dataset[(for_dataset["Shift"]!=shift)&(for_dataset["Shift"]!="FGSM")]
 
             test = for_dataset[for_dataset["Shift"]==shift]
@@ -584,7 +583,7 @@ def test_generalization_gap_estimation(batch_size):
             print(f"{dataset:<15} {shift:<20} {mae:>10.4f} {baseline:>10.4f}k")
             gam_data.append({"Dataset":dataset, "Shift":shift, "mae":mae, "baseline mae": baseline,  "x":np.linspace(0,1,100), "y":gam.predict(np.linspace(0,1,100)), "score":score})
     gam_df = pd.DataFrame(gam_data)
-    print(gam_df)
+    print(gam_df.groupby(["Dataset"])[["mae", "baseline mae"]].mean())
     def plot_gam_fits(data, color=None, **kwargs):
         dataset = data["Dataset"].unique()[0]
         fit_to_plot = gam_df[(gam_df["Shift"]=="Organic")&(gam_df["Dataset"]==dataset)]
@@ -595,6 +594,109 @@ def test_generalization_gap_estimation(batch_size):
 
             # print(gam.summary())
 
+def get_acc_prediction_results(batch_size):
+    df = get_all_ood_detector_data(batch_size, filter_thresholding_method=True, filter_ood_correctness=False,
+                                   filter_correctness_calibration=True, filter_organic=False, filter_best=False)
+    df = df[df["OoD==f(x)=y"] == False]  # only OOD performance
+
+    df_synth = df[df["Shift Intensity"]!="Organic"]
+    df_synth.replace(SHIFT_PRINT_LUT, inplace=True)
+    unique_shifts  = df_synth["Shift"].unique().tolist()
+    max_intensity = df_synth["Shift Intensity"].max()
+    df_raw = load_all(batch_size, shift="", prefix="fine_data")
+
+    acc_by_dataset_and_shift = df_raw.groupby(["Dataset", "feature_name", "fold"])["correct_prediction"].mean().reset_index()
+    acc_by_dataset_and_shift.replace(DSD_PRINT_LUT, inplace=True)
+
+    ood_accs = df.groupby(["Dataset","feature_name", "OoD Test Fold", "OoD==f(x)=y"])["tpr"].mean().reset_index()
+    ind_accs = df.groupby(["Dataset","feature_name", "InD Test Fold", "OoD==f(x)=y"])["tnr"].mean().reset_index()
+    ind_accs["tnr"]=1-ind_accs["tnr"]
+    ind_accs.rename(columns={"InD Test Fold":"fold", "tnr":"Detection Rate"}, inplace=True)
+    ood_accs.rename(columns={"OoD Test Fold":"fold", "tpr":"Detection Rate"}, inplace=True)
+
+    merged = pd.concat([ood_accs, ind_accs], ignore_index=True)
+
+    merged = merged.merge(acc_by_dataset_and_shift, on=["Dataset", "feature_name", "fold"])
+
+    merged["Shift"] = merged["fold"].apply(lambda x: x.split("_")[0] if "_" in x else "Organic")
+    merged["Organic"] = merged["Shift"].apply(lambda x: "Synthetic" if x in SYNTHETIC_SHIFTS else "Organic")
+
+    acc = merged.groupby(["Dataset","feature_name", "fold"], as_index=False)["correct_prediction"].mean()
+    # pull the per-dataset ind_val baseline
+    ind = (acc.loc[acc["fold"] == "ind_val", ["Dataset","feature_name", "correct_prediction"]]
+           .rename(columns={"correct_prediction": "ind_val_acc"}))
+
+    # join baseline back to every shift of the same dataset
+    acc = acc.merge(ind, on=["Dataset", "feature_name"], how="left")
+    # absolute and relative differences vs ind_val
+    acc["Generalization Gap"] = acc["correct_prediction"] - acc["ind_val_acc"]
+    acc["Accuracy"] = acc["correct_prediction"]
+    merged = merged.merge(acc, on=["Dataset","feature_name", "fold"], how="left")
+
+    g = sns.FacetGrid(merged, col="Dataset", row="feature_name", sharex=False, sharey=False)
+    g.map_dataframe(sns.scatterplot, x="Detection Rate", y="Generalization Gap", hue="Organic", hue_order=["Organic", "Synthetic"], alpha=0.7, edgecolor=None)
+
+    merged["shift"] = merged.replace(SHIFT_PRINT_LUT, inplace=True)
+    gam_data = []
+
+    for dataset in DATASETS:
+        for feature_name in merged["feature_name"].unique():
+            for_dataset = merged[(merged["Dataset"]==dataset)&(merged["feature_name"]==feature_name)]
+            if for_dataset.empty:
+                continue
+            raw_data = load_pra_df(dataset_name=dataset, feature_name=DSD_LUT[feature_name], batch_size=batch_size,
+                        shift="", prefix="fine_data")
+            for shift in for_dataset["Shift"].unique():
+                if shift=="adv" or shift=="ind":
+                    continue
+                train = for_dataset[(for_dataset["Shift"]!=shift)&(for_dataset["Shift"]!="FGSM")]
+                gam = LinearGAM(constraints="monotonic_dec")
+                gam.fit(train["Detection Rate"], train["Generalization Gap"])
+                # print(raw_data.head(10))
+                if shift=="Organic":
+                    test = raw_data[raw_data["Organic"]==True]
+                else:
+                    test = raw_data[raw_data["shift"]==SHIFT_LUT[shift]]
+                test_organic = raw_data[raw_data["Organic"]==True]
+
+
+                test = test[test["fold"]!="train"]
+                test_organic = test_organic[test_organic["fold"]!="train"]
+
+                for ood_folds in test_organic["fold"].unique():
+                    if ood_folds in ["train", "ind_val", "ind_test"]:
+                        continue
+
+                    calib_ood = test_organic[(test_organic["fold"]==ood_folds)|(test_organic["fold"]=="ind_val")]
+                    if shift=="Organic":
+                        test_ood = test[(test["fold"]!=ood_folds)&(test["ood"]==True)] #makes sure no overlap when normal
+                    else:
+
+                        test_ood = test[(test["shift_intensity"]==max_intensity)&(test["ood"]==True)]
+
+
+                    test_ind = test_organic[test_organic["fold"]=="ind_test"]
+                    assert not test_ind.empty
+                    ood_detector = OODDetector(calib_ood, "val_optimal")
+                    ood_dr = test_ood.apply(lambda row: ood_detector.predict(row), axis=1).mean()
+                    ind_dr =  test_ind.apply(lambda row: ood_detector.predict(row), axis=1).mean()
+                    ind_acc = test_organic[test_organic["fold"]=="ind_val"]["correct_prediction"].mean()
+                    test_ood["Generalization Gap"] = test_ood["correct_prediction"]-ind_acc
+                    test_ind["Generalization Gap"] = test_ind["correct_prediction"]-ind_acc
+
+                    for proportion in np.linspace(0,1,11):
+
+                        detection_rate = proportion*ood_dr + (1-proportion)*ind_dr
+
+                        gap = (proportion*test_ood["Generalization Gap"].mean() + (1-proportion)*test_ind["Generalization Gap"].mean())
+
+                        mae = np.abs(gap - gam.predict(detection_rate))
+                        baseline =np.abs(gap - 0)
+                        gam_data.append({"Dataset":dataset, "feature_name":feature_name, "Shift":shift,
+                                         "mae":mae, "naive baseline mae": baseline})
+
+    gam_df = pd.DataFrame(gam_data)
+    print(gam_df.groupby(["Dataset", "feature_name"])[["mae", "naive baseline mae"]].mean())
 
 
 

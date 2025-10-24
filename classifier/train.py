@@ -84,8 +84,8 @@ if __name__ == '__main__':
     import torch
     torch.set_float32_matmul_precision('medium')
 
-    train_set, val_set, test, ood_set = build_officehome_dataset("../../Datasets/OfficeHome", train_transform=trans, val_transform=val_trans )
-    train_classifier(train_set, val_set, transfer=True, model_type="resnet")
+    # train_set, val_set, test, ood_set = build_officehome_dataset("../../Datasets/OfficeHome", train_transform=trans, val_transform=val_trans)
+    # train_classifier(train_set, val_set, transfer=True, model_type="resnet", load_from_checkpoint="classifier_logs/resnet/OfficeHome/checkpoints/epoch=54-step=11990.ckpt")
 
     train_set, val_set, test_set, ood_set = build_nico_dataset( "../../Datasets/NICO++", trans, val_trans, ind_context="dim")
     train_classifier(train_set, val_set, transfer=True, model_type="resnet")

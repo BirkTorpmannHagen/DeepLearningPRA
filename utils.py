@@ -234,7 +234,7 @@ def load_pra_df(dataset_name, feature_name, model="" , batch_size=1, samples=100
     try:
             df = pd.concat([pd.read_csv(join(prefix, fname)) for fname in os.listdir(prefix) if dataset_name in fname and feature_name in fname and model in fname  and shift in fname])
     except:
-        print("no data found for ", dataset_name, feature_name)
+        print(f"no data found for path {prefix}/{dataset_name}_{shift}_{feature_name}.csv")
         return pd.DataFrame()
 
     df["Dataset"]=dataset_name
@@ -308,8 +308,11 @@ COLUMN_PRINT_LUT = {"feature_name":"Feature", "loss":"Loss", "rate":"p(E)", "shi
 BIAS_TYPES = ["Unbiased", "Class", "Synthetic", "Temporal"]
 SAMPLERS = ["RandomSampler",  "ClassOrderSampler", "ClusterSampler", "SequentialSampler",]
 SYNTHETIC_SHIFTS = ["noise", "multnoise", "hue", "saltpepper", "saturation", "brightness", "contrast", "smear", "fgsm", "fog", "autoattack", "jpeg"]
+
 SHIFT_PRINT_LUT= {"normal": "Organic", "noise": "Additive Noise", "multnoise": "Multiplicative Noise",
              "hue": "Hue", "saltpepper": "Salt+Pepper Noise", "brightness":"Brightness", "contrast":"Contrast", "smear":"Smear", "fgsm": "FGSM"}
+
+SHIFT_LUT = {value: key for key, value in SHIFT_PRINT_LUT.items()}
 
 SAMPLER_LUT = dict(zip(SAMPLERS, BIAS_TYPES))
 # BATCH_SIZES = np.arange(1, 64)

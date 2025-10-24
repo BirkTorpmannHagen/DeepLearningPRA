@@ -1,5 +1,5 @@
 # from albumentations.random_utils import normal
-
+import matplotlib.pyplot as plt
 from scipy.stats import ks_2samp
 from seaborn import FacetGrid
 import warnings
@@ -163,12 +163,18 @@ def examine_aggregated_feature_distributions(batch_size):
 
 
 def polyp_tables_and_plots():
-    # df = load_polyp_data()
+    df = load_polyp_data()
 
     #data passthrough
-    # ood_data = df[(df["ood"]==True)&(df["fold"]!=df["Calibration Fold"])] # unseen ood data
-    # print(ood_data.groupby("model", "fold", "feature_name", "correct_prediction")["Verdict"].mean())
 
+    ood_data = df # unseen ood data
+
+    ood_data =ood_data[ood_data["fold"]!=ood_data["Calibration Fold"]]
+    print(ood_data.head(10))
+    print(ood_data.groupby(["model","feature_name", "correct_prediction"])["verdict"].mean())
+
+    plot_data = ood_data.groupby(["model", "fold", "feature_name", "correct_prediction"])["verdict"].mean()
+    print(plot_data)
     #accuracy table
     # print(df.groupby(["fold", "model"])[["correct_prediction", "IoU"]].mean())
 
@@ -176,8 +182,8 @@ def polyp_tables_and_plots():
 
 
     # risk plot
-    get_datasetwise_risk()
-    get_risk_tables()
+    # get_datasetwise_risk()
+    # get_risk_tables()
 
 
 
@@ -197,7 +203,8 @@ def run_rv_experiments():
       """
     # test_ensembling()
     # test_logistic_risk_calibrator()
-    test_generalization_gap_estimation(1)
+    # test_generalization_gap_estimation(1)
+    get_acc_prediction_results(1)
 
     # for batch_size in BATCH_SIZES:
     #     print(f"Running batch size {batch_size}")
@@ -287,8 +294,8 @@ def run_pra_experiments():
 
 if __name__ == '__main__':
     #accuracies on each dataset
-    polyp_tables_and_plots()
-    # run_rv_experiments()
+    # polyp_tables_and_plots()
+    run_rv_experiments()
     # run_loss_regression_experiments()
     # run_pra_experiments()
     # run_appendix_experiments()

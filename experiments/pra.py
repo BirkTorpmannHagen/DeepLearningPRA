@@ -692,7 +692,8 @@ def get_risk_tables():
     df_base = df[df["Tree"] == "Base Tree"]
     df_dsd = df[df["Tree"] != "Base Tree"]
     print(df_base.groupby(["Dataset"])["True Risk"].mean())
-
+    print(df_dsd.groupby(["Model","DSD"])["True Risk"].mean())
+    print(df_base.groupby(["Model"])["True Risk"].mean())
     print(df_dsd.groupby(["Model", "DSD", "Dataset"])["True Risk"].mean())
 
 
