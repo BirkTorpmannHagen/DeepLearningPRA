@@ -1,12 +1,12 @@
 # from albumentations.random_utils import normal
-import matplotlib.pyplot as plt
 from scipy.stats import ks_2samp
 from seaborn import FacetGrid
 import warnings
 
+
 warnings.filterwarnings("ignore")
+from experiments.accuracy_prediction import *
 from experiments.dataset_analysis import *
-from experiments.runtime_classification import *
 from experiments.pra import *
 from experiments.loss_regression import *
 from experiments.appendices import *
@@ -197,14 +197,20 @@ def run_appendix_experiments():
     # investigate_training_wise_thresholding(1, shift="normal")
     plot_ind_correctness_by_ood_feature()
 
+def run_acc_prediction_experiments():
+    # test_generalization_gap_estimation(1)
+    # get_acc_prediction_results(1)
+    # error_heatmap()
+    error_per_accuracy()
+
+
 def run_rv_experiments():
     """
           Runtime Verification
       """
     # test_ensembling()
     # test_logistic_risk_calibrator()
-    # test_generalization_gap_estimation(1)
-    get_acc_prediction_results(1)
+
 
     # for batch_size in BATCH_SIZES:
     #     print(f"Running batch size {batch_size}")
@@ -295,7 +301,8 @@ def run_pra_experiments():
 if __name__ == '__main__':
     #accuracies on each dataset
     # polyp_tables_and_plots()
-    run_rv_experiments()
+    # run_rv_experiments()
+    run_acc_prediction_experiments()
     # run_loss_regression_experiments()
     # run_pra_experiments()
     # run_appendix_experiments()
