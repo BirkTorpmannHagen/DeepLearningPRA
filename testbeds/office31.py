@@ -4,7 +4,7 @@ class Office31TestBed(BaseTestBed):
     def __init__(self, rep_model="vae", mode="severity", sampler="RandomSampler", batch_size=16):
         super().__init__( mode=mode, sampler=sampler, batch_size=batch_size)
         self.trans = transforms.Compose([
-            transforms.Resize((512, 512)),
+            transforms.Resize((INPUT_SIZE, INPUT_SIZE)),
             transforms.ToTensor(), ])
         self.ind_train, self.ind_val, self.ind_test, self.ood_val, self.ood_test = build_office31_dataset("../../Datasets/office31", self.trans, self.trans)
         self.ood_contexts = self.ood_val.ood_contexts

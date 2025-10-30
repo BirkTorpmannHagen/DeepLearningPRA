@@ -8,6 +8,7 @@ from datasets.synthetic_shifts import *
 from torch.utils.data import DataLoader, ConcatDataset, random_split, Subset
 import torch.nn as nn
 import torch.nn
+from utils import INPUT_SIZE
 from torch.utils.data import ConcatDataset
 from datasets.office31 import build_office31_dataset
 from datasets.nico import build_nico_dataset

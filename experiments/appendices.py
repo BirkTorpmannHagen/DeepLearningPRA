@@ -4,7 +4,7 @@ from experiments.runtime_classification import *
 
 
 def investigate_training_wise_thresholding(batch_size, shift="normal"):
-    df = load_all(prefix="fine_data", batch_size=batch_size, shift=shift, samples=100)
+    df = load_all(model="fine_data", batch_size=batch_size, shift=shift, samples=100)
     data = []
     for dataset, feature in itertools.product(DATASETS, DSDS):
         data_filtered = df[(df["Dataset"] == dataset) & (df["feature_name"] == feature)]
@@ -50,7 +50,7 @@ def investigate_training_wise_thresholding(batch_size, shift="normal"):
     print(merged.groupby(["Dataset", "feature_name"])[["tnr_training", "tnr_regular", "tnr_diff"]].mean().reset_index())
 
 def plot_ind_correctness_by_ood_feature():
-    df = load_all(prefix="final_data", batch_size=1, shift="normal", samples=100)
+    df = load_all(model="final_data", batch_size=1, shift="normal", samples=100)
     df = df[(df["fold"]=="ind_val")&(df["Dataset"]=="OfficeHome")]
     print(df)
     g = sns.FacetGrid(df, col="feature_name", margin_titles=True, sharey=False, sharex=False, col_wrap=3)

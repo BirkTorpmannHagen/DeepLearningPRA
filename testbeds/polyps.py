@@ -34,15 +34,9 @@ class PolypTestBed(BaseTestBed):
         super().__init__(num_workers=5, mode=mode, sampler=sampler, batch_size=batch_size)
         self.mode = mode
 
-        self.ind_train, self.ind_val, self.ind_test, self.etis, self.cvc, self.endo = build_polyp_dataset("../../Datasets/Polyps")
+        self.ind_train, self.ind_val, self.ind_test, self.etis, self.cvc, self.endo = build_polyp_dataset("../../Datasets/Polyps", img_size=INPUT_SIZE)
         self.batch_size=batch_size
         #vae
-        if rep_model=="vae":
-            self.vae = VanillaVAE(in_channels=3, latent_dim=512).to("cuda").eval()
-            vae_exp = VAEXperiment(self.vae, DEFAULT_PARAMS)
-            vae_exp.load_state_dict(
-                torch.load("vae_logs/PolypDataset/version_0/checkpoints/epoch=180-step=7240.ckpt")[
-                    "state_dict"])
 
         #segmodel
         self.classifier = SegmentationModel.load_from_checkpoint(

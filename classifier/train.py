@@ -2,7 +2,7 @@
 from pytorch_lightning import Trainer
 from datasets import *
 from datasets.office31 import build_office31_dataset
-
+from utils import INPUT_SIZE
 from pytorch_lightning.callbacks import ModelCheckpoint
 
 import warnings
@@ -69,15 +69,14 @@ def train_classifier(train_set, val_set, batch_size=16, load_from_checkpoint=Non
 
 if __name__ == '__main__':
 
-    size = 224
 
-    trans = transforms.Compose([transforms.Resize((size,size)),
+    trans = transforms.Compose([transforms.Resize((INPUT_SIZE, INPUT_SIZE)),
                         transforms.ToTensor(),
                             transforms.RandomHorizontalFlip(),
                         transforms.RandomVerticalFlip(),
                         transforms.RandomRotation(90),])
     val_trans = transforms.Compose([
-                        transforms.Resize((size,size)),
+                        transforms.Resize((INPUT_SIZE, INPUT_SIZE)),
                         transforms.ToTensor(), ])
 
 
@@ -87,14 +86,14 @@ if __name__ == '__main__':
     # train_set, val_set, test, ood_set = build_officehome_dataset("../../Datasets/OfficeHome", train_transform=trans, val_transform=val_trans)
     # train_classifier(train_set, val_set, transfer=True, model_type="resnet", load_from_checkpoint="classifier_logs/resnet/OfficeHome/checkpoints/epoch=54-step=11990.ckpt")
 
-    train_set, val_set, test_set, ood_set = build_nico_dataset( "../../Datasets/NICO++", trans, val_trans, ind_context="dim")
+    # train_set, val_set, test_set, ood_set = build_nico_dataset( "../../Datasets/NICO++", trans, val_trans, ind_context="dim")
+    # train_classifier(train_set, val_set, transfer=True, model_type="resnet")
+    #
+    # train_set, val_set, test_set, ood_val_set, ood_test_set = build_office31_dataset("../../Datasets/office31", train_transform=trans, val_transform=val_trans )
+    # train_classifier(train_set, val_set, transfer=True, model_type="resnet")
+
+    train_set, val_set, test_set, ood_val_set, ood_test_set = build_cct_dataset("../../Datasets/CCT", train_transform=trans, val_transform=val_trans)
     train_classifier(train_set, val_set, transfer=True, model_type="resnet")
-
-    train_set, val_set, test_set, ood_val_set, ood_test_set = build_office31_dataset("../../Datasets/office31", train_transform=trans, val_transform=val_trans )
-    train_classifier(train_set, val_set, transfer=True, model_type="resnet")
-
-    train_set, val_set, test_set, ood_val_set, ood_test_set = build_cct_dataset("../../CCT", train_transform=trans, val_transform=val_trans)
-
 
 #train_set, val_set, test_set, ood_val_set, ood_test_set = build_cct_dataset("../../Datasets/CCT", trans, val_trans)
    # train_classifier(train_set, val_set, load_from_checkpoint="classifier_logs/CCT/checkpoints/epoch=60-step=50813.ckpt")

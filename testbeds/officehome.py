@@ -1,11 +1,10 @@
 from testbeds.base import *
 
-
 class OfficeHomeTestBed(BaseTestBed):
     def __init__(self, sample_size, rep_model="vae", mode="severity", sampler="RandomSampler", batch_size=16):
         super().__init__( mode=mode, sampler=sampler, batch_size=batch_size)
         self.trans = transforms.Compose([
-            transforms.Resize((512, 512)),
+            transforms.Resize((INPUT_SIZE, INPUT_SIZE)),
             transforms.ToTensor(), ])
         self.ind_train, self.ind_val, self.ind_test, self.oods = build_officehome_dataset("../../Datasets/OfficeHome", self.trans, self.trans)
 

@@ -5,7 +5,7 @@ class NICOTestBed(BaseTestBed):
     def __init__(self, sample_size, mode="severity", sampler="RandomSampler", batch_size=16):
         super().__init__( mode=mode, sampler=sampler, batch_size=batch_size)
         self.trans = transforms.Compose([
-                                                 transforms.Resize((512, 512)),
+                                                 transforms.Resize((INPUT_SIZE, INPUT_SIZE)),
                                                  transforms.ToTensor(), ])
         self.num_classes = num_classes = len(os.listdir("../../Datasets/NICO++/track_1/public_dg_0416/train/dim"))
 

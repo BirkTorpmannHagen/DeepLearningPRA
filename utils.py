@@ -195,14 +195,14 @@ def load_all_biased(prefix="debiased_data", filter_batch=False):
     return pd.concat(dfs)
 
 
-def load_all(batch_size=30, samples=100, feature="all", shift="normal", prefix="fine_data", stratisfication=False, groupbyfolds=True):
+def load_all(batch_size=30, samples=100, feature="all", shift="normal", model="resnet", stratisfication=False, groupbyfolds=True):
     dfs = []
     for dataset in DATASETS:
         if feature!="all":
-            dfs.append(load_pra_df(dataset, feature, model="", batch_size=batch_size, samples=samples, prefix=prefix, stratisfication=stratisfication, shift=shift, groupbyfolds=groupbyfolds))
+            dfs.append(load_classifier_data(dataset, feature, batch_size=batch_size, samples=samples, model=model, stratisfication=stratisfication, shift=shift, groupbyfolds=groupbyfolds))
         else:
             for dsd in DSDS:
-                dfs.append(load_pra_df(dataset, dsd, model="", batch_size=batch_size, samples=samples, prefix=prefix, stratisfication=stratisfication, shift=shift, groupbyfolds=groupbyfolds))
+                dfs.append(load_classifier_data(dataset, dsd, batch_size=batch_size, samples=samples, model=model, stratisfication=stratisfication, shift=shift, groupbyfolds=groupbyfolds))
     return pd.concat(dfs)
 
 def load_as_ensemble(batch_size=30, samples=100, feature="all", shift="normal",
@@ -228,23 +228,24 @@ def load_as_ensemble(batch_size=30, samples=100, feature="all", shift="normal",
     df_wide = base.merge(pivoted, on=key, how="left")
     return df_wide
 
-def load_pra_df(dataset_name, feature_name, model="" , batch_size=1, samples=1000, prefix="final_data", shift="normal", stratisfication=False, groupbyfolds=True):
+def load_classifier_data(dataset_name, feature_name, batch_size=1, samples=1000, model="resnet", shift="normal", stratisfication=False, groupbyfolds=True):
+    prefix = f"{model}_feature_data"
     if dataset_name=="Polyp" and feature_name=="softmax":
         return pd.DataFrame() #softmax does not work for segmentation
     try:
-            df = pd.concat([pd.read_csv(join(prefix, fname)) for fname in os.listdir(prefix) if dataset_name in fname and feature_name in fname and model in fname  and shift in fname])
+            df = pd.concat([pd.read_csv(join(prefix, fname)) for fname in os.listdir(prefix) if dataset_name in fname and feature_name in fname and shift in fname])
     except:
         print(f"no data found for path {prefix}/{dataset_name}_{shift}_{feature_name}.csv")
         return pd.DataFrame()
 
     df["Dataset"]=dataset_name
     df["batch_size"]=batch_size
+    df["Model"]=model
+
     if groupbyfolds:
         df["shift"] = df["fold"].apply(lambda x: x.split("_")[0] if "_0." in x else x)  # what kind of shift has occured?
         df["shift_intensity"] = df["fold"].apply(
             lambda x: x.split("_")[1] if "0." in x else "InD" if "ind" in x else "Train" if "train" in x else "OoD")  # what intensity?
-    if model!="":
-        df["Model"]=model
     try:
         df.drop(columns=["Unnamed: 0"], inplace=True)
     except:
@@ -289,7 +290,7 @@ DATASETS = ["CCT", "OfficeHome", "Office31", "NICO", "Polyp"]
 DSDS = ["knn", "grad_magnitude", "cross_entropy", "energy", "typicality", "softmax", "rabanser"]
 # BATCH_SIZES = [32]
 BATCH_SIZES = [1, 8, 16, 32, 64]
-THRESHOLD_METHODS = [ "val_optimal", "ind_span", "logistic"]
+THRESHOLD_METHODS = [ "val_optimal", "ind_span"]
 DATASETWISE_RANDOM_LOSS = {
     "CCT": -np.log(1/15),
     "OfficeHome": -np.log(1/65),
@@ -310,8 +311,8 @@ SAMPLERS = ["RandomSampler",  "ClassOrderSampler", "ClusterSampler", "Sequential
 SYNTHETIC_SHIFTS = ["noise", "multnoise", "hue", "saltpepper", "saturation", "brightness", "contrast", "smear", "fgsm", "fog", "autoattack", "jpeg"]
 
 SHIFT_PRINT_LUT= {"normal": "Organic", "noise": "Additive Noise", "multnoise": "Multiplicative Noise",
-             "hue": "Hue", "saltpepper": "Salt+Pepper Noise", "brightness":"Brightness", "contrast":"Contrast", "smear":"Smear", "fgsm": "FGSM"}
-
+             "hue": "Hue", "saltpepper": "Salt+Pepper Noise", "brightness":"Brightness", "contrast":"Contrast", "smear":"Smear", "fgsm": "FGSM", "fog":"Fog", "jpeg":"JPEG"}
+INPUT_SIZE = 224
 SHIFT_LUT = {value: key for key, value in SHIFT_PRINT_LUT.items()}
 
 SAMPLER_LUT = dict(zip(SAMPLERS, BIAS_TYPES))
@@ -322,7 +323,7 @@ def load_polyp_data():
         for model in ["deeplabv3plus", "unet", "segformer"]:
             for ood_val, ood_test in itertools.permutations(["CVC-ClinicDB", "EndoCV2020", "EtisLaribDB"], 2):
 
-                df = load_pra_df(dataset_name="Polyp", feature_name=dsd_name, model=model, batch_size=1, samples=1000, prefix="polyp_data")
+                df = load_classifier_data(dataset_name="Polyp", feature_name=dsd_name, model=model, batch_size=1, samples=1000)
                 train_df = df[(df["fold"]==ood_val)|(df["fold"]=="ind_val")]
                 test_df = df[(df["fold"]==ood_test)|(df["fold"]=="ind_test")]
                 print(test_df["fold"].unique())

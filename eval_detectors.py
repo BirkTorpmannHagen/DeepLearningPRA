@@ -141,10 +141,10 @@ def collect_single_data(testbed):
             continue
         if dataset_name=="Polyp" and mode=="fgsm":
             continue # FGSM not applicable to segmentation
-        if os.path.exists(f"feature_data/{dataset_name}_{mode}_knn.csv"):
+        if os.path.exists(f"resnet_feature_data/{dataset_name}_{mode}_knn.csv"):
             continue
         print(mode)
-        collect_data(testbed, dataset_name, mode=mode, prefix="feature_data")
+        collect_data(testbed, dataset_name, mode=mode, prefix="resnet_feature_data")
 
 
 
@@ -164,10 +164,10 @@ if __name__ == '__main__':
     # collect_single_data(PolypTestBed)
 
     # collect_single_data(PolypTestBed)
-    # collect_single_data(OfficeHomeTestBed)
-    # collect_single_data(Office31TestBed)
+    collect_single_data(OfficeHomeTestBed)
+    collect_single_data(Office31TestBed)
     collect_single_data(NICOTestBed)
-    # collect_single_data(CCTTestBed)
+    collect_single_data(CCTTestBed)
 
     # from experiments.runtime_classification import ood_detector_correctness_prediction_accuracy
     # for batch_size in BATCH_SIZES:

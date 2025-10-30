@@ -13,6 +13,7 @@ from matplotlib.lines import Line2D
 from multiprocessing import Pool, cpu_count
 from matplotlib.patches import Patch
 from pygam import LinearGAM
+from sklearn.linear_model import LinearRegression
 from tqdm import tqdm
 from multiprocessing import Pool, cpu_count
 
@@ -27,7 +28,7 @@ from utils import *
 
 def cost_benefit_analysis():
 
-    data = load_pra_df("Polyp", "knn", batch_size=1, samples=1000)
+    data = load_classifier_data("Polyp", "knn", batch_size=1, samples=1000)
     oods = data[~data["shift"].isin(["ind_val", "ind_test", "train", "noise"])]["shift"].unique()
     cba_data = []
     print(oods)
@@ -69,7 +70,7 @@ def cost_benefit_analysis():
 
 
 def verdictwise_proportions(cal_idx=0, batch_size=1):
-    df = load_all(batch_size, prefix="final_data")
+    df = load_all(batch_size, model="final_data")
 
     dfs_processed = []
 
@@ -276,8 +277,8 @@ def _make_jobs_for_feature(data_filtered, dataset, feature):
     return jobs
 
 # ---- main entry ----
-def ood_detector_correctness_prediction_accuracy(batch_size, prefix="fine_data", shift="normal"):
-    df = load_all(prefix=prefix, batch_size=batch_size, shift=shift, samples=100)
+def ood_detector_correctness_prediction_accuracy(batch_size, model="resnet", shift=""):
+    df = load_all(model=model, batch_size=batch_size, shift=shift, samples=100)
     df = df[df["fold"] != "train"]
     # Precompute total jobs for progress bar
     total_jobs = 0
@@ -326,18 +327,22 @@ def ood_detector_correctness_prediction_accuracy(batch_size, prefix="fine_data",
         data["feature_name"].replace(DSD_PRINT_LUT, inplace=True)
 
     if flat_errors:
-        pd.DataFrame(flat_errors).to_csv(f"ood_detector_data/ood_detector_errors_{batch_size}.csv", index=False)
+        pd.DataFrame(flat_errors).to_csv(f"{model}_ood_detector_data/ood_detector_errors_{batch_size}.csv", index=False)
 
     for dataset in DATASETS:
         data_ds = data[data["Dataset"] == dataset]
         if data_ds.empty:
             continue
-        data_ds.to_csv(f"ood_detector_data/ood_detector_correctness_{dataset}_{batch_size}.csv", index=False)
+        data_ds.to_csv(f"{model}_ood_detector_data/ood_detector_correctness_{dataset}_{batch_size}.csv", index=False)
 
-def get_all_ood_detector_data(batch_size, filter_thresholding_method=False, filter_ood_correctness=False, filter_correctness_calibration=False, filter_organic=False, filter_best=False, prefix="fine_ood_detector_data"):
+def get_all_ood_detector_data(batch_size, filter_thresholding_method=False, filter_ood_correctness=False, filter_correctness_calibration=False, filter_organic=False, filter_best=False, model="resnet"):
     dfs = []
+    if len(os.listdir(f"{model}_ood_detector_data"))==0:
+        ood_detector_correctness_prediction_accuracy(batch_size, model=model, shift="")
     for dataset, feature in itertools.product(DATASETS, DSDS):
-        dfs.append(pd.read_csv(f"{prefix}/ood_detector_correctness_{dataset}_{batch_size}.csv"))
+        if dataset=="Polyp":
+            continue
+        dfs.append(pd.read_csv(f"{model}_ood_detector_data/ood_detector_correctness_{dataset}_{batch_size}.csv"))
     df = pd.concat(dfs)
     if filter_thresholding_method:
         df = df[df["Threshold Method"] == "val_optimal"]
@@ -355,7 +360,7 @@ def get_all_ood_detector_data(batch_size, filter_thresholding_method=False, filt
 
     return df
 def ood_rv_accuracy_by_dataset_and_feature(batch_size):
-    df = get_all_ood_detector_data(batch_size, filter_organic=True, filter_thresholding_method=True, filter_correctness_calibration=True, filter_ood_correctness=False, prefix="fine_ood_detector_data")
+    df = get_all_ood_detector_data(batch_size, filter_organic=True, filter_thresholding_method=True, filter_correctness_calibration=True, filter_ood_correctness=False, model="fine_ood_detector_data")
     df = df[df["OoD Val Fold"]!=df["OoD Test Fold"]]
     df = df[df["InD Val Fold"]!=df["InD Test Fold"]]
     print(df.head(100))
@@ -426,7 +431,7 @@ def ood_accuracy_vs_pred_accuacy_plot(batch_size):
 
     # df = df[~((df["OoD==f(x)=y"] == True)&(~df["Performance Calibrated"]))]  # only OOD performance
     #get only the shifts that affect the performance of the OOD detector
-    df_raw = load_all(batch_size, shift="", prefix="fine_data")
+    df_raw = load_all(batch_size, shift="", model="fine_data")
 
     acc_by_dataset_and_shift = df_raw.groupby(["Dataset", "fold"])["correct_prediction"].mean().reset_index()
 
@@ -508,7 +513,7 @@ def test_ensembling():
     print(df.groupby("Dataset")["ba"].mean())
 
 def test_logistic_risk_calibrator():
-    df = load_all(1, shift="normal", prefix="fine_data")
+    df = load_all(1, shift="normal", model="fine_data")
     df = df[df["fold"] != "train"]
     for dsd in DSDS:
         for dataset in DATASETS:
@@ -526,15 +531,16 @@ def test_logistic_risk_calibrator():
                 input()
 
 def test_generalization_gap_estimation(batch_size):
-    df = get_all_ood_detector_data(batch_size, filter_thresholding_method=True, filter_ood_correctness=False,
-                                   filter_correctness_calibration=True, filter_organic=False, filter_best=True)
-    df = df[df["OoD==f(x)=y"] == False]  # only OOD performance
+    df_raw = load_all(batch_size, shift="", model="resnet")
+    print(df_raw.groupby(["Dataset", "fold"])["correct_prediction"].mean().reset_index())
 
+    df = get_all_ood_detector_data(batch_size, filter_thresholding_method=True, filter_ood_correctness=False,
+                                   filter_correctness_calibration=True, filter_organic=False, filter_best=True, )
+    df = df[df["OoD==f(x)=y"] == False]  # only OOD performance
 
     df_synth = df[df["Shift Intensity"]!="Organic"]
     df_synth.replace(SHIFT_PRINT_LUT, inplace=True)
     unique_shifts  = df_synth["Shift"].unique().tolist()
-    df_raw = load_all(batch_size, shift="", prefix="fine_data")
 
     acc_by_dataset_and_shift = df_raw.groupby(["Dataset", "fold"])["correct_prediction"].mean().reset_index()
 
@@ -563,7 +569,7 @@ def test_generalization_gap_estimation(batch_size):
     merged = merged.merge(acc, on=["Dataset", "fold"], how="left")
 
     g = sns.FacetGrid(merged, col="Dataset", col_wrap=3)
-    g.map_dataframe(sns.scatterplot, x="Detection Rate", y="Generalization Gap", hue="Organic", hue_order=["Organic", "Synthetic"], alpha=0.7, edgecolor=None)
+    g.map_dataframe(sns.scatterplot, x="Detection Rate", y="Generalization Gap", hue="Shift", hue_order=["Organic", "Synthetic"], alpha=0.7, edgecolor=None)
 
     merged["shift"] = merged.replace(SHIFT_PRINT_LUT, inplace=True)
     gam_data = []
@@ -575,15 +581,18 @@ def test_generalization_gap_estimation(batch_size):
 
             test = for_dataset[for_dataset["Shift"]==shift]
 
-            gam = LinearGAM(constraints="monotonic_dec")
-            gam.fit(train["Detection Rate"], train["Generalization Gap"])
-            mae = mean_absolute_error(test["Generalization Gap"], gam.predict(test["Detection Rate"]))
+            # model = LinearGAM(constraints="monotonic_dec")
+            model = LinearRegression()
+            model.fit(train["Detection Rate"].values.reshape(-1,1), train["Generalization Gap"].values.reshape(-1,1))
+            mae = mean_absolute_error(test["Generalization Gap"].values.reshape(-1,1), model.predict(test["Detection Rate"].values.reshape(-1,1)))
             baseline = mean_absolute_error(test["Generalization Gap"], [0]*len(test))
-            score = gam.score(test["Detection Rate"], test["Generalization Gap"])
+            # score = model.score(test["Detection Rate"], test["Generalization Gap"])
             print(f"{dataset:<15} {shift:<20} {mae:>10.4f} {baseline:>10.4f}k")
-            gam_data.append({"Dataset":dataset, "Shift":shift, "mae":mae, "baseline mae": baseline,  "x":np.linspace(0,1,100), "y":gam.predict(np.linspace(0,1,100)), "score":score})
+            gam_data.append({"Dataset":dataset, "Shift":shift, "mae":mae, "baseline mae": baseline,  "x":np.linspace(0,1,2), "y":model.predict(np.linspace(0,1,2).reshape(-1,1))})
     gam_df = pd.DataFrame(gam_data)
-    print(gam_df.groupby(["Dataset"])[["mae", "baseline mae"]].mean())
+
+    print(gam_df.groupby(["Dataset"])[["mae", "baseline mae"]].mean()) # print simple evaluation
+
     def plot_gam_fits(data, color=None, **kwargs):
         dataset = data["Dataset"].unique()[0]
         fit_to_plot = gam_df[(gam_df["Shift"]=="Organic")&(gam_df["Dataset"]==dataset)]
@@ -592,18 +601,18 @@ def test_generalization_gap_estimation(batch_size):
     g.map_dataframe(plot_gam_fits)
     plt.show()
 
-            # print(gam.summary())
+            # print(model.summary())
 
-def get_acc_prediction_results(batch_size):
+def get_acc_prediction_results(batch_size, model="resnet"):
     df = get_all_ood_detector_data(batch_size, filter_thresholding_method=True, filter_ood_correctness=False,
-                                   filter_correctness_calibration=True, filter_organic=False, filter_best=False)
+                                   filter_correctness_calibration=True, filter_organic=False, filter_best=False, model=model)
     df = df[df["OoD==f(x)=y"] == False]  # only OOD performance
 
     df_synth = df[df["Shift Intensity"]!="Organic"]
     df_synth.replace(SHIFT_PRINT_LUT, inplace=True)
     unique_shifts  = df_synth["Shift"].unique().tolist()
     max_intensity = df_synth["Shift Intensity"].max()
-    df_raw = load_all(batch_size, shift="", prefix="fine_data")
+    df_raw = load_all(batch_size, shift="", model=model)
 
     acc_by_dataset_and_shift = df_raw.groupby(["Dataset", "feature_name", "fold"])["correct_prediction"].mean().reset_index()
     acc_by_dataset_and_shift.replace(DSD_PRINT_LUT, inplace=True)
@@ -637,26 +646,33 @@ def get_acc_prediction_results(batch_size):
     g.map_dataframe(sns.scatterplot, x="Detection Rate", y="Generalization Gap", hue="Organic", hue_order=["Organic", "Synthetic"], alpha=0.7, edgecolor=None)
 
     merged["shift"] = merged.replace(SHIFT_PRINT_LUT, inplace=True)
-    gam_data = []
+    model_data = []
 
     for dataset in DATASETS:
         for feature_name in merged["feature_name"].unique():
             for_dataset = merged[(merged["Dataset"]==dataset)&(merged["feature_name"]==feature_name)]
             if for_dataset.empty:
                 continue
-            raw_data = load_pra_df(dataset_name=dataset, feature_name=DSD_LUT[feature_name], batch_size=batch_size,
-                        shift="", prefix="fine_data")
-            for shift in for_dataset["Shift"].unique():
+            raw_data = load_classifier_data(dataset_name=dataset, feature_name=DSD_LUT[feature_name], batch_size=batch_size,
+                                            shift="", model=model)
+            for shift in list(for_dataset["Shift"].unique())+["all"]:
                 if shift=="adv" or shift=="ind":
                     continue
                 train = for_dataset[(for_dataset["Shift"]!=shift)&(for_dataset["Shift"]!="FGSM")]
-                gam = LinearGAM(constraints="monotonic_dec")
-                gam.fit(train["Detection Rate"], train["Generalization Gap"])
+                # model = LinearGAM(constraints="monotonic_dec")
+                reg_model = LinearRegression()
+
+                reg_model.fit(train["Detection Rate"].values.reshape(-1, 1), train["Generalization Gap"].values.reshape(-1, 1))
                 # print(raw_data.head(10))
+
                 if shift=="Organic":
+                    print(raw_data.head(10))
                     test = raw_data[raw_data["Organic"]==True]
+                elif shift=="all":
+                    test = raw_data.sample(len(raw_data[raw_data["Organic"]==True]))
                 else:
                     test = raw_data[raw_data["shift"]==SHIFT_LUT[shift]]
+
                 test_organic = raw_data[raw_data["Organic"]==True]
 
 
@@ -690,13 +706,14 @@ def get_acc_prediction_results(batch_size):
 
                         gap = (proportion*test_ood["Generalization Gap"].mean() + (1-proportion)*test_ind["Generalization Gap"].mean())
 
-                        mae = np.abs(gap - gam.predict(detection_rate))
+                        mae = np.abs(gap - reg_model.predict(detection_rate.reshape(1, -1)))[0][0]
                         baseline =np.abs(gap - 0)
-                        gam_data.append({"Dataset":dataset, "feature_name":feature_name, "Shift":shift,
+                        model_data.append({"Dataset":dataset, "feature_name":feature_name, "Shift":shift,
                                          "mae":mae, "naive baseline mae": baseline})
 
-    gam_df = pd.DataFrame(gam_data)
-    print(gam_df.groupby(["Dataset", "feature_name"])[["mae", "naive baseline mae"]].mean())
+    model_df = pd.DataFrame(model_data)
+    model_df.to_csv(f"{model}_ood_detector_data/acc_prediction_results.csv", index=False)
+    print(model_df.groupby(["Dataset", "feature_name", "Shift"])[["mae", "naive baseline mae"]].mean())
 
 
 
@@ -960,8 +977,8 @@ def ood_verdict_plots_batched():
     plt.show()
 
 def plot_batching_effect(dataset, feature):
-    df = load_pra_df(dataset, feature, batch_size=1)
-    df_batched = load_pra_df(dataset, feature, batch_size=30)
+    df = load_classifier_data(dataset, feature, batch_size=1)
+    df_batched = load_classifier_data(dataset, feature, batch_size=30)
     oods = df[(df["ood"])&(~df["correct_prediction"])]
     inds = df[(~df["ood"])&(df["correct_prediction"])]
     fig, ax1 = plt.subplots()
@@ -982,7 +999,7 @@ def get_error_rate_given_rv():
         for dsd in DSDS:
             if dsd=="rabanser":
                 continue
-            df = load_pra_df(dataset, dsd, batch_size=1)
+            df = load_classifier_data(dataset, dsd, batch_size=1)
             ood_folds = df[df["ood"]]["fold"].unique()
             for ood_val, ood_test in itertools.product(ood_folds, ood_folds):
                 data_train = df[(df["fold"]=="ind_val")|(df["fold"]==ood_val)]

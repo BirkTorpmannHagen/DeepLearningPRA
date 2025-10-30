@@ -203,8 +203,9 @@ def run_rv_experiments():
       """
     # test_ensembling()
     # test_logistic_risk_calibrator()
-    # test_generalization_gap_estimation(1)
+    test_generalization_gap_estimation(1)
     get_acc_prediction_results(1)
+
 
     # for batch_size in BATCH_SIZES:
     #     print(f"Running batch size {batch_size}")

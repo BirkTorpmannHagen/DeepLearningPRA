@@ -19,7 +19,7 @@ def get_baseline_loss_estimate(df):
     return loss_by_fold.groupby(["Dataset"])["baseline_error"].mean().reset_index()
 
 def get_best_gam_data(batch_size=32, prefix="final_data"):
-    df = load_all(batch_size, shift="", prefix=prefix, samples=20)
+    df = load_all(batch_size, shift="", model=prefix, samples=20)
     df = df[df["fold"] != "train"]
     # df = filter_max_loss(df)
     all_gams = []
@@ -332,7 +332,7 @@ def assess_ungrouped_regression_errors():
             try:
                 df = pd.read_csv(f"gam_data/gam_ungrouped_{dataset}_{feature_name}_{batch_size}.csv")
                 dfs.append(df)
-                baseline_df = load_pra_df(dataset, feature_name, batch_size=batch_size, shift="", samples=100)
+                baseline_df = load_classifier_data(dataset, feature_name, batch_size=batch_size, shift="", samples=100)
                 ind_loss = baseline_df[baseline_df["fold"] == "ind_val"]["loss"].mean()
                 # guard against zero baseline for MAPE
                 if ind_loss == 0:
@@ -437,7 +437,7 @@ def assess_ungrouped_regression_errors():
 
 
 def regplots(batch_size):
-    df = load_all(batch_size=batch_size, prefix="final_data", shift="", samples=40)
+    df = load_all(batch_size=batch_size, model="final_data", shift="", samples=40)
     df = df[df["fold"]!="train"] #exclude training data, to not skew results
     df = df[~df["shift"].isin(["contrast", "brightness", "smear"])]
     for shift in df["shift"].unique():
@@ -539,7 +539,7 @@ def filter_max_loss(df):
 
 
 def plot_intensitywise_kdes():
-    df = load_all(batch_size=1, shift="", prefix="final_data")
+    df = load_all(batch_size=1, shift="", model="final_data")
     g = sns.FacetGrid(df, row="Dataset", col="shift")
     g.map_dataframe(sns.kdeplot, x="feature", y="loss", hue="shift_intensity")
     plt.show()
