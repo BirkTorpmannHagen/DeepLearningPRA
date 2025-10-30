@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-from h5py.h5p import PropDXID
 from sklearn.linear_model import LogisticRegression
 from matplotlib import pyplot as plt
 from pygam import LinearGAM
