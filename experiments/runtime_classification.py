@@ -325,12 +325,12 @@ def ood_detector_correctness_prediction_accuracy(batch_size, model="resnet", shi
 
 def get_all_ood_detector_data(batch_size, filter_thresholding_method=False, filter_ood_correctness=False, filter_correctness_calibration=False, filter_organic=False, filter_best=False, model="resnet"):
     dfs = []
-    if len(os.listdir(f"{model}_ood_detector_data"))==0:
+    if len(os.listdir(f"data/{model}/ood_detector_data"))==0:
         ood_detector_correctness_prediction_accuracy(batch_size, model=model, shift="")
     for dataset, feature in itertools.product(DATASETS, DSDS):
         if dataset=="Polyp":
             continue
-        dfs.append(pd.read_csv(f"{model}_ood_detector_data/ood_detector_correctness_{dataset}_{batch_size}.csv"))
+        dfs.append(pd.read_csv(f"data/{model}/ood_detector_data/ood_detector_correctness_{dataset}_{batch_size}.csv"))
     df = pd.concat(dfs)
     if filter_thresholding_method:
         df = df[df["Threshold Method"] == "val_optimal"]

@@ -210,8 +210,9 @@ def get_acc_prediction_results(batch_size, model="resnet"):
 
 
 def acc_prediction_table(model="resnet"):
-    df = pd.concat([pd.read_csv(f"{model}_ood_detector_data/{dataset}_acc_prediction_results.csv") for dataset in DATASETS if dataset!="Polyp"])
-    print(df.groupby(["Dataset", "feature_name"])[["mae", "naive baseline mae"]].mean())
+    for model in MODELS:
+        df = pd.concat([pd.read_csv(f"data/{model}/ood_detector_data/{dataset}_acc_prediction_results.csv") for dataset in DATASETS if dataset!="Polyp"])
+        print(df.groupby(["Dataset", "feature_name"])[["mae", "naive baseline mae"]].mean())
 
 def error_heatmap(model="resnet"):
     df = pd.concat([pd.read_csv(f"data/{model}/ood_detector_data/{dataset}_acc_prediction_results.csv") for dataset in DATASETS if dataset!="Polyp"])
