@@ -1,11 +1,9 @@
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
-<<<<<<< HEAD
+
 from pygam import LinearGAM
 from sklearn.linear_model import LinearRegression
 from tqdm import tqdm
-=======
->>>>>>> 13498237984f1b27b6b3fda083e7508b4f146b97
 from multiprocessing import Pool, cpu_count
 import seaborn as sns
 import matplotlib.pyplot as plt
