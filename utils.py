@@ -111,98 +111,14 @@ class ArgumentIterator:
     def __len__(self):
         return len(self.iterable)
 
-def load_all_rabanser(batch_size, prefix="debiased_data", k=0):
+
+
+def load_all(batch_size=30, samples=100, feature="all", shift="normal"):
     dfs = []
-    for dataset in DATASETS:
-        for sampler in SAMPLERS:
-            try:
-                df = pd.read_csv(join(prefix, f"{dataset}_normal_{sampler}_{batch_size}_k={k}_rabanser.csv"))
-            except FileNotFoundError:
-                print(f"Could not find  {dataset}_normal_{sampler}_{batch_size}_k={k}_rabanser.csv")
-                continue
-            df["k"]=k
-            df["bias"] = SAMPLER_LUT[sampler]
-            df["feature_name"] = "rabanser"
-            df["Dataset"] = dataset
-            df["batch_size"] = batch_size
-            if dataset == "Polyp":
-                df["correct_prediction"] = df["loss"] < df[df["fold"] == "ind_val"][
-                    "loss"].max()  # maximum observed val mean jaccard
-            else:
-                df["correct_prediction"] = df["loss"] < df[df["fold"] == "ind_val"]["loss"].quantile(
-                    0.95)  # losswise definition
-                # df["correct_prediction"] = df["acc"]>=ind_val_acc   #accuracywise definition
-            df["shift"] = df["fold"].apply(
-                lambda x: x.split("_")[0] if "_0." in x else x)  # what kind of shift has occured?
-            df["shift_intensity"] = df["fold"].apply(
-                lambda x: x.split("_")[1] if "_" in x else x)  # what intensity?
-            df["ood"] = ~df["fold"].isin(["train", "ind_val", "ind_test"])
-            dfs.append(df)
-    try:
-        return pd.concat(dfs)
-    except ValueError:
-        print(f"No data found for and {batch_size}.csv")
-        return []
-
-
-def load_all_biased(prefix="debiased_data", filter_batch=False):
-    dfs = []
-    for dataset in DATASETS:
-        for sampler in ["RandomSampler", "SequentialSampler", "ClassOrderSampler", "ClusterSampler"]:
-            for batch_size in BATCH_SIZES[1:]:
-                if filter_batch:
-                    if batch_size!=filter_batch:
-                        continue
-                for k in [-1, 0, 1, 5, 10]:
-                    for feature in DSDS:
-                        if feature=="softmax" and dataset=="Polyp":
-                            continue
-                        if feature=="knn" and k!=-1:
-                            continue
-                        if feature=="rabanser" and k==-1:
-                            continue
-                        try:
-                            df = pd.read_csv(join(prefix, f"{dataset}_normal_{sampler}_{batch_size}_k={k}_{feature}.csv"), converters={
-    "feature": lambda x: float(x) if x not in ("[]", "") else 0.0})
-                        except FileNotFoundError:
-                            print(f"No data found for {prefix}/{dataset}_normal_{sampler}_{batch_size}_k={k}_{feature}.csv")
-                            continue
-                        try:
-
-                            df["bias"] = sampler
-                            df["feature_name"]=feature
-                            df["k"]=k
-                            df["Dataset"] = dataset
-                            df["batch_size"] = batch_size
-                            if dataset == "Polyp":
-                               df["correct_prediction"] = df["loss"] < df[df["fold"] == "ind_val"][
-                                "loss"].max()  # maximum observed val mean jaccard
-                            else:
-                                df["correct_prediction"] = df["loss"] < df[df["fold"] == "ind_val"]["loss"].quantile(
-                                    0.95)  # losswise definition
-                                # df["correct_prediction"] = df["acc"]>=ind_val_acc   #accuracywise definition
-
-                            df["shift"] = df["fold"].apply(
-                            lambda x: x.split("_")[0] if "_0." in x else x)  # what kind of shift has occured?
-
-
-                            df["shift_intensity"] = df["fold"].apply(
-                                lambda x: x.split("_")[1] if "_" in x else x)  # what intensity?
-                            df["ood"] = ~df["fold"].isin(["train", "ind_val", "ind_test"])
-                            dfs.append(df)
-                        except TypeError:
-                            print(f"{dataset}_normal_{sampler}_{batch_size}_k={k}_{feature}.csv")
-    return pd.concat(dfs)
-
-
-def load_all(batch_size=30, samples=100, feature="all", shift="normal", model="resnet", stratisfication=False, groupbyfolds=True):
-    dfs = []
-    for dataset in DATASETS:
-        if feature!="all":
-            dfs.append(load_classifier_data(dataset, feature, batch_size=batch_size, samples=samples, model=model, stratisfication=stratisfication, shift=shift, groupbyfolds=groupbyfolds))
-        else:
+    for model in MODELS:
+        for dataset in DATASETS:
             for dsd in DSDS:
-                dfs.append(load_classifier_data(dataset, dsd, batch_size=batch_size, samples=samples, model=model, stratisfication=stratisfication, shift=shift, groupbyfolds=groupbyfolds))
+                dfs.append(load_data(dataset, dsd, batch_size=batch_size, samples=samples, model=model))
     return pd.concat(dfs)
 
 def load_as_ensemble(batch_size=30, samples=100, feature="all", shift="normal",
@@ -228,8 +144,8 @@ def load_as_ensemble(batch_size=30, samples=100, feature="all", shift="normal",
     df_wide = base.merge(pivoted, on=key, how="left")
     return df_wide
 
-def load_classifier_data(dataset_name, feature_name, batch_size=1, samples=1000, model="resnet", shift="normal", stratisfication=False, groupbyfolds=True):
-    prefix = f"{model}_feature_data"
+def load_data(dataset_name, feature_name, batch_size=1, samples=1000, model="resnet", shift="normal"):
+    prefix = f"data/{model}/feature_data"
     if dataset_name=="Polyp" and feature_name=="softmax":
         return pd.DataFrame() #softmax does not work for segmentation
     try:
@@ -242,10 +158,9 @@ def load_classifier_data(dataset_name, feature_name, batch_size=1, samples=1000,
     df["batch_size"]=batch_size
     df["Model"]=model
 
-    if groupbyfolds:
-        df["shift"] = df["fold"].apply(lambda x: x.split("_")[0] if "_0." in x else x)  # what kind of shift has occured?
-        df["shift_intensity"] = df["fold"].apply(
-            lambda x: x.split("_")[1] if "0." in x else "InD" if "ind" in x else "Train" if "train" in x else "OoD")  # what intensity?
+    df["shift"] = df["fold"].apply(lambda x: x.split("_")[0] if "_0." in x else x)  # what kind of shift has occured?
+    df["shift_intensity"] = df["fold"].apply(
+        lambda x: x.split("_")[1] if "0." in x else "InD" if "ind" in x else "Train" if "train" in x else "OoD")  # what intensity?
     try:
         df.drop(columns=["Unnamed: 0"], inplace=True)
     except:
@@ -253,10 +168,7 @@ def load_classifier_data(dataset_name, feature_name, batch_size=1, samples=1000,
     sampled_ind_val_loss = np.quantile(np.array([df[df["fold"] == "ind_val"]["loss"].sample(batch_size).mean() for _ in range(samples)]), 0.95)
 
     if batch_size!=1:
-        if groupbyfolds:
-            df = df.groupby(["fold", "feature_name", "Dataset"]).apply(sample_loss_feature, samples, batch_size, stratisfication=False).reset_index()
-        else:
-            df = df.groupby(["feature_name", "Dataset"]).apply(sample_loss_feature, samples, batch_size, stratisfication=stratisfication).reset_index()
+        df = df.groupby(["fold", "feature_name", "Dataset"]).apply(sample_loss_feature, samples, batch_size, stratisfication=False).reset_index()
     # ind_acc = df[df["fold"]=="ind_val"]["acc"].mean()
 
     if dataset_name=="Polyp":
@@ -271,8 +183,7 @@ def load_classifier_data(dataset_name, feature_name, batch_size=1, samples=1000,
         else:
             df["correct_prediction"] = df["loss"] < sampled_ind_val_loss#losswise definition
             # df["correct_prediction"] = df["acc"]>=ind_val_acc   #accuracywise definition
-    if groupbyfolds:
-        df["ood"] = ~df["fold"].isin(["train", "ind_val", "ind_test"])
+    df["ood"] = ~df["fold"].isin(["train", "ind_val", "ind_test"])
 
     df["shift"] = df["fold"].apply(
         lambda x: x.split("_")[0] if "_0." in x else x)  # what kind of shift has occured?
@@ -285,6 +196,7 @@ def load_classifier_data(dataset_name, feature_name, batch_size=1, samples=1000,
 
 
 DSD_PRINT_LUT = {"grad_magnitude": "GradNorm", "cross_entropy" : "Entropy", "energy":"Energy", "knn":"kNN", "mahalanobis":"Mahalanobis", "softmax":"Softmax", "typicality":"Typicality"}
+MODELS = ["resnet", "vit", "deeplabv3plus", "unet", "segformer"]
 DSD_LUT = {value: key for key, value in DSD_PRINT_LUT.items()}
 DATASETS = ["CCT", "OfficeHome", "Office31", "NICO", "Polyp"]
 DSDS = ["knn", "grad_magnitude", "cross_entropy", "energy", "typicality", "softmax", "rabanser"]
@@ -323,7 +235,7 @@ def load_polyp_data():
         for model in ["deeplabv3plus", "unet", "segformer"]:
             for ood_val, ood_test in itertools.permutations(["CVC-ClinicDB", "EndoCV2020", "EtisLaribDB"], 2):
 
-                df = load_classifier_data(dataset_name="Polyp", feature_name=dsd_name, model=model, batch_size=1, samples=1000)
+                df = load_data(dataset_name="Polyp", feature_name=dsd_name, model=model, batch_size=1, samples=1000)
                 train_df = df[(df["fold"]==ood_val)|(df["fold"]=="ind_val")]
                 test_df = df[(df["fold"]==ood_test)|(df["fold"]=="ind_test")]
                 print(test_df["fold"].unique())

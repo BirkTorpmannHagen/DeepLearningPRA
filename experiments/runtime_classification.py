@@ -16,7 +16,7 @@ from utils import *
 
 def cost_benefit_analysis():
 
-    data = load_classifier_data("Polyp", "knn", batch_size=1, samples=1000)
+    data = load_data("Polyp", "knn", batch_size=1, samples=1000)
     oods = data[~data["shift"].isin(["ind_val", "ind_test", "train", "noise"])]["shift"].unique()
     cba_data = []
     print(oods)
@@ -779,8 +779,8 @@ def ood_verdict_plots_batched():
     plt.show()
 
 def plot_batching_effect(dataset, feature):
-    df = load_classifier_data(dataset, feature, batch_size=1)
-    df_batched = load_classifier_data(dataset, feature, batch_size=30)
+    df = load_data(dataset, feature, batch_size=1)
+    df_batched = load_data(dataset, feature, batch_size=30)
     oods = df[(df["ood"])&(~df["correct_prediction"])]
     inds = df[(~df["ood"])&(df["correct_prediction"])]
     fig, ax1 = plt.subplots()
@@ -801,7 +801,7 @@ def get_error_rate_given_rv():
         for dsd in DSDS:
             if dsd=="rabanser":
                 continue
-            df = load_classifier_data(dataset, dsd, batch_size=1)
+            df = load_data(dataset, dsd, batch_size=1)
             ood_folds = df[df["ood"]]["fold"].unique()
             for ood_val, ood_test in itertools.product(ood_folds, ood_folds):
                 data_train = df[(df["fold"]=="ind_val")|(df["fold"]==ood_val)]

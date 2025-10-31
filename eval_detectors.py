@@ -14,7 +14,7 @@ def compute_stats_no_ind(ood_features, ood_losses, fname, feature_names):
     for df, feature_name in zip(dfs, feature_names):
         df.to_csv(f"{fname}_{feature_name}.csv")
 
-def collect_data(testbed_constructor, dataset_name, prefix="final_data", mode="noise"):
+def collect_data(testbed_constructor, dataset_name, mode="noise"):
     print("Collecting data for", dataset_name, "in", mode, "mode")
     bench = testbed_constructor("classifier", mode=mode, batch_size=8)
     # features = [mahalanobis]
@@ -25,9 +25,11 @@ def collect_data(testbed_constructor, dataset_name, prefix="final_data", mode="n
     tsd.register_testbed(bench)
     if mode=="normal": #just compute ind and organic oods for normal mode; saves on computation time
         compute_stats(*tsd.compute_pvals_and_loss(),
-                      fname=f"{prefix}/{dataset_name}_{mode}", feature_names=[f.__name__ for f in features])
+                      fname=f"data/{model}/feature_data/{dataset_name}_{mode}", feature_names=[f.__name__ for f in features])
     else:
-        compute_stats_no_ind(*tsd.compute_pvals_and_loss(noind=True),fname=f"{prefix}/{dataset_name}_{mode}", feature_names=[f.__name__ for f in features])
+        compute_stats_no_ind(*tsd.compute_pvals_and_loss(noind=True),
+                             fname=f"data/{model}/feature_data/{dataset_name}_{mode}",
+                             feature_names=[f.__name__ for f in features])
     # compute_stats(*tsd.compute_pvals_and_loss(),
     #               fname=f"final_data/{dataset_name}_{mode}", feature_names=[f.__name__ for f in features])
 
@@ -136,15 +138,16 @@ def collect_bias_data():
 
 def collect_single_data(testbed):
     dataset_name = testbed.__name__.split("TestBed")[0]
-    for mode in SYNTHETIC_SHIFTS+["normal"]:
-        if mode=="autoattack":
-            continue
-        if dataset_name=="Polyp" and mode=="fgsm":
-            continue # FGSM not applicable to segmentation
-        if os.path.exists(f"resnet_feature_data/{dataset_name}_{mode}_knn.csv"):
-            continue
-        print(mode)
-        collect_data(testbed, dataset_name, mode=mode, prefix="resnet_feature_data")
+    for model in MODELS:
+        for mode in SYNTHETIC_SHIFTS+["normal"]:
+            if mode=="autoattack":
+                continue
+            if dataset_name=="Polyp" and mode=="fgsm":
+                continue # FGSM not applicable to segmentation
+            if os.path.exists(f"data/{model}/feature_data/{dataset_name}_{mode}_knn.csv"):
+                continue
+            print(mode)
+            collect_data(testbed, dataset_name, mode=mode, model=model, prefix="feature_data")
 
 
 

@@ -198,7 +198,7 @@ def get_ratewise_risk_data(load=True):
     if load and os.path.exists("pra_data/ratewise_risk_data.csv"):
         df = pd.read_csv("pra_data/ratewise_risk_data.csv")
     else:
-        data = load_classifier_data("Polyp", "knn", batch_size=1, samples=100)
+        data = load_data("Polyp", "knn", batch_size=1, samples=100)
         oods = data[~data["shift"].isin(["ind_val", "ind_test", "train"])]["shift"].unique()
         rates = np.linspace(0, 1, 11)
         dfs = []
@@ -237,8 +237,8 @@ def collect_tpr_tnr_sensitivity_data():
     for dataset in DATASETS:
         dfs = []
 
-        data = load_classifier_data(dataset_name=dataset, feature_name="knn", batch_size=1,
-                                    samples=1000)  # we are just interested in the loss and oodness values, knn is arbitray
+        data = load_data(dataset_name=dataset, feature_name="knn", batch_size=1,
+                         samples=1000)  # we are just interested in the loss and oodness values, knn is arbitray
         ood_sets = data[~data["shift"].isin(["ind_val", "ind_test", "train"])]["shift"].unique()
 
         with tqdm(total=bins ** 2 * (len(ood_sets) - 1) * len(ood_sets)) as pbar:
@@ -284,8 +284,8 @@ def collect_re_accuracy_estimation_data():
             dfs = []
             config = dsd_accuracies.groupby(["feature_name"])[["tpr", "tnr", "ba"]].mean().reset_index()
             feature_name, _, _, _ = config.iloc[0]
-            data = load_classifier_data(dataset, DSD_LUT[feature_name], batch_size=batch_size, samples=1000, shift="",
-                                        model="fine_data/")
+            data = load_data(dataset, DSD_LUT[feature_name], batch_size=batch_size, samples=1000, shift="",
+                             model="fine_data/")
             data = data[
                 (data["shift"].isin(SYNTHETIC_SHIFTS) &
                  (data["shift_intensity"] == data.groupby("shift")["shift_intensity"].transform("max")))
@@ -548,7 +548,7 @@ def iou_distribution():
         results_list = []
         for dsd in DSDS:
             for model_name in ["deeplabv3plus", "unet", "segformer"]:
-                df = load_classifier_data("Polyp", dsd, model=model_name, batch_size=1, samples=1000)
+                df = load_data("Polyp", dsd, model=model_name, batch_size=1, samples=1000)
                 for dataset in ["noise", "ind_test", "EndoCV2020", "EtisLaribDB", "CVC-ClinicDB"]:
                     if dataset not in df["shift"].unique():
                         print(f"Dataset {dataset} not in df")
@@ -662,7 +662,7 @@ def get_datasetwise_risk():
     with tqdm(total=len(DSDS)*3*4*3) as pbar:
         for dsd in  ["energy", "knn", "grad_magnitude", "cross_entropy", "mahalanobis"]:
             for model_name in ["deeplabv3plus", "unet", "segformer"]:
-                df = load_classifier_data("Polyp", dsd, batch_size=1, samples=1000, model=model_name)
+                df = load_data("Polyp", dsd, batch_size=1, samples=1000, model=model_name)
                 if df.empty:
                     print(f"No data for {dsd} and {model_name}")
                     continue

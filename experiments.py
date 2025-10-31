@@ -193,119 +193,17 @@ def run_methodological_experiments():
     accuracy_table()
     dataset_summaries()
 
-def run_appendix_experiments():
-    # investigate_training_wise_thresholding(1, shift="normal")
-    plot_ind_correctness_by_ood_feature()
 
 def run_acc_prediction_experiments():
     # test_generalization_gap_estimation(1)
     # get_acc_prediction_results(1)
     acc_prediction_table()
-    # error_heatmap()
+    error_heatmap()
     # error_per_accuracy()
 
 
-def run_rv_experiments():
-    """
-          Runtime Verification
-      """
-    # test_ensembling()
-    # test_logistic_risk_calibrator()
-
-
-    # for batch_size in BATCH_SIZES:
-    #     print(f"Running batch size {batch_size}")
-    #     ood_detector_correctness_prediction_accuracy(batch_size, shift="")
-        # ood_rv_accuracy_by_thresh_and_stuff(1)
-        # if batch_size==1:
-        #     ood_rv_accuracy_by_dataset_and_feature(1)
-    # ood_rv_accuracy_by_dataset_and_feature(1)
-
-    # ood_accuracy_vs_pred_accuacy_plot(1)
-
-
-
-
-
-    # ood_accuracy_vs_pred_accuacy_plot(1)
-    #single batch size
-
-    # simple batching
-    # ood_verdict_plots_batched()
-
-    #debiasing
-    # table_bias_effect_on_ood_detectors()
-    # bias_percentagewise_reduction()
-
-    # examine_feature_distributions(64)
-    # examine_rabanser_feature_distributions(8)
-
-    # runtime verification
-    # plot_batching_effect("NICO", "entropy")
-
-    # for batch_size in BATCH_SIZES[1:-1]:
-    #     debiased_ood_detector_correctness_prediction_accuracy(batch_size)
-
-    # debiased_plots()
-
-    # get_datasetwise_risk()
-    # iou_distribution()
-    # compare_kdes()
-
-    # ood_verdict_plots_batched()
-    # get_error_rate_given_rv()
-
-def run_loss_regression_experiments():
-    # verdictwise_proportions()
-
-    # regplot_by_shift()
-    # plot_intensitywise_kdes()
-    # regplots(32)
-    # compare_gam_errors()
-    # get_gam_data()
-    gam_fits(batch_size=32)
-    # plot_gam_errors(32)
-    # plot_gam_errors_by_batch_size()
-    # assess_ungrouped_regression_errors()
-
-
-
-
-
-
-def run_pra_experiments():
-
-    #parameter estimation
-
-    #rate estimation
-    # collect_rate_estimator_data()
-    # eval_rate_estimator()
-    # plot_rate_estimation_errors_for_dsds()
-
-    #prediction accuracy estimation
-    # assess_re_tree_predaccuracy_estimation_errors()
-    # accuracy_by_fold_and_dsd_verdict()
-
-    # dsd accuracy estimation
-    # ood_detector_accuracy_estimation_errors()
-
-    # accuracy estimation
-    # collect_re_accuracy_estimation_data()
-    plot_dsd_acc_errors()
-
-
-    # get_ratewise_risk_data(load=False)
-    # cost_benefit_analysis()
-
-
-
 if __name__ == '__main__':
-    #accuracies on each dataset
-    # polyp_tables_and_plots()
-    # run_rv_experiments()
     run_acc_prediction_experiments()
-    # run_loss_regression_experiments()
-    # run_pra_experiments()
-    # run_appendix_experiments()
+
 
 

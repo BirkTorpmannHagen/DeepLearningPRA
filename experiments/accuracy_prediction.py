@@ -12,7 +12,7 @@ from matplotlib.patches import Patch
 
 from components import OODDetector
 from experiments.runtime_classification import get_all_ood_detector_data
-from utils import SHIFT_PRINT_LUT, load_all, DSD_PRINT_LUT, SYNTHETIC_SHIFTS, DATASETS, load_classifier_data, DSD_LUT, SHIFT_LUT
+from utils import SHIFT_PRINT_LUT, load_all, DSD_PRINT_LUT, SYNTHETIC_SHIFTS, DATASETS, load_data, DSD_LUT, SHIFT_LUT
 
 
 def test_generalization_gap_estimation(batch_size):
@@ -139,8 +139,8 @@ def get_acc_prediction_results(batch_size, model="resnet"):
             for_dataset = merged[(merged["Dataset"]==dataset)&(merged["feature_name"]==feature_name)]
             if for_dataset.empty:
                 continue
-            raw_data = load_classifier_data(dataset_name=dataset, feature_name=DSD_LUT[feature_name], batch_size=batch_size,
-                                            shift="", model=model)
+            raw_data = load_data(dataset_name=dataset, feature_name=DSD_LUT[feature_name], batch_size=batch_size,
+                                 shift="", model=model)
             for shift in list(for_dataset["Shift"].unique())+["all"]:
                 if shift=="adv" or shift=="ind":
                     continue
@@ -203,7 +203,7 @@ def get_acc_prediction_results(batch_size, model="resnet"):
                                              "mae":mae, "naive baseline mae": baseline})
 
         model_df = pd.DataFrame(model_data)
-        model_df.to_csv(f"{model}_ood_detector_data/{dataset}_acc_prediction_results.csv", index=False)
+        model_df.to_csv(f"data/{model}/ood_detector_data/{dataset}_acc_prediction_results.csv", index=False)
         print(model_df.groupby(["Dataset", "feature_name", "Shift"])[["mae", "naive baseline mae"]].mean())
 
         # print(gam.summary())
@@ -214,7 +214,7 @@ def acc_prediction_table(model="resnet"):
     print(df.groupby(["Dataset", "feature_name"])[["mae", "naive baseline mae"]].mean())
 
 def error_heatmap(model="resnet"):
-    df = pd.concat([pd.read_csv(f"{model}_ood_detector_data/{dataset}_acc_prediction_results.csv") for dataset in DATASETS if dataset!="Polyp"])
+    df = pd.concat([pd.read_csv(f"data/{model}/ood_detector_data/{dataset}_acc_prediction_results.csv") for dataset in DATASETS if dataset!="Polyp"])
     ood_detector_data = get_all_ood_detector_data(batch_size=1, filter_thresholding_method=True, filter_ood_correctness=False,
                                       filter_correctness_calibration=True, filter_organic=True, filter_best=True)
     ood_detector_data = ood_detector_data[ood_detector_data["OoD==f(x)=y"]==False]

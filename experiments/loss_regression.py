@@ -332,7 +332,7 @@ def assess_ungrouped_regression_errors():
             try:
                 df = pd.read_csv(f"gam_data/gam_ungrouped_{dataset}_{feature_name}_{batch_size}.csv")
                 dfs.append(df)
-                baseline_df = load_classifier_data(dataset, feature_name, batch_size=batch_size, shift="", samples=100)
+                baseline_df = load_data(dataset, feature_name, batch_size=batch_size, shift="", samples=100)
                 ind_loss = baseline_df[baseline_df["fold"] == "ind_val"]["loss"].mean()
                 # guard against zero baseline for MAPE
                 if ind_loss == 0:
