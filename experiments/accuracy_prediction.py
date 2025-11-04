@@ -12,7 +12,7 @@ from matplotlib.patches import Patch
 
 from components import OODDetector
 from experiments.runtime_classification import get_all_ood_detector_data
-from utils import SHIFT_PRINT_LUT, load_all, DSD_PRINT_LUT, SYNTHETIC_SHIFTS, DATASETS, load_data, DSD_LUT, SHIFT_LUT
+from utils import *
 
 
 def test_generalization_gap_estimation(batch_size):
@@ -90,14 +90,14 @@ def test_generalization_gap_estimation(batch_size):
 
 def get_acc_prediction_results(batch_size, model="resnet"):
     df = get_all_ood_detector_data(batch_size, filter_thresholding_method=True, filter_ood_correctness=False,
-                                   filter_correctness_calibration=True, filter_organic=False, filter_best=False, model=model)
+                                   filter_correctness_calibration=True, filter_organic=False, filter_best=False)
     df = df[df["OoD==f(x)=y"] == False]  # only OOD performance
 
     df_synth = df[df["Shift Intensity"]!="Organic"]
     df_synth.replace(SHIFT_PRINT_LUT, inplace=True)
     unique_shifts  = df_synth["Shift"].unique().tolist()
     max_intensity = df_synth["Shift Intensity"].max()
-    df_raw = load_all(batch_size, shift="", model=model)
+    df_raw = load_all(batch_size, shift="")
 
     acc_by_dataset_and_shift = df_raw.groupby(["Dataset", "feature_name", "fold"])["correct_prediction"].mean().reset_index()
     acc_by_dataset_and_shift.replace(DSD_PRINT_LUT, inplace=True)
@@ -134,13 +134,14 @@ def get_acc_prediction_results(batch_size, model="resnet"):
 
     for dataset in DATASETS:
         model_data = []
-
         for feature_name in merged["feature_name"].unique():
             for_dataset = merged[(merged["Dataset"]==dataset)&(merged["feature_name"]==feature_name)]
             if for_dataset.empty:
                 continue
             raw_data = load_data(dataset_name=dataset, feature_name=DSD_LUT[feature_name], batch_size=batch_size,
                                  shift="", model=model)
+            if raw_data.empty:
+                continue
             for shift in list(for_dataset["Shift"].unique())+["all"]:
                 if shift=="adv" or shift=="ind":
                     continue
@@ -196,11 +197,13 @@ def get_acc_prediction_results(batch_size, model="resnet"):
                             detection_rate = proportion * ood_dr + (1 - proportion) * ind_dr
 
                             gap = (proportion*test_ood_filt["Generalization Gap"].mean() + (1-proportion)*test_ind["Generalization Gap"].mean())
-
-                            mae = np.abs(gap - reg_model.predict(detection_rate.reshape(1, -1)))[0][0]
+                            pred = reg_model.predict(detection_rate.reshape(1, -1))
+                            mae = np.abs(gap - pred)[0][0]
                             baseline =np.abs(gap - 0)
-                            model_data.append({"Dataset":dataset, "feature_name":feature_name, "Shift":shift, "intensity":intensity, "proportion":proportion,
-                                             "mae":mae, "naive baseline mae": baseline})
+                            model_data.append({"Dataset":dataset, "feature_name":feature_name, "Shift":shift,
+                                               "intensity":intensity, "proportion":proportion,
+                                             "mae":mae, "naive baseline mae": baseline, "pred": pred[0][0], "gap": gap,
+                                               "detection_rate": detection_rate, "m":reg_model.coef_[0][0], "b":reg_model.intercept_[0]})
 
         model_df = pd.DataFrame(model_data)
         model_df.to_csv(f"data/{model}/ood_detector_data/{dataset}_acc_prediction_results.csv", index=False)
@@ -209,18 +212,35 @@ def get_acc_prediction_results(batch_size, model="resnet"):
         # print(gam.summary())
 
 
-def acc_prediction_table(model="resnet"):
+def acc_prediction_table():
     for model in MODELS:
-        df = pd.concat([pd.read_csv(f"data/{model}/ood_detector_data/{dataset}_acc_prediction_results.csv") for dataset in DATASETS if dataset!="Polyp"])
+        try:
+            df = pd.concat([pd.read_csv(f"data/{model}/ood_detector_data/{dataset}_acc_prediction_results.csv") for dataset in DATASETS if dataset!="Polyp"])
+        except FileNotFoundError:
+            print(f"No data for model {model}")
+            continue
         print(df.groupby(["Dataset", "feature_name"])[["mae", "naive baseline mae"]].mean())
 
-def error_heatmap(model="resnet"):
-    df = pd.concat([pd.read_csv(f"data/{model}/ood_detector_data/{dataset}_acc_prediction_results.csv") for dataset in DATASETS if dataset!="Polyp"])
+def get_all_acc_prediction_results():
+    dfs = []
+    for model, dataset in itertools.product(MODELS, DATASETS):
+        try:
+            df = pd.read_csv(f"data/{model}/ood_detector_data/{dataset}_acc_prediction_results.csv")
+        except FileNotFoundError:
+            print(f"No data for model {model}")
+            continue
+        df["Model"] = model
+        dfs.append(df)
+    all_df = pd.concat(dfs, ignore_index=True)
+    return all_df
+
+def error_heatmap():
+    df = get_all_acc_prediction_results()
     ood_detector_data = get_all_ood_detector_data(batch_size=1, filter_thresholding_method=True, filter_ood_correctness=False,
                                       filter_correctness_calibration=True, filter_organic=True, filter_best=True)
     ood_detector_data = ood_detector_data[ood_detector_data["OoD==f(x)=y"]==False]
-    best_detectors_per_dataset = ood_detector_data.groupby(["Dataset", "feature_name"])["ba"].mean().reset_index()
-    df = df.merge(best_detectors_per_dataset, on=["Dataset", "feature_name"], how="inner", suffixes=("", "_detector"))
+    best_detectors_per_dataset = ood_detector_data.groupby(["Dataset", "feature_name", "Model"])["ba"].mean().reset_index()
+    df = df.merge(best_detectors_per_dataset, on=["Model", "Dataset", "feature_name"], how="inner", suffixes=("", "_detector"))
     df = df.round(2)
     print(df.head(3))
     df["intensity"] = df["intensity"].apply(lambda x: str(round(float(x), 2)) if x!="OoD" else x)
@@ -228,7 +248,7 @@ def error_heatmap(model="resnet"):
     # Mean per (Dataset, feature_name, proportion, intensity)
 
     df_grouped = (
-        df.groupby(["Dataset", "feature_name", "proportion", "intensity"])[["mae", "naive baseline mae"]]
+        df.groupby(["Dataset", "Model", "feature_name", "proportion", "intensity"])[["mae", "naive baseline mae"]]
         .mean()
         .reset_index()
     )
@@ -294,19 +314,19 @@ def error_heatmap(model="resnet"):
     g.map_dataframe(heatmap)
     g.set_axis_labels("Proportion OoD", "Shift Intensity")
     plt.tight_layout()
+    plt.savefig("figures/accuracy_prediction_error_heatmap.pdf")
     plt.show()
 
 def error_per_accuracy():
-    data = pd.concat([pd.read_csv(f"acc_estimation_data/{dataset}_acc_prediction_gam_results.csv") for dataset in DATASETS])
+    data = get_all_acc_prediction_results()
     fits = pd.read_csv("gam_fits.csv")
     data = data[data["proportion"]==1]
     print(data.columns)
     data["relative_error"] = data["prediction"] - data["gap"]
 
-    g = sns.FacetGrid(fits, col="Dataset", row="feature_name", sharex=False, sharey=False)
-    g.map_dataframe(sns.lineplot, x="x", y="y", color="black", linestyle="--")
-    # g.map_dataframe(sns.scatterplot, x="gap", y="relative_error", hue="intensity")
-
-    # g.map_dataframe(sns.lineplot, x="gap", y="gap", color="black", linestyle="--")
+    g = sns.FacetGrid(data, col="Dataset", row="feature_name", sharex=False, sharey=False)
+    # g.map_dataframe(sns.lineplot, x="x", y="y", color="black", linestyle="--")
+    g.map_dataframe(sns.scatterplot, x="gap", y="relative_error", hue="intensity")
+    g.map_dataframe(sns.lineplot, x="gap", y="gap", color="black", linestyle="--")
     plt.show()
 

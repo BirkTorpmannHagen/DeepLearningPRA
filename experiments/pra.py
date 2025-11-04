@@ -273,45 +273,47 @@ def collect_tpr_tnr_sensitivity_data():
 def collect_re_accuracy_estimation_data():
     bins = 11
 
-    for batch_size in BATCH_SIZES:
-        best = get_all_ood_detector_data(batch_size=batch_size, filter_thresholding_method=True,
-                                         filter_ood_correctness=True, filter_correctness_calibration=True,
-                                         filter_best=True, filter_organic=False)
-        for dataset in DATASETS:
-            if dataset!="OfficeHome" and batch_size!=1:
-                continue
-            dsd_accuracies = best[best["Dataset"] == dataset]
-            dfs = []
-            config = dsd_accuracies.groupby(["feature_name"])[["tpr", "tnr", "ba"]].mean().reset_index()
-            feature_name, _, _, _ = config.iloc[0]
-            data = load_data(dataset, DSD_LUT[feature_name], batch_size=batch_size, samples=1000, shift="",
-                             model="fine_data/")
-            data = data[
-                (data["shift"].isin(SYNTHETIC_SHIFTS) &
-                 (data["shift_intensity"] == data.groupby("shift")["shift_intensity"].transform("max")))
-                | (~data["shift"].isin(SYNTHETIC_SHIFTS))
-                ]
-            if data.empty:
-                continue
-            ood_sets = data[~data["shift"].isin(["ind_val", "ind_test", "train"])]["shift"].unique()
+    best = get_all_ood_detector_data(batch_size=1, filter_thresholding_method=True,
+                                     filter_ood_correctness=True, filter_correctness_calibration=True,
+                                     filter_best=True, filter_organic=False)
+    for dataset, model in itertools.product(DATASETS, MODELS):
+        dsd_accuracies = best[(best["Dataset"] == dataset)&(best["Model"]==model)]
+        if dsd_accuracies.empty:
+            continue
+        dfs = []
+        config = dsd_accuracies.groupby(["feature_name"])[["tpr", "tnr", "ba"]].mean().reset_index()
+        feature_name, _, _, _ = config.iloc[0]
+        data = load_data(dataset, DSD_LUT[feature_name], batch_size=1, samples=1000, shift="",
+                         model=model)
+        data = data[
+            (data["shift"].isin(SYNTHETIC_SHIFTS) &
+             (data["shift_intensity"] == data.groupby("shift")["shift_intensity"].transform("max")))
+            | (~data["shift"].isin(SYNTHETIC_SHIFTS))
+            ]
+        if data.empty:
+            continue
+        ood_sets = data[~data["shift"].isin(["ind_val", "ind_test", "train"])]["shift"].unique()
 
-            with tqdm(total=bins * len(ood_sets) * (len(ood_sets) - 1)) as pbar:
-                for val_set in ood_sets:
-                    for test_set in ood_sets:
-                        for calibrated_by_fold in [False, True]:
-                            pool = Pool(bins)
-                            print("multiprocessing...")
-                            results = pool.starmap(simulate_dsd_accuracy_estimation, [
-                                (data, rate, val_set, test_set, feature_name, calibrated_by_fold) for rate
-                                in np.linspace(0, 1, bins)])
-                            pool.close()
-                            # results = results.groupby(["tpr", "tnr", "rate", "test_set", "val_set", "Tree"]).mean().reset_index()
-                            for result in results:
-                                dfs.append(result)
-                                pbar.update(1)
-            df_final = pd.concat(dfs)
-            print(df_final.head(10))
-            df_final.to_csv(f"pra_data_final/dsd_results_{dataset}_{batch_size}.csv")
+        with tqdm(total=bins * len(ood_sets) * (len(ood_sets) - 1)) as pbar:
+            for val_set in ood_sets:
+                for test_set in ood_sets:
+                    for calibrated_by_fold in [False, True]:
+                        pool = Pool(bins)
+                        print("multiprocessing...")
+                        results = pool.starmap(simulate_dsd_accuracy_estimation, [
+                            (data, rate, val_set, test_set, feature_name, calibrated_by_fold) for rate
+                            in np.linspace(0, 1, bins)])
+                        pool.close()
+                        # results = results.groupby(["tpr", "tnr", "rate", "test_set", "val_set", "Tree"]).mean().reset_index()
+                        for result in results:
+                            result["Model"]= model
+                            dfs.append(result)
+                            pbar.update(1)
+        df_final = pd.concat(dfs)
+        print(df_final.head(10))
+        if not os.path.exists(f"data/{model}/pra_data/"):
+            os.makedirs(f"data/{model}/pra_data/")
+        df_final.to_csv(f"data/{model}/pra_data/{dataset}_pre_results.csv")
 
 
 def plot_ba_rate_sensitivity():

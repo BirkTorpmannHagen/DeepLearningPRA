@@ -196,10 +196,14 @@ def run_methodological_experiments():
 
 def run_acc_prediction_experiments():
     # test_generalization_gap_estimation(1)
-    # get_acc_prediction_results(1)
-    acc_prediction_table()
+    # for model in MODELS:
+    #     get_acc_prediction_results(1, model=model)
+    # ood_detector_correctness_prediction_accuracy(1, model="deeplabv3plus", shift="")
+
+    # acc_prediction_table()
+    collect_re_accuracy_estimation_data()
     error_heatmap()
-    # error_per_accuracy()
+    error_per_accuracy()
 
 
 if __name__ == '__main__':
