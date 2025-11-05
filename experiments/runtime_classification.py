@@ -1,3 +1,5 @@
+import os.path
+
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 
@@ -26,7 +28,7 @@ def cost_benefit_analysis():
 
         current_ood_val_acc = data[data["shift"]==ood_val_set]["correct_prediction"].mean()
         print(current_ood_val_acc)
-        sim = UniformBatchSimulator(data, ood_test_shift=ood_test_set, ood_val_shift=ood_val_set, maximum_loss=0.5, estimator=ErrorAdjustmentEstimator, dsd_tnr=0.9, dsd_tpr=0.9)
+        sim = UniformBatchSimulator(data, ood_test_fold=ood_test_set, ood_val_fold=ood_val_set, maximum_loss=0.5, estimator=ErrorAdjustmentEstimator, dsd_tnr=0.9, dsd_tpr=0.9)
         results = sim.sim(0.5, 600) #just to get the right parameters
 
         for acc in np.linspace(0, 1, 11):
@@ -39,7 +41,7 @@ def cost_benefit_analysis():
             cba_data.append({"Component":"Classifier", "Accuracy":acc, "Risk Estimate":d_risk})
             pbar.update(1)
 
-        sim = UniformBatchSimulator(data, ood_test_shift=ood_test_set, ood_val_shift=ood_val_set, maximum_loss=0.5,
+        sim = UniformBatchSimulator(data, ood_test_fold=ood_test_set, ood_val_fold=ood_val_set, maximum_loss=0.5,
                                     estimator=ErrorAdjustmentEstimator, dsd_tnr=0.9, dsd_tpr=0.9)
         results = sim.sim(0.5, 600)  # just to get the right parameters
         for acc in np.linspace(0, 1, 11):
@@ -327,18 +329,19 @@ def ood_detector_correctness_prediction_accuracy(batch_size, model="resnet", shi
             continue
         data_ds.to_csv(f"data/{model}/ood_detector_data/ood_detector_correctness_{dataset}_{batch_size}.csv", index=False)
 
-def get_all_ood_detector_data(batch_size, filter_thresholding_method=False, filter_ood_correctness=False, filter_correctness_calibration=False, filter_organic=False, filter_best=False):
+def get_all_ood_detector_data(batch_size, filter_thresholding_method=False, filter_ood_correctness=False, filter_correctness_calibration=False, filter_organic=False, filter_best=False, model="resnet"):
     dfs = []
-    for model in MODELS:
-        if len(os.listdir(f"data/{model}/ood_detector_data"))==0:
-            ood_detector_correctness_prediction_accuracy(batch_size, model=model, shift="")
-        for dataset, feature in itertools.product(DATASETS, DSDS):
-            try:
-                df = pd.read_csv(f"data/{model}/ood_detector_data/ood_detector_correctness_{dataset}_{batch_size}.csv")
-            except FileNotFoundError:
-                continue
-            df["Model"] = model
-            dfs.append(df)
+    if not os.path.exists(f"data/{model}/ood_detector_data"):
+        os.makedirs(f"data/{model}/ood_detector_data")
+    if len(os.listdir(f"data/{model}/ood_detector_data"))==0:
+        ood_detector_correctness_prediction_accuracy(batch_size, model=model, shift="")
+    for dataset, feature in itertools.product(DATASETS, DSDS):
+        try:
+            df = pd.read_csv(f"data/{model}/ood_detector_data/ood_detector_correctness_{dataset}_{batch_size}.csv")
+        except FileNotFoundError:
+            continue
+        df["Model"] = model
+        dfs.append(df)
     df = pd.concat(dfs)
     if filter_thresholding_method:
         df = df[df["Threshold Method"] == "val_optimal"]
@@ -352,13 +355,13 @@ def get_all_ood_detector_data(batch_size, filter_thresholding_method=False, filt
 
     if filter_best:
         meaned_ba = df.groupby(["Dataset", "Model", "feature_name"])["ba"].mean().reset_index()
-        print(meaned_ba)
         best_ba = meaned_ba.loc[meaned_ba.groupby(["Dataset", "Model"])["ba"].idxmax()]
-        print()
-        print(best_ba.head(10))
         df = df.merge(best_ba[["Dataset", "Model", "feature_name"]], on=["Dataset", "Model", "feature_name"], how="inner")
 
     return df
+
+
+
 def ood_rv_accuracy_by_dataset_and_feature(batch_size):
     df = get_all_ood_detector_data(batch_size, filter_organic=True, filter_thresholding_method=True, filter_correctness_calibration=True, filter_ood_correctness=False, model="fine_ood_detector_data")
     df = df[df["OoD Val Fold"]!=df["OoD Test Fold"]]

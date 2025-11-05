@@ -22,28 +22,24 @@ class Simulator:
     Abstract simulator class
 """
 
-    def __init__(self, df, ood_test_shift, ood_val_shift, estimator=ErrorAdjustmentEstimator, calibrate_by_fold=True, trace_length=100,
-                 use_synth=True, **kwargs):
+    def __init__(self, df, ood_test_fold, ood_val_fold, estimator=ErrorAdjustmentEstimator, trace_length=100,
+                 use_synth=False, **kwargs):
 
         self.df = df
 
-        self.ood_test_shift = ood_test_shift
-        self.ood_val_shift = ood_val_shift
+        self.ood_test_fold= ood_test_fold
+        self.ood_val_fold = ood_val_fold
         # self.ood_detector = OODDetector(df)
-        if use_synth:
-            self.ood_detector = SyntheticOODDetector(kwargs["dsd_tpr"], kwargs["dsd_tnr"])
-            dsd_tpr = kwargs["dsd_tpr"]
-            dsd_tnr = kwargs["dsd_tnr"]
-        else:
-            self.ood_detector = OODDetector(df, ood_val_shift)
-            train_df = df[(df["shift"] == ood_val_shift) | (df["shift"] == "ind_val")]
 
-            self.ood_detector = OODDetector(train_df, "val_optimal")
-            dsd_tpr, dsd_tnr = self.ood_detector.get_likelihood()
+        self.ood_detector = OODDetector(df, ood_val_fold)
+        train_df = df[(df["fold"] == ood_val_fold) | (df["fold"] == "ind_val")]
+
+        self.ood_detector = OODDetector(train_df, "val_optimal")
+        dsd_tpr, dsd_tnr = self.ood_detector.get_likelihood()
 
 
-        self.ood_val_acc = self.get_predictor_accuracy(self.ood_val_shift)
-        self.ood_test_acc = self.get_predictor_accuracy(self.ood_test_shift)
+        self.ood_val_acc = self.get_predictor_accuracy(self.ood_val_fold)
+        self.ood_test_acc = self.get_predictor_accuracy(self.ood_test_fold)
         self.ind_val_acc = self.get_predictor_accuracy("ind_val")
         self.ind_test_acc = self.get_predictor_accuracy("ind_test")
 
@@ -53,8 +49,8 @@ class Simulator:
 
         ind_ndsd_acc = self.get_conditional_prediction_likelihood_estimates("ind_val", False)
         ind_dsd_acc = self.get_conditional_prediction_likelihood_estimates("ind_val", True)
-        ood_ndsd_acc = self.get_conditional_prediction_likelihood_estimates(ood_val_shift, False)
-        ood_dsd_acc = self.get_conditional_prediction_likelihood_estimates(ood_val_shift, True)
+        ood_ndsd_acc = self.get_conditional_prediction_likelihood_estimates(ood_val_fold, False)
+        ood_dsd_acc = self.get_conditional_prediction_likelihood_estimates(ood_val_fold, True)
 
 
         self.detector_tree = DetectorEventTree(dsd_tpr, dsd_tnr, ind_ndsd_acc, ind_dsd_acc, ood_ndsd_acc, ood_dsd_acc,
@@ -63,10 +59,10 @@ class Simulator:
                                        ind_acc=self.ind_val_acc, estimator=estimator)
         self.dsd_trace = Trace(trace_length)
         self.loss_trace_for_eval = Trace(trace_length)
-        self.shifts = self.df[self.df["ood"]]["shift"].unique()
+        self.folds = self.df[self.df["ood"]]["fold"].unique()
 
-    def get_conditional_prediction_likelihood_estimates(self, shift, monitor_verdict, num_samples=1000):
-        frame_copy = self.df[(self.df["shift"] == shift)]
+    def get_conditional_prediction_likelihood_estimates(self, fold, monitor_verdict, num_samples=1000):
+        frame_copy = self.df[(self.df["fold"] == fold)]
         samples = []
         for i in range(num_samples):
             sample = frame_copy.sample(replace=True).copy()
@@ -81,7 +77,7 @@ class Simulator:
         return likelihood
 
     def get_predictor_accuracy(self, fold):
-        return self.df[self.df["shift"] == fold]["correct_prediction"].mean()
+        return self.df[self.df["fold"] == fold]["correct_prediction"].mean()
 
 
 
@@ -109,17 +105,22 @@ class UniformBatchSimulator(Simulator):
     """
     permits conditional data collection simulating model + ood detector
     """
-    def __init__(self, df, ood_test_shift, ood_val_shift, estimator=ErrorAdjustmentEstimator, trace_length=100, use_synth=True, calibrated_by_fold=True, **kwargs):
-        super().__init__(df, ood_test_shift, ood_val_shift, estimator,calibrated_by_fold, trace_length, use_synth, **kwargs)
+    def __init__(self, df, ood_test_fold, ood_val_fold, estimator=ErrorAdjustmentEstimator, trace_length=100, **kwargs):
+        super().__init__(df, ood_test_fold, ood_val_fold, estimator, trace_length, **kwargs)
 
 
-    def sample_a_uniform_batch(self, shift):
-        return self.df[self.df["shift"] == shift].sample()
+    def sample_a_uniform_batch(self, fold):
+        try:
+            sample = self.df[self.df["fold"] == fold].sample()
+        except ValueError:
+            print("Error sampling from fold ", fold, "w/df: ", self.df.head(10))
+            raise ValueError
+        return sample
 
     def process(self, has_shifted, index):
         shifted = has_shifted[index]
         if shifted:
-            batch = self.sample_a_uniform_batch(self.ood_test_shift)
+            batch = self.sample_a_uniform_batch(self.ood_test_fold)
         else:
             batch = self.sample_a_uniform_batch("ind_test")
 

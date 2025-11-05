@@ -3,6 +3,7 @@ import os.path
 from multiprocessing import Pool
 
 import seaborn as sns
+from gast import descr
 from matplotlib import pyplot as plt
 
 from experiments.runtime_classification import get_all_ood_detector_data, ood_verdict_shiftwise_accuracy_tables
@@ -21,17 +22,15 @@ np.set_printoptions(suppress=True)
 plt.rcParams['text.usetex'] = True  # Enable LaTeX rendering
 
 
-def simulate_dsd_accuracy_estimation(data, rate, val_set, test_set, feature_name, calibrated_by_fold):
-    sim = UniformBatchSimulator(data, ood_test_shift=test_set, ood_val_shift=val_set,
-                                estimator=ErrorAdjustmentEstimator,
-                                calibrated_by_fold=calibrated_by_fold, use_synth=False)
+def simulate_dsd_accuracy_estimation(data, rate, val_set, test_fold, feature_name):
+    sim = UniformBatchSimulator(data, ood_test_fold=test_fold, ood_val_fold=val_set,
+                                estimator=ErrorAdjustmentEstimator)
     results = sim.sim(rate, 600)
     results = results.groupby(["Tree"]).mean().reset_index()
     # results = results.mean()
     results["dsd"] = feature_name
     results["rate"] = rate
-    results["Calibrated By Fold"] = calibrated_by_fold
-    results["test_set"] = test_set
+    results["test_set"] = test_fold
     results["val_set"] = val_set
     return results
 
@@ -206,7 +205,7 @@ def get_ratewise_risk_data(load=True):
             for ood_val_set, ood_test_set, rate in itertools.product(oods, oods, rates):
                 if ood_val_set == ood_test_set:
                     continue
-                sim = UniformBatchSimulator(data, ood_test_shift=ood_test_set, ood_val_shift=ood_val_set,
+                sim = UniformBatchSimulator(data, ood_test_fold=ood_test_set, ood_val_fold=ood_val_set,
                                             maximum_loss=0.5, estimator=ErrorAdjustmentEstimator, use_synth=False)
                 results = sim.sim(rate, 600)
                 results["Rate"] = rate
@@ -248,7 +247,7 @@ def collect_tpr_tnr_sensitivity_data():
                         continue  #used only to estimate accuracies
                     for rate in np.linspace(0, 1, bins):
                         for ba in np.linspace(0.5, 1, bins):
-                            sim = UniformBatchSimulator(data, ood_test_shift=test_set, ood_val_shift=val_set,
+                            sim = UniformBatchSimulator(data, ood_test_fold=test_set, ood_val_fold=val_set,
                                                         estimator=ErrorAdjustmentEstimator, dsd_tpr=ba, dsd_tnr=ba)
                             results = sim.sim(rate, 600)
                             results = results.groupby(["Tree"]).mean().reset_index()
@@ -285,30 +284,29 @@ def collect_re_accuracy_estimation_data():
         feature_name, _, _, _ = config.iloc[0]
         data = load_data(dataset, DSD_LUT[feature_name], batch_size=1, samples=1000, shift="",
                          model=model)
-        data = data[
-            (data["shift"].isin(SYNTHETIC_SHIFTS) &
-             (data["shift_intensity"] == data.groupby("shift")["shift_intensity"].transform("max")))
-            | (~data["shift"].isin(SYNTHETIC_SHIFTS))
-            ]
         if data.empty:
             continue
-        ood_sets = data[~data["shift"].isin(["ind_val", "ind_test", "train"])]["shift"].unique()
 
-        with tqdm(total=bins * len(ood_sets) * (len(ood_sets) - 1)) as pbar:
-            for val_set in ood_sets:
-                for test_set in ood_sets:
-                    for calibrated_by_fold in [False, True]:
-                        pool = Pool(bins)
-                        print("multiprocessing...")
-                        results = pool.starmap(simulate_dsd_accuracy_estimation, [
-                            (data, rate, val_set, test_set, feature_name, calibrated_by_fold) for rate
-                            in np.linspace(0, 1, bins)])
-                        pool.close()
-                        # results = results.groupby(["tpr", "tnr", "rate", "test_set", "val_set", "Tree"]).mean().reset_index()
-                        for result in results:
-                            result["Model"]= model
-                            dfs.append(result)
-                            pbar.update(1)
+
+        ood_folds = data[~data["fold"].isin(["ind_val", "ind_test", "train"])]["fold"].unique()
+        organic_ood_sets = data[(data["Organic"]==True)&(~data["fold"].isin(["ind_val", "ind_test", "train"]))]["fold"].unique()
+
+        with tqdm(total=bins * len(ood_folds) * (len(organic_ood_sets) - 1)) as pbar:
+            for val_fold in organic_ood_sets:
+                for test_fold in ood_folds:
+                    print(f"{dataset}-{model}-val:{val_fold}-test:{test_fold}")
+
+                    pool = Pool(bins)
+                    print("multiprocessing...")
+                    results = pool.starmap(simulate_dsd_accuracy_estimation, [
+                        (data, rate, val_fold, test_fold, feature_name) for rate
+                        in np.linspace(0, 1, bins)])
+                    pool.close()
+                    # results = results.groupby(["tpr", "tnr", "rate", "test_set", "val_set", "Tree"]).mean().reset_index()
+                    for result in results:
+                        result["Model"]= model
+                        dfs.append(result)
+                        pbar.update(1)
         df_final = pd.concat(dfs)
         print(df_final.head(10))
         if not os.path.exists(f"data/{model}/pra_data/"):
@@ -557,7 +555,7 @@ def iou_distribution():
                         continue
                     print()
                     for ood_val_shift in ["EndoCV2020", "EtisLaribDB", "CVC-ClinicDB"]:
-                        sim = UniformBatchSimulator(df, ood_test_shift=dataset, ood_val_shift=ood_val_shift,
+                        sim = UniformBatchSimulator(df, ood_test_fold=dataset, ood_val_fold=ood_val_shift,
                                                     maximum_loss=0.5, use_synth=False)
                         results = sim.sim(1, 600)
                         results["Dataset"] = dataset
@@ -673,7 +671,7 @@ def get_datasetwise_risk():
                         print(f"Dataset {dataset} not in df")
                         continue
                     for ood_val_shift in ["EndoCV2020", "EtisLaribDB", "CVC-ClinicDB"]:
-                        sim = UniformBatchSimulator(df, ood_test_shift=dataset, ood_val_shift=ood_val_shift, maximum_loss=0.5, use_synth=False)
+                        sim = UniformBatchSimulator(df, ood_test_fold=dataset, ood_val_fold=ood_val_shift, maximum_loss=0.5, use_synth=False)
                         results = sim.sim(1, 600)
                         results["Dataset"]=dataset
                         results["Model"]=model_name

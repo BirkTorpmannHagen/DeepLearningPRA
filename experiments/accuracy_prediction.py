@@ -90,9 +90,11 @@ def test_generalization_gap_estimation(batch_size):
 
 def get_acc_prediction_results(batch_size, model="resnet"):
     df = get_all_ood_detector_data(batch_size, filter_thresholding_method=True, filter_ood_correctness=False,
-                                   filter_correctness_calibration=True, filter_organic=False, filter_best=False)
+                                   filter_correctness_calibration=True, filter_organic=False, filter_best=False, model=model)
     df = df[df["OoD==f(x)=y"] == False]  # only OOD performance
-
+    df = df[df["Model"]==model]
+    print(df)
+    assert df["Model"].unique()[0]==model
     df_synth = df[df["Shift Intensity"]!="Organic"]
     df_synth.replace(SHIFT_PRINT_LUT, inplace=True)
     unique_shifts  = df_synth["Shift"].unique().tolist()
@@ -206,20 +208,47 @@ def get_acc_prediction_results(batch_size, model="resnet"):
                                                "detection_rate": detection_rate, "m":reg_model.coef_[0][0], "b":reg_model.intercept_[0]})
 
         model_df = pd.DataFrame(model_data)
+        if model_df.empty:
+            continue
         model_df.to_csv(f"data/{model}/ood_detector_data/{dataset}_acc_prediction_results.csv", index=False)
         print(model_df.groupby(["Dataset", "feature_name", "Shift"])[["mae", "naive baseline mae"]].mean())
 
         # print(gam.summary())
 
 
-def acc_prediction_table():
-    for model in MODELS:
+def get_all_pre_data():
+    all_data = []
+    for model, dataset in itertools.product(MODELS, DATASETS):
         try:
-            df = pd.concat([pd.read_csv(f"data/{model}/ood_detector_data/{dataset}_acc_prediction_results.csv") for dataset in DATASETS if dataset!="Polyp"])
+            df = pd.read_csv(f"data/{model}/pra_data/{dataset}_pre_results.csv")
+            df["Dataset"] = dataset
+            all_data.append(df)
+        except FileNotFoundError:
+            print(f"No data for model {model} dataset {dataset} ")
+            continue
+        print(df.head(3))
+    all_df = pd.concat(all_data, ignore_index=True)
+    print(all_df.groupby(["Dataset", "Model"])["Accuracy Error"].mean())
+    return all_df
+
+
+
+def acc_prediction_table():
+    dfs = []
+    for model, dataset  in itertools.product(MODELS, DATASETS):
+        try:
+            df = pd.read_csv(f"data/{model}/ood_detector_data/{dataset}_acc_prediction_results.csv")
+            dfs.append(df)
+            df["Model"]=model
         except FileNotFoundError:
             print(f"No data for model {model}")
             continue
-        print(df.groupby(["Dataset", "feature_name"])[["mae", "naive baseline mae"]].mean())
+        except pd.errors.EmptyDataError:
+            print(f"Empty data for model {model} dataset {dataset}")
+            continue
+    df = pd.concat(dfs, ignore_index=True)
+
+    print(df.groupby(["Dataset", "Model", "feature_name"])[["mae", "naive baseline mae"]].mean())
 
 def get_all_acc_prediction_results():
     dfs = []
@@ -236,13 +265,32 @@ def get_all_acc_prediction_results():
 
 def error_heatmap():
     df = get_all_acc_prediction_results()
-    ood_detector_data = get_all_ood_detector_data(batch_size=1, filter_thresholding_method=True, filter_ood_correctness=False,
-                                      filter_correctness_calibration=True, filter_organic=True, filter_best=True)
+    ood_detector_data = []
+    for model in MODELS:
+        for_model = get_all_ood_detector_data(batch_size=1, filter_thresholding_method=True, filter_ood_correctness=False,
+                                      filter_correctness_calibration=True, filter_organic=True, filter_best=True, model=model)
+        if for_model.empty:
+            continue
+        for_model = for_model[for_model["Model"]==model]
+        ood_detector_data.append(for_model)
+    ood_detector_data = pd.concat(ood_detector_data, ignore_index=True)
+
+    print(ood_detector_data["Dataset"].unique())
+    pre_data = get_all_pre_data()
+    pre_data = pre_data.groupby(["Dataset", "dsd", "val_set", "rate", "Model"])["Accuracy Error"].mean().reset_index()
+    pre_data["intensity"] = pre_data["val_set"].apply(lambda x: x.split("_")[-1] if "_" in x else "OoD")
+    pre_data.rename(columns={"dsd":"feature_name", "Accuracy Error":"mae", "rate":"proportion"}, inplace=True)
+    pre_data = pre_data.groupby(["Dataset", "feature_name", "proportion", "intensity", "Model"])[["mae"]].mean().reset_index()
+
     ood_detector_data = ood_detector_data[ood_detector_data["OoD==f(x)=y"]==False]
     best_detectors_per_dataset = ood_detector_data.groupby(["Dataset", "feature_name", "Model"])["ba"].mean().reset_index()
+    print(df["Dataset"].unique())
+
     df = df.merge(best_detectors_per_dataset, on=["Model", "Dataset", "feature_name"], how="inner", suffixes=("", "_detector"))
     df = df.round(2)
-    print(df.head(3))
+    print(df["Dataset"].unique())
+
+    pre_data = pre_data.round(2)
     df["intensity"] = df["intensity"].apply(lambda x: str(round(float(x), 2)) if x!="OoD" else x)
     # df["mae"] = df["mae"].apply(lambda x: float(x.strip("[]")))
     # Mean per (Dataset, feature_name, proportion, intensity)
@@ -253,65 +301,150 @@ def error_heatmap():
         .reset_index()
     )
 
-    g = sns.FacetGrid(df_grouped, col="Dataset", sharex=True, sharey=True, margin_titles=False, col_wrap=2)
+    g = sns.FacetGrid(df_grouped, col="Dataset", sharex=True, sharey=True, margin_titles=False, col_wrap=3)
+    from matplotlib.colors import LinearSegmentedColormap, PowerNorm
+    from matplotlib.colors import hsv_to_rgb
+    def saturation_only_cmap(hue, value=0.75, n=256):
+        """
+        Colormap that holds brightness (V) constant and varies only saturation (S):
+        t=0 -> fully saturated color, t=1 -> gray with same brightness.
+        """
+        t = np.linspace(0, 1, n)
+        sats = 1.0 - t  # high saturation for low error
+        hsv = np.stack([np.full(n, hue), sats, np.full(n, value)], axis=1)
+        rgb = hsv_to_rgb(hsv)
+        return LinearSegmentedColormap.from_list(f"sats_only_{hue:.2f}", rgb)
 
-    def heatmap(data, **kwargs):
+    palette = {
+        "model": saturation_only_cmap(hue=0.33, value=0.75),  # green
+        "baseline": saturation_only_cmap(hue=0.00, value=0.75),  # red
+        "pre": saturation_only_cmap(hue=0.60, value=0.75),  # blue
+    }
+
+    def sort_mixed_index(df):
+        """Sort numeric-like intensities ascending, keep 'OoD' or non-numeric last."""
+
+        def parse_key(x):
+            try:
+                return (0, float(x))  # numeric part
+            except ValueError:
+                return (1, x)  # non-numeric last
+
+        return df.sort_index(key=lambda idx: [parse_key(x) for x in idx])
+
+    def draw_min_config_heatmap(data, **kwargs):
         ax = plt.gca()
+        dataset = data["Dataset"].unique()[0]
 
-        mae_p = data.pivot(index="intensity", columns="proportion", values="mae").sort_index().sort_index(axis=1)
-        base_p = data.pivot(index="intensity", columns="proportion", values="naive baseline mae").reindex_like(mae_p)
+        model = data["Model"].unique()[0]
+        pre_data_filt = pre_data[(pre_data["Dataset"]==dataset)&(pre_data["Model"]==model)]
+        # split by source
 
-        baseline_better = base_p < mae_p
-        vmin = float(mae_p.min().min())
-        vmax = float(mae_p.max().max())
-        norm = Normalize(vmin=vmin, vmax=vmax)
 
-        # draw both heatmaps WITHOUT colorbars
-        hm_mako = sns.heatmap(
-            mae_p, cmap="mako", norm=norm,
-            mask=baseline_better, cbar=False, ax=ax, **kwargs
+        # pivots (align grids)
+        model_p = data.pivot(index="intensity", columns="proportion", values="mae")
+        base_p = data.pivot(index="intensity", columns="proportion", values="naive baseline mae")
+        pre_p = pre_data_filt.pivot(index="intensity", columns="proportion", values="mae")
+
+        # union index/columns
+        all_idx = model_p.index.union(base_p.index if base_p is not None else model_p.index).union(
+            pre_p.index if pre_p is not None else model_p.index)
+        all_col = model_p.columns.union(base_p.columns if base_p is not None else model_p.columns).union(
+            pre_p.columns if pre_p is not None else model_p.columns)
+        model_p = model_p.reindex(index=all_idx, columns=all_col)
+        base_p = base_p.reindex(index=all_idx, columns=all_col)
+        pre_p = pre_p.reindex(index=all_idx, columns=all_col)
+
+        # 3D stack to get mins/argmins (order: model, baseline, pre)
+        stack = np.stack([
+            model_p.values,
+            base_p.values,
+            pre_p.values
+        ], axis=0)
+        # nan-aware min/argmin
+        min_vals = np.nanmin(stack, axis=0)
+        # for argmin with nans: replace nans with +inf so they won't win
+        stack_for_arg = np.where(np.isnan(stack), np.inf, stack)
+        winners = np.argmin(stack_for_arg, axis=0)  # 0=model,1=baseline,2=pre
+        # cells where all nan -> mask out entirely
+        all_nan_mask = np.all(np.isnan(stack), axis=0)
+
+        # Shared normalization over min values (exclude nans)
+        valid_min = min_vals[~np.isnan(min_vals)]
+        if valid_min.size == 0:
+            return
+        vmin = float(np.nanmin(valid_min))
+        vmax = float(np.nanmax(valid_min))
+        norm = PowerNorm(gamma=0.6, vmin=vmin, vmax=vmax)  # lower gamma → more separation at low end
+
+        # masks per config: True means "hide"; we invert below
+        mask_model = ~(winners == 0) | all_nan_mask
+        mask_baseline = ~(winners == 1) | all_nan_mask
+        mask_pre = ~(winners == 2) | all_nan_mask
+
+        # We'll plot the same numeric matrix (min_vals) three times, each with its own mask & cmap
+        # Use consistent DataFrame for seaborn
+        min_df = pd.DataFrame(min_vals, index=all_idx, columns=all_col)
+
+        # PRE (Blues)
+        sns.heatmap(
+            min_df, cmap=palette["pre"], norm=norm,
+            mask=mask_pre, cbar=False, ax=ax, **kwargs
         )
-        hm_magma = sns.heatmap(
-            mae_p, cmap="magma", norm=norm,
-            mask=~baseline_better, cbar=False, ax=ax, **kwargs
+        # BASELINE (Reds)
+        sns.heatmap(
+            min_df, cmap=palette["baseline"], norm=norm,
+            mask=mask_baseline, cbar=False, ax=ax, **kwargs
+        )
+        # MODEL (Greens)
+        hm = sns.heatmap(
+            min_df, cmap=palette["model"], norm=norm,
+            mask=mask_model, cbar=False, ax=ax, **kwargs
         )
 
-        # make two dedicated colorbar axes, very close together
+        # --- replace the Greys colorbar section with this ---
         divider = make_axes_locatable(ax)
-        # append the INNER one first (this will sit closest to the main axes)
-        cax_magma = divider.append_axes("right", size="5%", pad=0.015)
-        # then the OUTER one (sits to the right of the first)
-        cax_mako = divider.append_axes("right", size="5%", pad=0.030)
 
-        # create independent mappables for each cmap
-        sm_mako = sns.color_palette("mako", as_cmap=True)
-        sm_magma = sns.color_palette("magma", as_cmap=True)
+        # three slim, stacked colorbars (inner→outer)
+        cax_model = divider.append_axes("right", size="3%", pad=0.015)
+        cax_base = divider.append_axes("right", size="3%", pad=0.030)
+        cax_pre = divider.append_axes("right", size="3%", pad=0.045)
 
-        mappable_mako = plt.cm.ScalarMappable(norm=norm, cmap=sm_mako)
-        mappable_magma = plt.cm.ScalarMappable(norm=norm, cmap=sm_magma)
-        mappable_mako.set_array([])
-        mappable_magma.set_array([])
+        sm_model = plt.cm.ScalarMappable(norm=norm, cmap=palette["model"])
+        sm_base = plt.cm.ScalarMappable(norm=norm, cmap=palette["baseline"])
+        sm_pre = plt.cm.ScalarMappable(norm=norm, cmap=palette["pre"])
+        for sm in (sm_model, sm_base, sm_pre):
+            sm.set_array([])
 
-        # draw the colorbars
-        cb_magma = ax.figure.colorbar(mappable_magma, cax=cax_magma)
-        cb_mako = ax.figure.colorbar(mappable_mako, cax=cax_mako)
+        cb_model = ax.figure.colorbar(sm_model, cax=cax_model)
+        cb_base = ax.figure.colorbar(sm_base, cax=cax_base)
+        cb_pre = ax.figure.colorbar(sm_pre, cax=cax_pre)
 
-        # hide ticks/numbers for magma; keep them for mako
-        cb_magma.ax.set_yticklabels([])
-        cb_magma.ax.tick_params(length=0)
+        # aesthetics: show ticks only on the outermost (blue/PRE) bar
+        for cb in (cb_model, cb_base):
+            cb.ax.set_yticklabels([])
+            cb.ax.tick_params(length=0)
+        for cb in (cb_model, cb_base, cb_pre):
+            cb.outline.set_visible(False)
 
-        # optional: thin outlines off
-        for c in (cb_mako, cb_magma):
-            c.outline.set_visible(False)
+        cb_pre.ax.set_ylabel("Min error (low = saturated)", rotation=270, labelpad=10)
 
-        # legend once per facet
-        handles = [Patch(label="Model ≤ Baseline (mako)"), Patch(label="Baseline < Model (magma)")]
+        # Legend: which color == which configuration
+        handles = [
+            Patch(color=palette["model"](0.0), label="Model"),  # t=0 → saturated
+            Patch(color=palette["baseline"](0.0), label="Baseline"),
+            Patch(color=palette["pre"](0.0), label="PRE"),
+        ]
         if not getattr(ax, "_legend_added", False):
-            ax.legend(handles, ["Model ≤ Baseline (mako)", "Baseline < Model (magma)"],
-                      frameon=False, loc="upper right", fontsize="small")
+            ax.legend(handles=handles, frameon=False, loc="upper right", fontsize="small", title="Winner")
             ax._legend_added = True
 
-    g.map_dataframe(heatmap)
+        # Tidy axes
+        ax.set_xlabel("Proportion OoD")
+        ax.set_ylabel("Shift Intensity")
+        ax.invert_yaxis()
+
+    g.map_dataframe(draw_min_config_heatmap)
     g.set_axis_labels("Proportion OoD", "Shift Intensity")
     plt.tight_layout()
     plt.savefig("figures/accuracy_prediction_error_heatmap.pdf")
@@ -319,14 +452,58 @@ def error_heatmap():
 
 def error_per_accuracy():
     data = get_all_acc_prediction_results()
-    fits = pd.read_csv("gam_fits.csv")
-    data = data[data["proportion"]==1]
-    print(data.columns)
-    data["relative_error"] = data["prediction"] - data["gap"]
 
-    g = sns.FacetGrid(data, col="Dataset", row="feature_name", sharex=False, sharey=False)
-    # g.map_dataframe(sns.lineplot, x="x", y="y", color="black", linestyle="--")
-    g.map_dataframe(sns.scatterplot, x="gap", y="relative_error", hue="intensity")
-    g.map_dataframe(sns.lineplot, x="gap", y="gap", color="black", linestyle="--")
+    # Compute mean MAE per (Dataset, feature_name, Model)
+    mae_means = (
+        data.groupby(["Dataset", "feature_name", "Model"], as_index=False)["mae"]
+        .mean()
+    )
+
+    # Find (feature_name, Model) combination with lowest MAE per Dataset
+    best_combinations = (
+        mae_means.loc[mae_means.groupby("Dataset")["mae"].idxmin(),
+        ["Dataset", "feature_name", "Model"]]
+    )
+
+    # Filter data to keep only the best combinations per dataset
+    filtered_data = data.merge(best_combinations, on=["Dataset", "feature_name", "Model"])
+    # gam_
+    fits = pd.read_csv("gam_fits.csv")
+    filtered_data["relative_error"] = data["pred"] - data["gap"]
+    filtered_data = filtered_data[filtered_data["proportion"]==1]
+
+    def scatter_with_sliding_mean(data, x, y, window=31, **kwargs):
+        """
+        Overlay a centered rolling (sliding-window) mean on top of scatter points.
+        `window` is the number of points in the rolling window (use an odd number).
+        """
+        ax = plt.gca()
+
+        # scatter
+        sns.scatterplot(data=data, x=x, y=y, alpha=0.5, ax=ax)
+
+        # rolling mean (by count, not by x-width)
+        df = data[[x, y]].dropna().sort_values(x)
+        if len(df) >= window:
+            m = df[y].rolling(window=window, center=True).mean()
+            ax.plot(df[x], m, linewidth=2, linestyle='-', color='red', label='Sliding Mean')
+        else:
+            # if too few points for rolling mean, just connect them
+            ax.plot(df[x], df[y], linewidth=2, linestyle='-', color='red', label='Line')
+
+    g = sns.FacetGrid(filtered_data, col="Dataset", sharex=False, sharey=False, col_wrap=3)
+
+    # scatter + sliding window average over the scatter points
+    g.map_dataframe(scatter_with_sliding_mean, x="gap", y="mae", window=31)
+
+    # keep the baseline as a dashed line
+    g.map_dataframe(sns.lineplot, x="gap", y="naive baseline mae", color="black", linestyle="--")
+
+    g.set_axis_labels("Generalization Gap", "Accuracy Prediction Error (MAE)")
+    g.set_titles(col_template="{col_name}")
+    for ax in g.axes.flat:
+        ax.set_yscale("log")
+        ax.set_ylim(1e-3,1)
+    plt.savefig("figures/accuracy_prediction_error_per_gap.pdf", bbox_inches="tight")
     plt.show()
 
