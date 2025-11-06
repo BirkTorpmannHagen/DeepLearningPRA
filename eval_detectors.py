@@ -1,7 +1,7 @@
 # from yellowbrick.features import PCA
 
 from testbeds import *
-from utils import load_all, BATCH_SIZES, DATASETS, SYNTHETIC_SHIFTS
+from utils import *
 
 
 def compute_stats(train_features, train_losses, ind_val_features, ind_val_losses, ind_test_features, ind_test_losses, ood_features, ood_losses, fname, feature_names):
@@ -139,6 +139,8 @@ def collect_bias_data():
 def collect_single_data(testbed):
     dataset_name = testbed.__name__.split("TestBed")[0]
     for model in MODELS:
+        if model!="resnet":
+            continue
         for mode in SYNTHETIC_SHIFTS+["normal"]:
             if mode=="autoattack":
                 continue
@@ -147,7 +149,7 @@ def collect_single_data(testbed):
             if os.path.exists(f"data/{model}/feature_data/{dataset_name}_{mode}_knn.csv"):
                 continue
             print(mode)
-            collect_data(testbed, dataset_name, mode=mode, model=model, prefix="feature_data")
+            collect_data(testbed, dataset_name, mode=mode, model=model)
 
 
 
@@ -167,10 +169,10 @@ if __name__ == '__main__':
     # collect_single_data(PolypTestBed)
 
     # collect_single_data(PolypTestBed)
-    collect_single_data(OfficeHomeTestBed)
+    # collect_single_data(OfficeHomeTestBed)
     collect_single_data(Office31TestBed)
-    collect_single_data(NICOTestBed)
-    collect_single_data(CCTTestBed)
+    # collect_single_data(NICOTestBed)
+    # collect_single_data(CCTTestBed)
 
     # from experiments.runtime_classification import ood_detector_correctness_prediction_accuracy
     # for batch_size in BATCH_SIZES:

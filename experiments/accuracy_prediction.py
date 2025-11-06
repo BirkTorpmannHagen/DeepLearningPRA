@@ -16,11 +16,11 @@ from utils import *
 
 
 def test_generalization_gap_estimation(batch_size):
-    df_raw = load_all(batch_size, shift="", model="resnet")
+    df_raw = load_all(batch_size, shift="")
     print(df_raw.groupby(["Dataset", "fold"])["correct_prediction"].mean().reset_index())
 
     df = get_all_ood_detector_data(batch_size, filter_thresholding_method=True, filter_ood_correctness=False,
-                                   filter_correctness_calibration=True, filter_organic=False, filter_best=True, )
+                                   filter_correctness_calibration=True, filter_organic=False, filter_best=False, model="resnet")
     df = df[df["OoD==f(x)=y"] == False]  # only OOD performance
 
     df_synth = df[df["Shift Intensity"]!="Organic"]
@@ -51,9 +51,9 @@ def test_generalization_gap_estimation(batch_size):
     acc["Accuracy"] = acc["correct_prediction"]
     # acc["Generalization Gap"] = acc["acc_diff"] / acc["ind_val_acc"]  # e.g., 0.10 == +10%
     # acc["Generalization Gap"] = - acc["Generalization Gap"] * 100  # convert to percentage
-    merged = merged.merge(acc, on=["Dataset", "fold"], how="left")
+    merged = merged.merge(acc, on=["Dataset", "fold", "feature_name"], how="left")
 
-    g = sns.FacetGrid(merged, col="Dataset", col_wrap=3)
+    g = sns.FacetGrid(merged, col="Dataset", row="feature_name")
     g.map_dataframe(sns.scatterplot, x="Detection Rate", y="Generalization Gap", hue="Shift", alpha=0.7, edgecolor=None)
 
     merged["shift"] = merged.replace(SHIFT_PRINT_LUT, inplace=True)
