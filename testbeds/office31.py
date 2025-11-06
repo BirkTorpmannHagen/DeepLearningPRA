@@ -1,8 +1,8 @@
 from testbeds.base import *
 
 class Office31TestBed(BaseTestBed):
-    def __init__(self, rep_model="vae", mode="severity", sampler="RandomSampler", batch_size=16):
-        super().__init__( mode=mode, sampler=sampler, batch_size=batch_size)
+    def __init__(self, model="vae", mode="severity", sampler="RandomSampler", batch_size=16):
+        super().__init__(model=model,mode=mode, sampler=sampler, batch_size=batch_size)
         self.trans = transforms.Compose([
             transforms.Resize((INPUT_SIZE, INPUT_SIZE)),
             transforms.ToTensor(), ])
@@ -10,10 +10,15 @@ class Office31TestBed(BaseTestBed):
         self.ood_contexts = self.ood_val.ood_contexts
 
         self.num_classes = num_classes = self.ind_train.num_classes
+        if self.model=="resnet":
+            self.classifier = ResNetClassifier.load_from_checkpoint(
+                "classifier_logs/resnet/Office31Dataset/checkpoints/epoch=97-step=13818.ckpt", num_classes=num_classes,
+                resnet_version=101).to("cuda").eval()
+        elif self.model=="vit":
+            self.classifier = ViTClassifier.load_from_checkpoint(
+                "classifier_logs/vit/Office31Dataset/checkpoints/epoch=267-step=37788.ckpt", num_classes=num_classes, batch_size=32, lr=1e-3
+            ).to("cuda").eval()
 
-        self.classifier = ResNetClassifier.load_from_checkpoint(
-            "classifier_logs/resnet/Office31Dataset/checkpoints/epoch=97-step=13818.ckpt", num_classes=num_classes,
-            resnet_version=101).to("cuda").eval()
         self.glow = GlowPL.load_from_checkpoint("glow_logs/Office31Dataset/checkpoints/epoch=297-step=42018.ckpt", in_channel=3, n_flow=32, n_block=4, conv_lu=True, affine=True).cuda().eval()
         self.mode = mode
 

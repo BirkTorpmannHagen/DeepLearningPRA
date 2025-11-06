@@ -1,5 +1,4 @@
 import albumentations as alb
-import imgaug as ia
 import matplotlib.pyplot as plt
 import torch
 import numpy as np
@@ -106,9 +105,8 @@ def autoattack(model, x, eps=1.0, target=None):
 
 def jpeg(x, intensity):
     seed_all(0)
-    alb.JpegCompression(quality_lower=int(100-intensity*50), quality_upper=100-int(intensity*50), always_apply=True)
     x = x.permute(1, 2, 0).numpy()
-    transforms = alb.Compose([alb.JpegCompression(quality_lower=int(100-intensity*50), quality_upper=100-int(intensity*50), always_apply=True)])
+    transforms = alb.Compose([alb.ImageCompression(quality_range=(int(100-intensity*50),100-int(intensity*50)), p=1)])
     transformed = transforms(image=x)["image"]
     transformed = ToTensor()(transformed)
     return transformed

@@ -1,7 +1,7 @@
 # from yellowbrick.features import PCA
 
 from testbeds import *
-from utils import load_all, BATCH_SIZES, DATASETS, SYNTHETIC_SHIFTS
+from utils import *
 
 
 def compute_stats(train_features, train_losses, ind_val_features, ind_val_losses, ind_test_features, ind_test_losses, ood_features, ood_losses, fname, feature_names):
@@ -14,9 +14,9 @@ def compute_stats_no_ind(ood_features, ood_losses, fname, feature_names):
     for df, feature_name in zip(dfs, feature_names):
         df.to_csv(f"{fname}_{feature_name}.csv")
 
-def collect_data(testbed_constructor, dataset_name, mode="noise"):
+def collect_data(testbed_constructor, dataset_name, mode="noise", model="resnet"):
     print("Collecting data for", dataset_name, "in", mode, "mode")
-    bench = testbed_constructor("classifier", mode=mode, batch_size=8)
+    bench = testbed_constructor(model=model, mode=mode, batch_size=8)
     # features = [mahalanobis]
     features = [cross_entropy,energy,knn, typicality, softmax,  grad_magnitude]
     # features = [cross_entropy,energy,knn, typicality, softmax]
@@ -138,8 +138,16 @@ def collect_bias_data():
 
 def collect_single_data(testbed):
     dataset_name = testbed.__name__.split("TestBed")[0]
+
+
     for model in MODELS:
+        if not os.path.exists(f"data/{model}/feature_data"):
+            os.makedirs(f"data/{model}/feature_data")
+        if model!="vit":
+            continue
         for mode in SYNTHETIC_SHIFTS+["normal"]:
+            if mode=="fgsm":
+                continue
             if mode=="autoattack":
                 continue
             if dataset_name=="Polyp" and mode=="fgsm":
@@ -147,13 +155,13 @@ def collect_single_data(testbed):
             if os.path.exists(f"data/{model}/feature_data/{dataset_name}_{mode}_knn.csv"):
                 continue
             print(mode)
-            collect_data(testbed, dataset_name, mode=mode, model=model, prefix="feature_data")
+            collect_data(testbed, dataset_name, mode=mode, model=model)
 
 
 
 if __name__ == '__main__':
     from features import *
-    torch.multiprocessing.set_start_method('spawn')
+    # torch.multiprocessing.set_start_method('spawn')
     # collect_bias_data(-1)
     # collect_bias_data()
 
@@ -167,9 +175,9 @@ if __name__ == '__main__':
     # collect_single_data(PolypTestBed)
 
     # collect_single_data(PolypTestBed)
-    collect_single_data(OfficeHomeTestBed)
-    collect_single_data(Office31TestBed)
-    collect_single_data(NICOTestBed)
+    # collect_single_data(OfficeHomeTestBed)
+    # collect_single_data(Office31TestBed)
+    # collect_single_data(NICOTestBed)
     collect_single_data(CCTTestBed)
 
     # from experiments.runtime_classification import ood_detector_correctness_prediction_accuracy

@@ -2,8 +2,8 @@ from testbeds.base import *
 
 class NICOTestBed(BaseTestBed):
 
-    def __init__(self, sample_size, mode="severity", sampler="RandomSampler", batch_size=16):
-        super().__init__( mode=mode, sampler=sampler, batch_size=batch_size)
+    def __init__(self, model="resnet", mode="severity", sampler="RandomSampler", batch_size=16):
+        super().__init__( model=model, mode=mode, sampler=sampler, batch_size=batch_size)
         self.trans = transforms.Compose([
                                                  transforms.Resize((INPUT_SIZE, INPUT_SIZE)),
                                                  transforms.ToTensor(), ])
@@ -14,10 +14,14 @@ class NICOTestBed(BaseTestBed):
         self.ind_train, self.ind_val, self.ind_test, self.oods = build_nico_dataset( "../../Datasets/NICO++", self.trans, self.trans, ind_context="dim")
         self.contexts.remove("dim")
         # self.ind, self.ind_test = random_split(self.ind, [0.5, 0.5])
-
-        self.classifier = ResNetClassifier.load_from_checkpoint(
+        if self.model=="resnet":
+            self.classifier = ResNetClassifier.load_from_checkpoint(
            "classifier_logs/resnet/NICODataset/checkpoints/epoch=285-step=178750.ckpt", num_classes=num_classes,
             resnet_version=101).to("cuda").eval()
+        elif self.model=="vit":
+            self.classifier = ViTClassifier.load_from_checkpoint(
+                "classifier_logs/vit/NICODataset/checkpoints/epoch=252-step=158125.ckpt", num_classes=num_classes, batch_size=32, lr=1e-3
+            ).to("cuda").eval()
         self.glow = GlowPL.load_from_checkpoint("glow_logs/NICODataset/checkpoints/epoch=499-step=312500.ckpt",  in_channel=3, n_flow=32, n_block=4, conv_lu=True, affine=True).cuda().eval()
         self.mode=mode
 

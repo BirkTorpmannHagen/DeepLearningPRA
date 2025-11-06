@@ -83,17 +83,17 @@ if __name__ == '__main__':
     import torch
     torch.set_float32_matmul_precision('medium')
     model_type="vit"
-    train_set, val_set, test, ood_set = build_officehome_dataset("../../Datasets/OfficeHome", train_transform=trans, val_transform=val_trans)
-    train_classifier(train_set, val_set, transfer=True, model_type=model_type)
+    # train_set, val_set, test, ood_set = build_officehome_dataset("../../Datasets/OfficeHome", train_transform=trans, val_transform=val_trans)
+    # train_classifier(train_set, val_set, transfer=True, model_type=model_type)
 
     train_set, val_set, test_set, ood_set = build_nico_dataset( "../../Datasets/NICO++", trans, val_trans, ind_context="dim")
     train_classifier(train_set, val_set, transfer=True, model_type=model_type)
 
-    train_set, val_set, test_set, ood_val_set, ood_test_set = build_office31_dataset("../../Datasets/office31", train_transform=trans, val_transform=val_trans )
-    train_classifier(train_set, val_set, transfer=True, model_type=model_type)
-
-    train_set, val_set, test_set, ood_val_set, ood_test_set = build_cct_dataset("../../Datasets/CCT", train_transform=trans, val_transform=val_trans)
-    train_classifier(train_set, val_set, transfer=True, model_type=model_type)
+    # train_set, val_set, test_set, ood_val_set, ood_test_set = build_office31_dataset("../../Datasets/office31", train_transform=trans, val_transform=val_trans )
+    # train_classifier(train_set, val_set, transfer=True, model_type=model_type)
+    #
+    # train_set, val_set, test_set, ood_val_set, ood_test_set = build_cct_dataset("../../Datasets/CCT", train_transform=trans, val_transform=val_trans)
+    # train_classifier(train_set, val_set, transfer=True, model_type=model_type)
 
 #train_set, val_set, test_set, ood_val_set, ood_test_set = build_cct_dataset("../../Datasets/CCT", trans, val_trans)
    # train_classifier(train_set, val_set, load_from_checkpoint="classifier_logs/CCT/checkpoints/epoch=60-step=50813.ckpt")
