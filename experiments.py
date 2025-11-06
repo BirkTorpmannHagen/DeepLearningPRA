@@ -12,7 +12,7 @@ from experiments.loss_regression import *
 from experiments.appendices import *
 
 def simulate_dsd_accuracy_estimation(data, rate, val_set, test_set, ba, tpr, tnr, dsd):
-    sim = UniformBatchSimulator(data, ood_test_shift=test_set, ood_val_shift=val_set, estimator=ErrorAdjustmentEstimator,
+    sim = UniformBatchSimulator(data, ood_test_fold=test_set, ood_val_fold=val_set, estimator=ErrorAdjustmentEstimator,
                                 use_synth=False)
     results = sim.sim(rate, 600)
     results = results.groupby(["Tree"]).mean().reset_index()
@@ -196,10 +196,15 @@ def run_methodological_experiments():
 
 def run_acc_prediction_experiments():
     # test_generalization_gap_estimation(1)
-    # get_acc_prediction_results(1)
-    acc_prediction_table()
+    # for model in MODELS:
+    # get_acc_prediction_results(1, model="vit")
+    # ood_detector_correctness_prediction_accuracy(1, model="deeplabv3plus", shift="")
+
+    # acc_prediction_table()
+    # collect_re_accuracy_estimation_data()
+    # get_all_pre_data()
     error_heatmap()
-    # error_per_accuracy()
+    error_per_accuracy()
 
 
 if __name__ == '__main__':

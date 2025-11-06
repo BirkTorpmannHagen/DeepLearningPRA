@@ -113,12 +113,12 @@ class ArgumentIterator:
 
 
 
-def load_all(batch_size=30, samples=100, feature="all", shift="normal"):
+def load_all(batch_size=30, samples=100, shift="normal"):
     dfs = []
     for model in MODELS:
         for dataset in DATASETS:
             for dsd in DSDS:
-                dfs.append(load_data(dataset, dsd, batch_size=batch_size, samples=samples, model=model))
+                dfs.append(load_data(dataset, dsd, batch_size=batch_size, samples=samples, model=model, shift=shift))
     return pd.concat(dfs)
 
 def load_as_ensemble(batch_size=30, samples=100, feature="all", shift="normal",
@@ -196,7 +196,8 @@ def load_data(dataset_name, feature_name, batch_size=1, samples=1000, model="res
 
 
 DSD_PRINT_LUT = {"grad_magnitude": "GradNorm", "cross_entropy" : "Entropy", "energy":"Energy", "knn":"kNN", "mahalanobis":"Mahalanobis", "softmax":"Softmax", "typicality":"Typicality"}
-MODELS = ["resnet", "vit", "deeplabv3plus", "unet", "segformer"]
+# MODELS = ["resnet", "vit", "deeplabv3plus", "unet", "segformer"]
+MODELS = ["resnet", "deeplabv3plus"]
 DSD_LUT = {value: key for key, value in DSD_PRINT_LUT.items()}
 DATASETS = ["CCT", "OfficeHome", "Office31", "NICO", "Polyp"]
 DSDS = ["knn", "grad_magnitude", "cross_entropy", "energy", "typicality", "softmax", "rabanser"]
@@ -226,7 +227,6 @@ SHIFT_PRINT_LUT= {"normal": "Organic", "noise": "Additive Noise", "multnoise": "
              "hue": "Hue", "saltpepper": "Salt+Pepper Noise", "brightness":"Brightness", "contrast":"Contrast", "smear":"Smear", "fgsm": "FGSM", "fog":"Fog", "jpeg":"JPEG"}
 INPUT_SIZE = 224
 SHIFT_LUT = {value: key for key, value in SHIFT_PRINT_LUT.items()}
-
 SAMPLER_LUT = dict(zip(SAMPLERS, BIAS_TYPES))
 # BATCH_SIZES = np.arange(1, 64)
 def load_polyp_data():
