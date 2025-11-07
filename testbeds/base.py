@@ -20,6 +20,7 @@ from torchvision.transforms import transforms
 from glow.plmodules import GlowPL
 from glow.model import Glow
 from classifier.resnetclassifier import ResNetClassifier
+from classifier.vit import ViTClassifier
 import os
 from bias_samplers import RandomSampler, ClassOrderSampler, ClusterSampler, SequentialSampler
 
@@ -30,10 +31,11 @@ class BaseTestBed:
     """
     Abstract class for testbeds; feel free to override for your own datasets!
     """
-    def __init__(self, batch_size, num_workers=5, mode="normal", sampler="RandomSampler"):
+    def __init__(self, batch_size, model, num_workers=5, mode="normal", sampler="RandomSampler"):
         self.mode=mode
         self.num_workers=5
         self.noise_range = np.linspace(0,0.5, 21)[1:]
+        self.model=model
 
 
         self.batch_size = batch_size

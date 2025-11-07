@@ -98,9 +98,7 @@ def plot_rate_estimation_errors_for_dsds():
 
     with tqdm(total=(len(DATASETS) * len(DSDS) * 11 * len(BATCH_SIZES))) as pbar:
         for batch_size in BATCH_SIZES:
-            dsd_data = get_all_ood_detector_data(batch_size=batch_size, filter_thresholding_method=True,
-                                                 filter_ood_correctness=True, filter_correctness_calibration=True,
-                                                 filter_best=True)
+            dsd_data = get_all_ood_detector_data(batch_size=batch_size, filter_best=True)
             dsd_data = dsd_data[~dsd_data["OoD Val Fold"].isin(SYNTHETIC_SHIFTS)]
             for dataset in DATASETS:
                 for feature in DSDS:
@@ -272,9 +270,7 @@ def collect_tpr_tnr_sensitivity_data():
 def collect_re_accuracy_estimation_data():
     bins = 11
 
-    best = get_all_ood_detector_data(batch_size=1, filter_thresholding_method=True,
-                                     filter_ood_correctness=True, filter_correctness_calibration=True,
-                                     filter_best=True, filter_organic=False)
+    best = get_all_ood_detector_data(batch_size=1, filter_organic=False, filter_best=True)
     for dataset, model in itertools.product(DATASETS, MODELS):
         dsd_accuracies = best[(best["Dataset"] == dataset)&(best["Model"]==model)]
         if dsd_accuracies.empty:

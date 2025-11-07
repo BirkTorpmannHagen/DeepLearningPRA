@@ -118,6 +118,7 @@ def load_all(batch_size=30, samples=100, shift="normal"):
     for model in MODELS:
         for dataset in DATASETS:
             for dsd in DSDS:
+
                 dfs.append(load_data(dataset, dsd, batch_size=batch_size, samples=samples, model=model, shift=shift))
     return pd.concat(dfs)
 
@@ -202,8 +203,8 @@ DSD_LUT = {value: key for key, value in DSD_PRINT_LUT.items()}
 DATASETS = ["CCT", "OfficeHome", "Office31", "NICO", "Polyp"]
 DSDS = ["knn", "grad_magnitude", "cross_entropy", "energy", "typicality", "softmax", "rabanser"]
 # BATCH_SIZES = [32]
-BATCH_SIZES = [1, 8, 16, 32, 64]
-THRESHOLD_METHODS = [ "val_optimal", "ind_span"]
+BATCH_SIZES = [1]
+THRESHOLD_METHODS = [ "val_optimal"]
 DATASETWISE_RANDOM_LOSS = {
     "CCT": -np.log(1/15),
     "OfficeHome": -np.log(1/65),

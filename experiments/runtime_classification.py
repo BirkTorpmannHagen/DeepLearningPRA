@@ -191,124 +191,110 @@ def verdictwise_proportions(cal_idx=0, batch_size=1):
     plt.savefig("proportions_all.pdf")
     plt.show()
 
-def parallel_compute_ood_detector_prediction_accuracy(data_filtered, threshold_method, dataset, feature, ood_perf, perf_calibrated):
+from itertools import product
+from multiprocessing import Pool, cpu_count
+from tqdm import tqdm
+
+def parallel_compute_ood_detector_prediction_accuracy(data_filtered, threshold_method, dataset, feature):
     data_dict = []
     ood_val_folds = data_filtered[(data_filtered["Organic"] == True) & (data_filtered["ood"] == True)]["fold"].unique()
 
-    for ind_val_fold, ind_test_fold in itertools.product(["ind_val", "ind_test"],repeat=2) :
+    for ind_val_fold, ind_test_fold in product(["ind_val", "ind_test"], repeat=2):
         for ood_val_fold in ood_val_folds:
             data_copy = data_filtered.copy()
             if ood_val_fold in ["train", "ind_val", "ind_test"] or ood_val_fold.split("_")[0] in SYNTHETIC_SHIFTS:
                 # dont calibrate on ind data or synthetic ood data
                 continue
+
             data_train = data_copy[
-                (data_copy["fold"] == ood_val_fold) | (data_copy["fold"] == ind_val_fold)].copy()
-            if perf_calibrated:
-                data_train["ood"] = ~data_train["correct_prediction"]
+                (data_copy["fold"] == ood_val_fold) | (data_copy["fold"] == ind_val_fold)
+            ].copy()
 
             dsd = OODDetector(data_train, threshold_method=threshold_method)
-            # dsd.kde()
-            for ood_test_fold in data_copy[data_copy["ood"]==True]["fold"].unique():
+            for ood_test_fold in data_copy[data_copy["ood"] == True]["fold"].unique():
                 if ood_test_fold in ["train", "ind_val", "ind_test"]:
-                    continue # not ood
+                    continue  # not ood
 
-                data_test = data_copy[(data_copy["fold"] == ood_test_fold) | (data_copy["fold"] == ind_test_fold)].copy()
+                data_test = data_copy[
+                    (data_copy["fold"] == ood_test_fold) | (data_copy["fold"] == ind_test_fold)
+                ].copy()
+
                 shift = ood_test_fold.split("_")[0]
                 shift_intensity = ood_test_fold.split("_")[-1] if "_" in ood_test_fold else "Organic"
-
-                if ood_perf:
-                    data_test["ood"] = ~data_test["correct_prediction"]
-
-                # dsd.val_kde(data_test, fname=f"figures/kdes/nico_knn_indval_kde_{ood_val_fold}_{ind_val_fold}_{ood_test_fold}_{ind_test_fold}.png")
                 tpr, tnr, ba = dsd.get_metrics(data_test)
-
 
                 if np.isnan(ba):
                     continue
-                data_dict.append({"Dataset": dataset, "feature_name": feature, "Threshold Method": threshold_method,
-                     "OoD==f(x)=y": ood_perf, "Performance Calibrated": perf_calibrated,
-                     "OoD Val Fold": ood_val_fold, "InD Val Fold": ind_val_fold,
-                     "OoD Test Fold": ood_test_fold, "InD Test Fold": ind_test_fold, "Shift": shift,
-                     "Shift Intensity": shift_intensity, "tpr": tpr, "tnr": tnr, "ba": ba})
+
+                data_dict.append({
+                    "Dataset": dataset,
+                    "feature_name": feature,
+                    "Threshold Method": threshold_method,
+                    "OoD Val Fold": ood_val_fold,
+                    "InD Val Fold": ind_val_fold,
+                    "OoD Test Fold": ood_test_fold,
+                    "InD Test Fold": ind_test_fold,
+                    "Shift": shift,
+                    "Shift Intensity": shift_intensity,
+                    "tpr": tpr,
+                    "tnr": tnr,
+                    "ba": ba,
+                })
     return data_dict
 
 
 def _compute_one(args):
-    (
-        data_filtered, threshold_method, dataset, feature,
-        ood_perf, perf_calibrated
-    ) = args
+    data_filtered, threshold_method, dataset, feature = args
     try:
-        out = parallel_compute_ood_detector_prediction_accuracy(
-            data_filtered, threshold_method, dataset, feature,
-            ood_perf, perf_calibrated
+        return parallel_compute_ood_detector_prediction_accuracy(
+            data_filtered, threshold_method, dataset, feature
         )
-        return out  # may be None if function early-continues
     except Exception as e:
-        # optional: return diagnostics instead of raising to avoid killing the pool
         return {
             "Dataset": dataset,
             "feature_name": feature,
             "Threshold Method": threshold_method,
-            "OoD==f(x)=y": ood_perf,
-            "Performance Calibrated": perf_calibrated,
             "error": str(e),
         }
 
-def _make_jobs_for_feature(data_filtered, dataset, feature):
-    # (ood_perf, perf_calibrated) pairs except the skipped case
-    pairs = [(o, p) for o, p in product([True, False], [True, False]) if not (p and not o)]
-    # cartesian product over threshold methods
-    jobs = [
-        (data_filtered, tm, dataset, feature, o, p)
-        for (o, p) in pairs
-        for tm in THRESHOLD_METHODS
-    ]
-    return jobs
+
+def _make_jobs_for_dataset_feature(df, dataset, feature):
+    data_filtered = df[(df["Dataset"] == dataset) & (df["feature_name"] == feature)]
+    if data_filtered.empty:
+        return []
+    return [(data_filtered, tm, dataset, feature) for tm in THRESHOLD_METHODS]
+
 
 # ---- main entry ----
 def ood_detector_correctness_prediction_accuracy(batch_size, model="resnet", shift=""):
     df = load_all(batch_size=batch_size, shift=shift, samples=100)
-    df = df[df["Model"]==model]
+    df = df[df["Model"] == model]
     df = df[df["fold"] != "train"]
     if df.empty:
         print("No data loaded.")
         return
-    # Precompute total jobs for progress bar
-    total_jobs = 0
+
+    # build ALL jobs across datasets and features (parallelized at this level too)
+    all_jobs = []
     for dataset in DATASETS:
-        data_dataset = df[df["Dataset"] == dataset]
         for feature in DSDS:
-            data_filtered = data_dataset[data_dataset["feature_name"] == feature]
-            if data_filtered.empty:
-                continue
-            total_jobs += len(_make_jobs_for_feature(data_filtered, dataset, feature))
+            all_jobs.extend(_make_jobs_for_dataset_feature(df, dataset, feature))
+
+    total_jobs = len(all_jobs)
+    if total_jobs == 0:
+        print("No jobs to run.")
+        return
 
     results_all = []
-    # choose pool size
     n_procs = max(1, cpu_count() - 1)
-    # n_procs=1 #debug
+
     with Pool(processes=n_procs) as pool, tqdm(total=total_jobs, desc="Computing") as pbar:
-        for dataset in DATASETS:
+        for out in pool.imap_unordered(_compute_one, all_jobs, chunksize=1):
+            pbar.update(1)
+            if out is None:
+                continue
+            results_all.append(out)
 
-            data_dataset = df[df["Dataset"] == dataset]
-            for feature in DSDS:
-                data_filtered = data_dataset[data_dataset["feature_name"] == feature]
-                if data_filtered.empty:
-                    print(f"No data for {dataset} {feature}")
-                    continue
-
-                jobs = _make_jobs_for_feature(data_filtered, dataset, feature)
-
-                # stream results as they complete; update pbar per completed task
-                for out in pool.imap_unordered(_compute_one, jobs, chunksize=1):
-                    pbar.update(1)
-                    if out is None:
-                        continue
-                    results_all.append(out)
-
-    # Collate + save per-dataset CSVs (to match original behavior)
-    # Collate + save per-dataset CSVs (to match original behavior)
     if not results_all:
         print("No results produced.")
         return
@@ -321,35 +307,35 @@ def ood_detector_correctness_prediction_accuracy(batch_size, model="resnet", shi
         data["feature_name"].replace(DSD_PRINT_LUT, inplace=True)
 
     if flat_errors:
-        pd.DataFrame(flat_errors).to_csv(f"{model}_ood_detector_data/ood_detector_errors_{batch_size}.csv", index=False)
+        pd.DataFrame(flat_errors).to_csv(
+            f"{model}_ood_detector_data/ood_detector_errors_{batch_size}.csv",
+            index=False
+        )
 
     for dataset in DATASETS:
         data_ds = data[data["Dataset"] == dataset]
         if data_ds.empty:
             continue
-        data_ds.to_csv(f"data/{model}/ood_detector_data/ood_detector_correctness_{dataset}_{batch_size}.csv", index=False)
+        data_ds.to_csv(
+            f"data/{model}/ood_detector_data/ood_detector_correctness_{dataset}_{batch_size}.csv",
+            index=False
+        )
 
-def get_all_ood_detector_data(batch_size, filter_thresholding_method=False, filter_ood_correctness=False, filter_correctness_calibration=False, filter_organic=False, filter_best=False, model="resnet"):
+def get_all_ood_detector_data(batch_size, filter_organic=False, filter_best=False):
     dfs = []
-    if not os.path.exists(f"data/{model}/ood_detector_data"):
-        os.makedirs(f"data/{model}/ood_detector_data")
-    if len(os.listdir(f"data/{model}/ood_detector_data"))==0:
-        ood_detector_correctness_prediction_accuracy(batch_size, model=model, shift="")
-    for dataset, feature in itertools.product(DATASETS, DSDS):
-        try:
-            df = pd.read_csv(f"data/{model}/ood_detector_data/ood_detector_correctness_{dataset}_{batch_size}.csv")
-        except FileNotFoundError:
-            continue
-        df["Model"] = model
-        dfs.append(df)
+    for model in MODELS:
+        if not os.path.exists(f"data/{model}/ood_detector_data"):
+            os.makedirs(f"data/{model}/ood_detector_data")
+        if len(os.listdir(f"data/{model}/ood_detector_data"))==0:
+            ood_detector_correctness_prediction_accuracy(batch_size, model=model, shift="")
+        for dataset, feature in itertools.product(DATASETS, DSDS):
+            try:
+                df = pd.read_csv(f"data/{model}/ood_detector_data/ood_detector_correctness_{dataset}_{batch_size}.csv")
+            except FileNotFoundError:
+                continue
+            df["Model"] = model
+            dfs.append(df)
     df = pd.concat(dfs)
-    if filter_thresholding_method:
-        df = df[df["Threshold Method"] == "val_optimal"]
-
-    if filter_ood_correctness:
-        df = df[df["OoD==f(x)=y"] == False]
-    if filter_correctness_calibration:
-        df = df[df["Performance Calibrated"] == False]
     if filter_organic:
         df = df[df["Shift Intensity"] == "Organic"]
 
@@ -363,7 +349,7 @@ def get_all_ood_detector_data(batch_size, filter_thresholding_method=False, filt
 
 
 def ood_rv_accuracy_by_dataset_and_feature(batch_size):
-    df = get_all_ood_detector_data(batch_size, filter_organic=True, filter_thresholding_method=True, filter_correctness_calibration=True, filter_ood_correctness=False, model="fine_ood_detector_data")
+    df = get_all_ood_detector_data(batch_size, filter_organic=True)
     df = df[df["OoD Val Fold"]!=df["OoD Test Fold"]]
     df = df[df["InD Val Fold"]!=df["InD Test Fold"]]
     print(df.head(100))
@@ -377,8 +363,7 @@ def ood_rv_accuracy_by_thresh_and_stuff(batch_size):
 
 
 def ood_verdict_shiftwise_accuracy_tables(batch_size, filter_organic=False):
-    df = get_all_ood_detector_data(batch_size, filter_thresholding_method=True, filter_ood_correctness=True,
-                                   filter_correctness_calibration=True, filter_organic=filter_organic, filter_best=True)
+    df = get_all_ood_detector_data(batch_size, filter_organic=filter_organic, filter_best=True)
 
 
     #get only the shifts that affect the performance of the OOD detector
@@ -413,8 +398,7 @@ def ood_verdict_shiftwise_accuracy_tables(batch_size, filter_organic=False):
 
 
 def ood_accuracy_vs_pred_accuacy_plot(batch_size):
-    df = get_all_ood_detector_data(batch_size, filter_thresholding_method=True, filter_ood_correctness=False,
-                                   filter_correctness_calibration=True, filter_organic=False, filter_best=True)
+    df = get_all_ood_detector_data(batch_size, filter_organic=False, filter_best=True)
     df = df[df["OoD==f(x)=y"] == True]  # only OOD performance
     print(df.columns)
     print()

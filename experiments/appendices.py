@@ -36,8 +36,7 @@ def investigate_training_wise_thresholding(batch_size, shift="normal"):
     df = pd.DataFrame(data)
 
     trainingwise = df.groupby(["Dataset", "feature_name", "InD Test Fold"])["tnr"].mean().reset_index()
-    ood_results = get_all_ood_detector_data(1, filter_thresholding_method=True, filter_correctness_calibration=True,
-                                            filter_organic=True, filter_best=False)
+    ood_results = get_all_ood_detector_data(1, filter_organic=True, filter_best=False)
 
     regular = ood_results[ood_results["OoD==f(x)=y"]].groupby(["Dataset", "feature_name", "InD Test Fold"])[
         "tnr"].mean().reset_index()
