@@ -169,16 +169,17 @@ if __name__ == '__main__':
     # collect_data(CCTTestBed, "CCT",mode="normal")
     # collect_bias_data(5)
 
-    # collect_single_data(OfficeHomeTestBed)
-    # collect_single_data(Office31TestBed)
-    # collect_single_data(NICOTestBed)
-    # collect_single_data(CCTTestBed)
-    # collect_single_data(PolypTestBed)
-
-    # collect_single_data(PolypTestBed)
-    # collect_single_data(OfficeHomeTestBed)
-
+    collect_single_data(OfficeHomeTestBed)
     collect_single_data(Office31TestBed)
+    collect_single_data(NICOTestBed)
+    collect_single_data(CCTTestBed)
+    collect_single_data(PolypTestBed)
+
+
+    # collect_single_data(PolypTestBed)
+    # collect_single_data(OfficeHomeTestBed)
+
+    # collect_single_data(Office31TestBed)
     # collect_single_data(NICOTestBed)
     # collect_single_data(CCTTestBed)
 

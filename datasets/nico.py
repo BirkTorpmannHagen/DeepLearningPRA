@@ -69,12 +69,3 @@ def build_nico_dataset(root, train_transform, val_transform, ind_context):
     ood_dict = dict(zip(ood_contexts, [NICODataset(paths, label_map_json, val_transform) for paths in ood_image_path_list]))
     print(ood_dict)
     return train, val, test, ood_dict
-
-
-if __name__ == '__main__':
-    from torchvision import transforms
-    trans = transforms.Compose([
-        transforms.Resize((512, 512)),
-        transforms.ToTensor(), ])
-
-    build_nico_dataset("../../../Datasets/NICO++",trans, trans, "dim")

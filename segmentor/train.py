@@ -6,12 +6,14 @@ import warnings
 from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.callbacks import ModelCheckpoint
 
+from utils import INPUT_SIZE
+
 warnings.filterwarnings('ignore')
 
 #
 
 def train_segmentor():
-    model_names = ["unet", "segformer"]
+    model_names = [ "deeplabv3plus"]
     for model_name in model_names:
         model = SegmentationModel(transfer=False, batch_size=16, model_name=model_name)
         # model = SegmentationModel.load_from_checkpoint("segmentation_logs/lightning_logs/version_4/checkpoints/epoch=199-step=20000.ckpt", resnet_version=34)
@@ -24,10 +26,8 @@ def train_segmentor():
             filename="best"    # Filename for the checkpoint
         )
         trainer = Trainer(accelerator="gpu", max_epochs=300,logger=logger, callbacks=[checkpoint_callback])
-        # trans = transforms.Compose([
-        #                     transforms.Resize((512,512)),
-        #                     transforms.ToTensor(), ])
-        ind, val, test, _, _, _ = build_polyp_dataset("../../Datasets/Polyps", img_size=512)
+
+        ind, val, test, _, _, _ = build_polyp_dataset("../../Datasets/Polyps")
         train_loader = DataLoader(ind, batch_size=16, shuffle=True, num_workers=4)
         val_loader = DataLoader(val, batch_size=16, shuffle=True, num_workers=4)
         trainer.fit(model, train_dataloaders=train_loader,val_dataloaders=val_loader)

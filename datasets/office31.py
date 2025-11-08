@@ -62,14 +62,3 @@ def build_office31_dataset(root, train_transform, val_transform, ind_context="am
     ood_test = Office31Dataset(root, train_transform, val_transform, ind_context, fold="ood_test")
     return train, val, test, ood_val, ood_test
 
-
-if __name__ == '__main__':
-    from torchvision import transforms
-    trans = transforms.Compose([
-        transforms.Resize((512, 512)),
-        transforms.ToTensor(), ])
-
-    for dataset in build_office31_dataset("../../../Datasets/office31/", train_transform=trans, val_transform=trans):
-        print(dataset)
-        for x,y in dataset:
-            print(y)

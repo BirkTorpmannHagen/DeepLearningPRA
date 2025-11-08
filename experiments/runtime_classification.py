@@ -5,6 +5,7 @@ from matplotlib.patches import Patch
 
 from pygam import LinearGAM
 from sklearn.linear_model import LinearRegression
+from tensorflow.python.framework.test_ops import int_output
 from tqdm import tqdm
 from multiprocessing import Pool, cpu_count
 import seaborn as sns
@@ -198,7 +199,7 @@ from tqdm import tqdm
 def parallel_compute_ood_detector_prediction_accuracy(data_filtered, threshold_method, dataset, feature):
     data_dict = []
     ood_val_folds = data_filtered[(data_filtered["Organic"] == True) & (data_filtered["ood"] == True)]["fold"].unique()
-
+    assert data_filtered["Model"].nunique() == 1, "Data contains multiple models"
     for ind_val_fold, ind_test_fold in product(["ind_val", "ind_test"], repeat=2):
         for ood_val_fold in ood_val_folds:
             data_copy = data_filtered.copy()
@@ -222,6 +223,10 @@ def parallel_compute_ood_detector_prediction_accuracy(data_filtered, threshold_m
                 shift = ood_test_fold.split("_")[0]
                 shift_intensity = ood_test_fold.split("_")[-1] if "_" in ood_test_fold else "Organic"
                 tpr, tnr, ba = dsd.get_metrics(data_test)
+                # if ba<0.5:
+                #     print(f"Warning: BA<<0.5 for {data_test['Model'].unique()} {dataset} {feature} {threshold_method} OOD Val: {ood_val_fold} OOD Test: {ood_test_fold} InD Val: {ind_val_fold} InD Test: {ind_test_fold} BA: {ba},  {dsd.threshold}")
+                #     dsd.plot_hist()
+
 
                 if np.isnan(ba):
                     continue
@@ -308,7 +313,7 @@ def ood_detector_correctness_prediction_accuracy(batch_size, model="resnet", shi
 
     if flat_errors:
         pd.DataFrame(flat_errors).to_csv(
-            f"{model}_ood_detector_data/ood_detector_errors_{batch_size}.csv",
+            f"data/{model}/ood_detector_data/ood_detector_errors_{batch_size}.csv",
             index=False
         )
 
@@ -332,6 +337,7 @@ def get_all_ood_detector_data(batch_size, filter_organic=False, filter_best=Fals
             try:
                 df = pd.read_csv(f"data/{model}/ood_detector_data/ood_detector_correctness_{dataset}_{batch_size}.csv")
             except FileNotFoundError:
+                print(f"data/{model}/ood_detector_data/ood_detector_correctness_{dataset}_{batch_size}.csv not found")
                 continue
             df["Model"] = model
             dfs.append(df)
@@ -340,8 +346,10 @@ def get_all_ood_detector_data(batch_size, filter_organic=False, filter_best=Fals
         df = df[df["Shift Intensity"] == "Organic"]
 
     if filter_best:
-        meaned_ba = df.groupby(["Dataset", "Model", "feature_name"])["ba"].mean().reset_index()
-        best_ba = meaned_ba.loc[meaned_ba.groupby(["Dataset", "Model"])["ba"].idxmax()]
+        #filter for best models and features per dataset
+        df_organic = df[df["Shift Intensity"] == "Organic"] #just consider the organic data for best selection
+        meaned_ba = df_organic.groupby(["Dataset", "Model", "feature_name"])["ba"].mean().reset_index() #
+        best_ba = meaned_ba.loc[meaned_ba.groupby(["Dataset"])["ba"].idxmax()]
         df = df.merge(best_ba[["Dataset", "Model", "feature_name"]], on=["Dataset", "Model", "feature_name"], how="inner")
 
     return df
@@ -400,8 +408,7 @@ def ood_verdict_shiftwise_accuracy_tables(batch_size, filter_organic=False):
 def ood_accuracy_vs_pred_accuacy_plot(batch_size):
     df = get_all_ood_detector_data(batch_size, filter_organic=False, filter_best=True)
     df = df[df["OoD==f(x)=y"] == True]  # only OOD performance
-    print(df.columns)
-    print()
+
     df_synth = df[df["Shift Intensity"]!="Organic"]
     df_synth.replace(SHIFT_PRINT_LUT, inplace=True)
     unique_shifts  = df_synth["Shift"].unique().tolist()

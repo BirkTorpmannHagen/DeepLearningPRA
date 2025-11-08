@@ -197,7 +197,7 @@ def run_methodological_experiments():
 def run_acc_prediction_experiments():
     test_generalization_gap_estimation(1)
     # for model in MODELS:
-    # get_acc_prediction_results(1, model="vit")
+    #     get_acc_prediction_results(1, model=model)
     # ood_detector_correctness_prediction_accuracy(1, model="deeplabv3plus", shift="")
 
     # acc_prediction_table()

@@ -11,6 +11,8 @@ from torch.utils.data import ConcatDataset
 from torchvision import transforms as transforms
 from torchvision.transforms import ToTensor
 
+from utils import INPUT_SIZE
+
 
 class KvasirSegmentationDataset(Dataset):
     """
@@ -118,14 +120,14 @@ class CVC_ClinicDB(Dataset):
         return self.len
 
 class EndoCV2020(Dataset):
-    def __init__(self, root_directory, tans):
+    def __init__(self, root_directory, trans):
         super(EndoCV2020, self).__init__()
         self.root = root_directory
         self.mask_fnames = sorted(listdir(join(self.root, "masksPerClass", "polyp")))
         self.mask_locs = [join(self.root, "masksPerClass", "polyp", i) for i in self.mask_fnames]
         self.img_locs = [join(self.root, "originalImages", i.replace("_polyp", "").replace(".tif", ".jpg")) for i in
                          self.mask_fnames]
-        self.trans = transforms.Compose([transforms.Resize((512, 512)), transforms.ToTensor()])
+        self.trans = trans
         self.tensor = ToTensor()
 
 
@@ -141,9 +143,9 @@ class EndoCV2020(Dataset):
         return len(self.mask_fnames)
 
 
-def build_polyp_dataset(root, img_size=512):
-    train_trans = alb.Compose([alb.Resize(img_size, img_size), alb.HorizontalFlip(), alb.RandomRotate90(), alb.Transpose()])
-    val_trans = alb.Compose([alb.Resize(img_size, img_size)])
+def build_polyp_dataset(root):
+    train_trans = alb.Compose([alb.Resize(INPUT_SIZE, INPUT_SIZE), alb.HorizontalFlip(), alb.RandomRotate90(), alb.Transpose()])
+    val_trans = alb.Compose([alb.Resize(INPUT_SIZE, INPUT_SIZE)])
     kvasir_root = join(root, "HyperKvasir")
     train_dataset = KvasirSegmentationDataset(kvasir_root, train_trans, val_trans, split="train")
     train_val = KvasirSegmentationDataset(kvasir_root, train_trans, val_trans, split="val")
@@ -152,12 +154,3 @@ def build_polyp_dataset(root, img_size=512):
     cvc = CVC_ClinicDB(join(root, "CVC-ClinicDB"), val_trans)
     endo = EndoCV2020(join(root,"EndoCV2020"), val_trans)
     return train_dataset, train_val, train_test, etis, cvc, endo
-
-
-if __name__ == '__main__':
-    endocv2020 = EndoCV2020("../../../Datasets/Polyps/EndoCV2020", alb.Compose([alb.Resize(512, 512)]))
-    loader = DataLoader(endocv2020, batch_size=1, shuffle=True)
-    for i, (image, mask) in enumerate(loader):
-        plt.imshow(image.squeeze(0).permute(1, 2, 0))
-        plt.imshow(mask.squeeze(0).permute(1,2,0), alpha=0.5)
-        plt.show()

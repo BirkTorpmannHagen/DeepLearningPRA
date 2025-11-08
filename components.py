@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import pandas as pd
 from sklearn.linear_model import LogisticRegression
@@ -13,7 +15,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import make_pipeline
 from sklearn.linear_model import LogisticRegression
 
-
+counter=0
 def l2_distance(a, b):
     """
     Compute the L2 distance between two vectors.
@@ -73,15 +75,16 @@ class OODDetector:
     def __init__(self, df, threshold_method="val_optimal"):
         assert df["feature_name"].nunique() == 1, df["feature_name"].unique()
         assert df["Dataset"].nunique() == 1
+        assert df["Model"].nunique() == 1
         if "k" in df.columns:
             assert df["k"].nunique() == 1, "OODDetector only works with k=1 due to the thresholding scheme"
-        self.df = df
+        self.df = df.copy()
         self.threshold_method = threshold_method
-        self.ind_val = df[~df["ood"]]
-        self.ood_val = df[df["ood"]]
+        self.ind_val = self.df[~self.df["ood"]]
+        self.ood_val = self.df[self.df["ood"]]
         assert not self.ind_val.empty, "No in-distribution validation data"
         assert not self.ood_val.empty, "No out-of-distribution validation data"
-
+        self.counter = 0
         self.higher_is_ood = self.ood_val["feature"].mean() >self.ind_val["feature"].mean()
 
         if threshold_method == "val_optimal":
@@ -180,8 +183,9 @@ class OODDetector:
 
 
     def plot_hist(self):
+        self.counter+=1
         sns.histplot(self.df, x="feature", hue="ood", alpha=0.5)
-        plt.title(f"{self.df['feature_name'].unique()[0]} - {self.df['Dataset'].unique()[0]}")
+        plt.title(f"{self.df['feature_name'].unique()[0]} - {self.df['Dataset'].unique()[0]}: {self.get_accuracy(self.df)}")
 
         if self.threshold_method == "ind_span":
             plt.axvline(self.threshold[0], color="red", linestyle="--")
@@ -190,7 +194,11 @@ class OODDetector:
             plt.axvline(self.threshold, color="red", linestyle="--")
 
         # plt.title(self.get_accuracy(self.df))
-        plt.show()
+        if os.path.exists("test_figs")==False:
+            os.makedirs("test_figs")
+        plt.savefig(f"test_figs/histogram_{self.counter}.png")
+        plt.close()
+        # plt.show()
 
     def get_likelihood(self):
         return self.get_tpr(self.df), self.get_tnr(self.df)

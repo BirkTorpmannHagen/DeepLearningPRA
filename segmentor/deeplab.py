@@ -5,6 +5,8 @@ from segmentation_models_pytorch.metrics import get_stats, iou_score
 import warnings
 from segmentation_models_pytorch.base import SegmentationHead
 
+from utils import INPUT_SIZE
+
 warnings.filterwarnings('ignore')
 
 # torch and lightning imports
@@ -54,8 +56,9 @@ class SegmentationModel(pl.LightningModule):
         return self.segmentor(X)
 
     def get_encoding_size(self):
-        dummy = torch.zeros((1,3,512,512))
+        dummy = torch.zeros((1,3,INPUT_SIZE,INPUT_SIZE))
         return self.get_encoding(dummy).shape[-1]
+
     def get_encoding(self, X):
         code =  torch.mean(self.segmentor.encoder(X)[-2], [-1, -2]).flatten(1).squeeze(-1)
         return code

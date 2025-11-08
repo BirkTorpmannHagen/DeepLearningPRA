@@ -10,7 +10,7 @@ from glow.plmodules import GlowPL
 
 from classifier.resnetclassifier import ResNetClassifier
 from ooddetectors import *
-
+from utils import *
 from testbeds.base import BaseTestBed
 from datasets.synthetic_shifts import *
 from torch.utils.data import DataLoader, ConcatDataset, random_split, Subset

@@ -147,7 +147,7 @@ def load_as_ensemble(batch_size=30, samples=100, feature="all", shift="normal",
 
 def load_data(dataset_name, feature_name, batch_size=1, samples=1000, model="resnet", shift="normal"):
     prefix = f"data/{model}/feature_data"
-    if dataset_name=="Polyp" and feature_name=="softmax":
+    if dataset_name=="Polyp" and feature_name=="softmax" or (dataset_name=="Polyp" and model not in SEG_MODELS) :
         return pd.DataFrame() #softmax does not work for segmentation
     try:
             df = pd.concat([pd.read_csv(join(prefix, fname)) for fname in os.listdir(prefix) if dataset_name in fname and feature_name in fname and shift in fname])
@@ -198,13 +198,14 @@ def load_data(dataset_name, feature_name, batch_size=1, samples=1000, model="res
 
 DSD_PRINT_LUT = {"grad_magnitude": "GradNorm", "cross_entropy" : "Entropy", "energy":"Energy", "knn":"kNN", "mahalanobis":"Mahalanobis", "softmax":"Softmax", "typicality":"Typicality"}
 # MODELS = ["resnet", "vit", "deeplabv3plus", "unet", "segformer"]
-MODELS = ["resnet", "deeplabv3plus"]
+SEG_MODELS = ["deeplabv3plus", "unet", "segformer"]
+MODELS = ["vit", "resnet"]+SEG_MODELS
 DSD_LUT = {value: key for key, value in DSD_PRINT_LUT.items()}
 DATASETS = ["CCT", "OfficeHome", "Office31", "NICO", "Polyp"]
-DSDS = ["knn", "grad_magnitude", "cross_entropy", "energy", "typicality", "softmax", "rabanser"]
+DSDS = ["knn", "grad_magnitude", "cross_entropy", "energy", "typicality", "softmax"]
 # BATCH_SIZES = [32]
 BATCH_SIZES = [1]
-THRESHOLD_METHODS = [ "val_optimal"]
+THRESHOLD_METHODS = ["val_optimal"]
 DATASETWISE_RANDOM_LOSS = {
     "CCT": -np.log(1/15),
     "OfficeHome": -np.log(1/65),
@@ -219,6 +220,7 @@ DATASETWISE_RANDOM_CORRECTNESS = {
     "NICO": 1/60,
     "Polyp": 0 #segmentation task; never incidentally correct
 }
+
 COLUMN_PRINT_LUT = {"feature_name":"Feature", "loss":"Loss", "rate":"p(E)", "shift_intensity":"Shift Intensity", "shift":"Shift", "feature": "Feature Value"}
 BIAS_TYPES = ["Unbiased", "Class", "Synthetic", "Temporal"]
 SAMPLERS = ["RandomSampler",  "ClassOrderSampler", "ClusterSampler", "SequentialSampler",]
