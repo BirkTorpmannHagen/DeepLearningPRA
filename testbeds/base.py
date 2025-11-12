@@ -37,7 +37,6 @@ class BaseTestBed:
         self.noise_range = np.linspace(0,0.5, 21)[1:]
         self.model=model
 
-
         self.batch_size = batch_size
         self.sampler = sampler
 

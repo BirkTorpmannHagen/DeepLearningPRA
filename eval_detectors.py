@@ -14,9 +14,12 @@ def compute_stats_no_ind(ood_features, ood_losses, fname, feature_names):
     for df, feature_name in zip(dfs, feature_names):
         df.to_csv(f"{fname}_{feature_name}.csv")
 
-def collect_data(testbed_constructor, dataset_name, mode="noise", model="resnet"):
+def collect_data(testbed_constructor, dataset_name, mode="noise", model="resnet", pretrain=True):
+    if os.path.exists(f"data/{'pretrained' if pretrain else 'nopretrain'}/{model}/feature_data/{dataset_name}_{mode}_knn.csv"):
+        print(f"Data for {dataset_name} in {mode} mode already exists, skipping...")
+        return
     print("Collecting data for", dataset_name, "in", mode, "mode")
-    bench = testbed_constructor(model=model, mode=mode, batch_size=8)
+    bench = testbed_constructor(model=model, mode=mode, batch_size=8, pretrained=pretrain)
     # features = [mahalanobis]
     features = [cross_entropy,energy,knn, typicality, softmax,  grad_magnitude]
     # features = [cross_entropy,energy,knn, typicality, softmax]
@@ -25,10 +28,10 @@ def collect_data(testbed_constructor, dataset_name, mode="noise", model="resnet"
     tsd.register_testbed(bench)
     if mode=="normal": #just compute ind and organic oods for normal mode; saves on computation time
         compute_stats(*tsd.compute_pvals_and_loss(),
-                      fname=f"data/{model}/feature_data/{dataset_name}_{mode}", feature_names=[f.__name__ for f in features])
+                      fname=f"data/{'pretrained' if pretrain else 'nopretrain'}/{model}/feature_data/{dataset_name}_{mode}", feature_names=[f.__name__ for f in features])
     else:
         compute_stats_no_ind(*tsd.compute_pvals_and_loss(noind=True),
-                             fname=f"data/{model}/feature_data/{dataset_name}_{mode}",
+                             fname=f"data/{'pretrained' if pretrain else 'nopretrain'}/{model}/feature_data/{dataset_name}_{mode}",
                              feature_names=[f.__name__ for f in features])
     # compute_stats(*tsd.compute_pvals_and_loss(),
     #               fname=f"final_data/{dataset_name}_{mode}", feature_names=[f.__name__ for f in features])
@@ -139,15 +142,16 @@ def collect_bias_data():
 def collect_single_data(testbed):
     dataset_name = testbed.__name__.split("TestBed")[0]
 
+    pretrain = False
 
     for model in MODELS:
         if model!="resnet":
             continue
-        if not os.path.exists(f"data/{model}/feature_data"):
-            os.makedirs(f"data/{model}/feature_data")
+        if not os.path.exists(f"data/{'pretrained' if pretrain else 'nopretrain'}/{model}/feature_data"):
+            os.makedirs(f"data/{'pretrained' if pretrain else 'nopretrain'}/{model}/feature_data")
 
         for mode in SYNTHETIC_SHIFTS+["normal"]:
-            if mode=="fgsm":
+            if mode!="fgsm":
                 continue
             if mode=="autoattack":
                 continue
@@ -156,13 +160,13 @@ def collect_single_data(testbed):
             # if os.path.exists(f"data/{model}/feature_data/{dataset_name}_{mode}_knn.csv"):
             #     continue
             print(mode)
-            collect_data(testbed, dataset_name, mode=mode, model=model)
+            collect_data(testbed, dataset_name, mode=mode, model=model, pretrain=pretrain)
 
 
 
 if __name__ == '__main__':
     from features import *
-    # torch.multiprocessing.set_start_method('spawn')
+    torch.multiprocessing.set_start_method('spawn')
     # collect_bias_data(-1)
     # collect_bias_data()
 

@@ -271,8 +271,12 @@ def _make_jobs_for_dataset_feature(df, dataset, feature):
 
 
 # ---- main entry ----
-def ood_detector_correctness_prediction_accuracy(batch_size, model="resnet", shift=""):
-    df = load_all(batch_size=batch_size, shift=shift, samples=100)
+def ood_detector_correctness_prediction_accuracy(batch_size, model="resnet", shift="", pretrain=True):
+    if pretrain:
+        prefix = "data/nopretrain"
+    else:
+        prefix = "data"
+    df = load_all(batch_size=batch_size, shift=shift, samples=100, pretrain=pretrain)
     df = df[df["Model"] == model]
     df = df[df["fold"] != "train"]
     if df.empty:
@@ -313,7 +317,7 @@ def ood_detector_correctness_prediction_accuracy(batch_size, model="resnet", shi
 
     if flat_errors:
         pd.DataFrame(flat_errors).to_csv(
-            f"data/{model}/ood_detector_data/ood_detector_errors_{batch_size}.csv",
+            f"{prefix}/{model}/ood_detector_{prefix}/ood_detector_errors_{batch_size}.csv",
             index=False
         )
 
@@ -322,22 +326,26 @@ def ood_detector_correctness_prediction_accuracy(batch_size, model="resnet", shi
         if data_ds.empty:
             continue
         data_ds.to_csv(
-            f"data/{model}/ood_detector_data/ood_detector_correctness_{dataset}_{batch_size}.csv",
+            f"{prefix}/{model}/ood_detector_{prefix}/ood_detector_correctness_{dataset}_{batch_size}.csv",
             index=False
         )
 
-def get_all_ood_detector_data(batch_size, filter_organic=False, filter_best=False):
+def get_all_ood_detector_data(batch_size, filter_organic=False, filter_best=False, pretrain=True):
     dfs = []
+    if pretrain:
+        prefix = "data/nopretrain"
+    else:
+        prefix = "data"
     for model in MODELS:
-        if not os.path.exists(f"data/{model}/ood_detector_data"):
-            os.makedirs(f"data/{model}/ood_detector_data")
-        if len(os.listdir(f"data/{model}/ood_detector_data"))==0:
-            ood_detector_correctness_prediction_accuracy(batch_size, model=model, shift="")
+        if not os.path.exists(f"{prefix}/{model}/ood_detector_data"):
+            os.makedirs(f"{prefix}/{model}/ood_detector_data")
+        if len(os.listdir(f"{prefix}/{model}/ood_detector_data"))==0:
+            ood_detector_correctness_prediction_accuracy(batch_size, model=model, shift="", pretrain=pretrain)
         for dataset, feature in itertools.product(DATASETS, DSDS):
             try:
-                df = pd.read_csv(f"data/{model}/ood_detector_data/ood_detector_correctness_{dataset}_{batch_size}.csv")
+                df = pd.read_csv(f"{prefix}/{model}/ood_detector_{prefix}/ood_detector_correctness_{dataset}_{batch_size}.csv")
             except FileNotFoundError:
-                print(f"data/{model}/ood_detector_data/ood_detector_correctness_{dataset}_{batch_size}.csv not found")
+                print(f"{prefix}/{model}/ood_detector_{prefix}/ood_detector_correctness_{dataset}_{batch_size}.csv not found")
                 continue
             df["Model"] = model
             dfs.append(df)
@@ -563,7 +571,7 @@ def debiased_ood_detector_correctness_prediction_accuracy(batch_size):
         if dataset=="Polyp":
             print(data_dataset.head(10))
         with tqdm(total=df["feature_name"].nunique()*2 * 2, desc=f"Computing for {dataset}") as pbar:
-            # if os.path.exists(f"ood_detector_data/debiased_ood_detector_correctness_{dataset}_{batch_size}.csv"):
+            # if os.path.exists(f"ood_detector_{prefix}/debiased_ood_detector_correctness_{dataset}_{batch_size}.csv"):
             #     print("continuing...")
             #     continue
             for feature in DSDS:
@@ -630,7 +638,7 @@ def debiased_ood_detector_correctness_prediction_accuracy(batch_size):
             data = pd.DataFrame(data_dict)
             if not data.empty:
                 data.replace(DSD_PRINT_LUT, inplace=True)
-                data.to_csv(f"ood_detector_data/debiased_ood_detector_correctness_{dataset}_{batch_size}.csv", index=False)
+                data.to_csv(f"ood_detector_{prefix}/debiased_ood_detector_correctness_{dataset}_{batch_size}.csv", index=False)
 
 def eval_debiased_ood_detectors():
     data = load_all_biased(prefix="debiased_data")
@@ -689,13 +697,13 @@ def eval_debiased_ood_detectors():
     # print(data.head(10))
     df.replace(DSD_PRINT_LUT, inplace=True)
     df.replace(SAMPLER_LUT, inplace=True)
-    df.to_csv(f"ood_detector_data/debiased_ood_detector_correctness.csv", index=False)
+    df.to_csv(f"ood_detector_{prefix}/debiased_ood_detector_correctness.csv", index=False)
 
 def debiased_plots():
     df = []
     for dataset, batch_size in itertools.product(DATASETS, BATCH_SIZES[1:]):
         try:
-            df_i = pd.read_csv(f"ood_detector_data/debiased_ood_detector_correctness_{dataset}_{batch_size}.csv")
+            df_i = pd.read_csv(f"ood_detector_{prefix}/debiased_ood_detector_correctness_{dataset}_{batch_size}.csv")
             df_i["batch_size"] = batch_size
             df_i["Dataset"] = dataset
             df.append(df_i)
@@ -767,7 +775,7 @@ def debiased_plots():
 def ood_verdict_plots_batched():
     dfs = []
     for dataset, batch_size in itertools.product(DATASETS, BATCH_SIZES):
-        df = pd.read_csv(f"ood_detector_data/ood_detector_correctness_{dataset}_{batch_size}.csv")
+        df = pd.read_csv(f"ood_detector_{prefix}/ood_detector_correctness_{dataset}_{batch_size}.csv")
         df["batch_size"] = batch_size
         dfs.append(df)
     data = pd.concat(dfs)

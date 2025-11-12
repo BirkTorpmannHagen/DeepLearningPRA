@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 from matplotlib import pyplot as plt
+from panel.widgets.indicators import ptqdm
 from sklearn.linear_model import LinearRegression
 
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -15,9 +16,9 @@ from experiments.runtime_classification import get_all_ood_detector_data
 from utils import *
 
 
-def test_generalization_gap_estimation(batch_size):
-    df_raw = load_all(batch_size, shift="")
-    df = get_all_ood_detector_data(batch_size, filter_organic=False, filter_best=True)
+def test_generalization_gap_estimation(batch_size, pretrain=False):
+    df_raw = load_all(batch_size, shift="", pretrain=pretrain)
+    df = get_all_ood_detector_data(batch_size, filter_organic=False, filter_best=True, pretrain=pretrain)
     df_synth = df[df["Shift Intensity"]!="Organic"]
     df_synth.replace(SHIFT_PRINT_LUT, inplace=True)
     print(df.columns)
@@ -67,6 +68,7 @@ def test_generalization_gap_estimation(batch_size):
 
             # model = LinearGAM(constraints="monotonic_dec")
             reg_model = LinearRegression()
+            print([train["Generalization Gap"]])
             reg_model.fit(train["Detection Rate"].values.reshape(-1,1), train["Generalization Gap"].values.reshape(-1,1))
             mae = mean_absolute_error(test["Generalization Gap"].values.reshape(-1,1), reg_model.predict(test["Detection Rate"].values.reshape(-1,1)))
             baseline = mean_absolute_error(test["Generalization Gap"], [0]*len(test))

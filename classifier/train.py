@@ -25,9 +25,9 @@ from classifier.vit import ViTClassifier
 def train_classifier(train_set, val_set, batch_size=16, load_from_checkpoint=None, model_type="vit", transfer=False):
     num_classes =  train_set.num_classes
     if model_type=="resnet":
-        model =  ResNetClassifier(num_classes, 101, transfer=transfer, batch_size=32, lr=1e-4).to("cuda")
+        model =  ResNetClassifier(num_classes, 101, transfer=transfer, batch_size=32, lr=1e-3).to("cuda")
     elif model_type=="vit":
-        model =  ViTClassifier(num_classes, transfer=transfer, batch_size=batch_size, lr=1e-2).to("cuda")
+        model =  ViTClassifier(num_classes, transfer=transfer, batch_size=batch_size, lr=1e-3).to("cuda")
     else:
         raise ValueError("model_type must be 'resnet' or 'vit'")
     if load_from_checkpoint:
@@ -51,27 +51,24 @@ def train_classifier(train_set, val_set, batch_size=16, load_from_checkpoint=Non
     train_loader = DataLoader(train_set, shuffle=True, batch_size=batch_size, num_workers=4, persistent_workers=True)
     val_loader = DataLoader(val_set, batch_size=batch_size, shuffle=True, num_workers=4, persistent_workers=True)
     tuner = Tuner(trainer)
-    lr_finder = tuner.lr_find(
-        model,
-        train_dataloaders=train_loader,
-        val_dataloaders=val_loader,
-        min_lr=1e-7,
-        max_lr=10,
-        num_training=100,     # ~100 steps is typical
-        mode="exponential",            # classic LR range test
-    )
-    suggested_lr = float(lr_finder.suggestion())
-    print(f"Found lr: {suggested_lr}")
-    model.lr = suggested_lr
+    # lr_finder = tuner.lr_find(
+    #     model,
+    #     train_dataloaders=train_loader,
+    #     val_dataloaders=val_loader,
+    #     min_lr=1e-7,
+    #     max_lr=10,
+    #     num_training=100,     # ~100 steps is typical
+    #     mode="exponential",            # classic LR range test
+    # )
+    # suggested_lr = float(lr_finder.suggestion())
+    # print(f"Found lr: {suggested_lr}")
+    # model.lr = suggested_lr
     trainer.fit(model, train_dataloaders=train_loader,
                 val_dataloaders=val_loader)
 
 
 if __name__ == '__main__':
     model_type="resnet"
-
-    if model_type=="resnet":
-        INPUT_SIZE=512
 
     trans = transforms.Compose([transforms.Resize((INPUT_SIZE, INPUT_SIZE)),
                         transforms.ToTensor(),
