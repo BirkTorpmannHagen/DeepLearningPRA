@@ -3,6 +3,7 @@ from scipy.stats import ks_2samp
 from seaborn import FacetGrid
 import warnings
 
+from sympy import factorial
 
 warnings.filterwarnings("ignore")
 from experiments.accuracy_prediction import *
@@ -195,16 +196,16 @@ def run_methodological_experiments():
 
 
 def run_acc_prediction_experiments():
-    test_generalization_gap_estimation(1)
-    # for model in MODELS:
-    #     get_acc_prediction_results(1, model=model)
+    # test_generalization_gap_estimation(1, pretrain=False)
+    for model in ["resnet", "deeplabv3plus"]:
+        get_acc_prediction_results(1, model="resnet", pretrain=False)
     # ood_detector_correctness_prediction_accuracy(1, model="deeplabv3plus", shift="")
 
-    # acc_prediction_table()
+    acc_prediction_table(pretrain=False)
     # collect_re_accuracy_estimation_data()
     # get_all_pre_data()
-    # error_heatmap()
-    # error_per_accuracy()
+    error_heatmap()
+    error_per_accuracy()
 
 
 if __name__ == '__main__':

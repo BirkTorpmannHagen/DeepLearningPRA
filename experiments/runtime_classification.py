@@ -275,7 +275,7 @@ def ood_detector_correctness_prediction_accuracy(batch_size, model="resnet", shi
     if pretrain:
         prefix = "data/nopretrain"
     else:
-        prefix = "data"
+        prefix = "data/pretrain"
     df = load_all(batch_size=batch_size, shift=shift, samples=100, pretrain=pretrain)
     df = df[df["Model"] == model]
     df = df[df["fold"] != "train"]
@@ -317,7 +317,7 @@ def ood_detector_correctness_prediction_accuracy(batch_size, model="resnet", shi
 
     if flat_errors:
         pd.DataFrame(flat_errors).to_csv(
-            f"{prefix}/{model}/ood_detector_{prefix}/ood_detector_errors_{batch_size}.csv",
+            f"{prefix}/{model}/ood_detector_data/ood_detector_errors_{batch_size}.csv",
             index=False
         )
 
@@ -326,16 +326,16 @@ def ood_detector_correctness_prediction_accuracy(batch_size, model="resnet", shi
         if data_ds.empty:
             continue
         data_ds.to_csv(
-            f"{prefix}/{model}/ood_detector_{prefix}/ood_detector_correctness_{dataset}_{batch_size}.csv",
+            f"{prefix}/{model}/ood_detector_data/ood_detector_correctness_{dataset}_{batch_size}.csv",
             index=False
         )
 
 def get_all_ood_detector_data(batch_size, filter_organic=False, filter_best=False, pretrain=True):
     dfs = []
     if pretrain:
-        prefix = "data/nopretrain"
+        prefix = "data/pretrain"
     else:
-        prefix = "data"
+        prefix = "data/nopretrain"
     for model in MODELS:
         if not os.path.exists(f"{prefix}/{model}/ood_detector_data"):
             os.makedirs(f"{prefix}/{model}/ood_detector_data")
@@ -343,13 +343,20 @@ def get_all_ood_detector_data(batch_size, filter_organic=False, filter_best=Fals
             ood_detector_correctness_prediction_accuracy(batch_size, model=model, shift="", pretrain=pretrain)
         for dataset, feature in itertools.product(DATASETS, DSDS):
             try:
-                df = pd.read_csv(f"{prefix}/{model}/ood_detector_{prefix}/ood_detector_correctness_{dataset}_{batch_size}.csv")
+                df = pd.read_csv(f"{prefix}/{model}/ood_detector_data/ood_detector_correctness_{dataset}_{batch_size}.csv")
             except FileNotFoundError:
-                print(f"{prefix}/{model}/ood_detector_{prefix}/ood_detector_correctness_{dataset}_{batch_size}.csv not found")
+                print(f"{prefix}/{model}/ood_detector_data/ood_detector_correctness_{dataset}_{batch_size}.csv not found")
                 continue
             df["Model"] = model
             dfs.append(df)
     df = pd.concat(dfs)
+    print(df.columns)
+    if "OOD==f(x)=y" in df.columns:
+        df = df[df["OOD==f(x)=y"]==False]
+    if "Performance Calibrated" in df.columns:
+        df = df[df["Performance Calibrated"]==True]
+    if "Threshold Method" in df.columns:
+        df = df[df["Threshold Method"]=="val_optimal"]
     if filter_organic:
         df = df[df["Shift Intensity"] == "Organic"]
 

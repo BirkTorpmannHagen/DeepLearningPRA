@@ -18,13 +18,15 @@ from utils import *
 
 def test_generalization_gap_estimation(batch_size, pretrain=False):
     df_raw = load_all(batch_size, shift="", pretrain=pretrain)
+    print(df_raw.groupby(["Dataset"])[["shift"]].value_counts())
     df = get_all_ood_detector_data(batch_size, filter_organic=False, filter_best=True, pretrain=pretrain)
+    print(df.groupby(["Dataset"])[["OoD Test Fold"]].value_counts())
+
     df_synth = df[df["Shift Intensity"]!="Organic"]
     df_synth.replace(SHIFT_PRINT_LUT, inplace=True)
     print(df.columns)
 
     acc_by_dataset_and_shift = df_raw.groupby(["Dataset", "fold", "Model"])["correct_prediction"].mean().reset_index()
-    print(df["Dataset"].unique())
     ood_accs = df.groupby(["Dataset", "OoD Test Fold", "Model"])["tpr"].mean().reset_index()
     ind_accs = df.groupby(["Dataset", "InD Test Fold", "Model"])["tnr"].mean().reset_index()
 
@@ -50,8 +52,7 @@ def test_generalization_gap_estimation(batch_size, pretrain=False):
     # acc["Generalization Gap"] = acc["acc_diff"] / acc["ind_val_acc"]  # e.g., 0.10 == +10%
     # acc["Generalization Gap"] = - acc["Generalization Gap"] * 100  # convert to percentage
     merged = merged.merge(acc, on=["Dataset", "fold", "Model"], how="left")
-    print(merged.groupby(["Dataset", "Model"])[["Generalization Gap"]].mean())
-    print(merged.groupby(["Dataset", "Shift"])[["Generalization Gap"]].mean())
+
     g = sns.FacetGrid(merged, col="Dataset", col_wrap=3)
     g.map_dataframe(sns.scatterplot, x="Detection Rate", y="Generalization Gap", hue="Shift", alpha=0.7, edgecolor=None)
 
@@ -65,10 +66,8 @@ def test_generalization_gap_estimation(batch_size, pretrain=False):
             train = for_dataset[(for_dataset["Shift"]!=shift)&(for_dataset["Shift"]!="FGSM")]
 
             test = for_dataset[for_dataset["Shift"]==shift]
-
             # model = LinearGAM(constraints="monotonic_dec")
             reg_model = LinearRegression()
-            print([train["Generalization Gap"]])
             reg_model.fit(train["Detection Rate"].values.reshape(-1,1), train["Generalization Gap"].values.reshape(-1,1))
             mae = mean_absolute_error(test["Generalization Gap"].values.reshape(-1,1), reg_model.predict(test["Detection Rate"].values.reshape(-1,1)))
             baseline = mean_absolute_error(test["Generalization Gap"], [0]*len(test))
@@ -95,9 +94,9 @@ def test_generalization_gap_estimation(batch_size, pretrain=False):
 
             # print(model.summary())
 
-def get_acc_prediction_results(batch_size, model="resnet"):
-    df = get_all_ood_detector_data(batch_size, filter_organic=False, filter_best=False)
-
+def get_acc_prediction_results(batch_size, model="resnet", pretrain=False):
+    df = get_all_ood_detector_data(batch_size, filter_organic=False, filter_best=False, pretrain=pretrain)
+    prefix = "data/pretrain" if pretrain else "data/nopretrain"
     df = df[df["Model"]==model]
 
     assert df["Model"].unique()[0]==model
@@ -105,7 +104,7 @@ def get_acc_prediction_results(batch_size, model="resnet"):
     df_synth.replace(SHIFT_PRINT_LUT, inplace=True)
     unique_shifts  = df_synth["Shift"].unique().tolist()
     max_intensity = df_synth["Shift Intensity"].max()
-    df_raw = load_all(batch_size, shift="")
+    df_raw = load_all(batch_size, shift="", pretrain=pretrain)
 
     acc_by_dataset_and_shift = df_raw.groupby(["Dataset", "feature_name", "fold"])["correct_prediction"].mean().reset_index()
     acc_by_dataset_and_shift.replace(DSD_PRINT_LUT, inplace=True)
@@ -216,34 +215,36 @@ def get_acc_prediction_results(batch_size, model="resnet"):
         model_df = pd.DataFrame(model_data)
         if model_df.empty:
             continue
-        model_df.to_csv(f"data/{model}/ood_detector_data/{dataset}_acc_prediction_results.csv", index=False)
+        model_df.to_csv(f"{prefix}/{model}/ood_detector_data/{dataset}_acc_prediction_results.csv", index=False)
         print(model_df.groupby(["Dataset", "feature_name", "Shift"])[["mae", "naive baseline mae"]].mean())
 
         # print(gam.summary())
 
 
-def get_all_pre_data():
+def get_all_pre_data(pretrain=False):
     all_data = []
+    prefix = "data/pretrain" if pretrain else "data/nopretrain"
+
     for model, dataset in itertools.product(MODELS, DATASETS):
         try:
-            df = pd.read_csv(f"data/{model}/pra_data/{dataset}_pre_results.csv")
+            df = pd.read_csv(f"{prefix}/{model}/pra_data/{dataset}_pre_results.csv")
             df["Dataset"] = dataset
             all_data.append(df)
         except FileNotFoundError:
             print(f"No data for model {model} dataset {dataset} ")
             continue
-        print(df.head(3))
     all_df = pd.concat(all_data, ignore_index=True)
     print(all_df.groupby(["Dataset", "Model"])["Accuracy Error"].mean())
     return all_df
 
 
 
-def acc_prediction_table():
+def acc_prediction_table(pretrain):
     dfs = []
+    prefix = "data/pretrain" if pretrain else "data/nopretrain"
     for model, dataset  in itertools.product(MODELS, DATASETS):
         try:
-            df = pd.read_csv(f"data/{model}/ood_detector_data/{dataset}_acc_prediction_results.csv")
+            df = pd.read_csv(f"{prefix}/{model}/ood_detector_data/{dataset}_acc_prediction_results.csv")
             dfs.append(df)
             df["Model"]=model
         except FileNotFoundError:

@@ -147,9 +147,10 @@ def load_as_ensemble(batch_size=30, samples=100, feature="all", shift="normal",
 
 def load_data(dataset_name, feature_name, batch_size=1, samples=1000, model="resnet", shift="normal", pretrain=True):
     if pretrain:
-        prefix = f"data/{model}/feature_data"
+        prefix = f"data/pretrain/{model}/feature_data"
     else:
         prefix = f"data/nopretrain/{model}/feature_data"
+
     if dataset_name=="Polyp" and feature_name=="softmax" or (dataset_name=="Polyp" and model not in SEG_MODELS) :
         return pd.DataFrame() #softmax does not work for segmentation
     try:
@@ -157,7 +158,7 @@ def load_data(dataset_name, feature_name, batch_size=1, samples=1000, model="res
     except:
         print(f"no data found for path {prefix}/{dataset_name}_{shift}_{feature_name}.csv")
         return pd.DataFrame()
-
+    df["Pretrained"]=pretrain
     df["Dataset"]=dataset_name
     df["batch_size"]=batch_size
     df["Model"]=model
