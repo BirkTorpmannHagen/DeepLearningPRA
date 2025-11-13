@@ -203,7 +203,7 @@ def load_data(dataset_name, feature_name, batch_size=1, samples=1000, model="res
 DSD_PRINT_LUT = {"grad_magnitude": "GradNorm", "cross_entropy" : "Entropy", "energy":"Energy", "knn":"kNN", "mahalanobis":"Mahalanobis", "softmax":"Softmax", "typicality":"Typicality"}
 # MODELS = ["resnet", "vit", "deeplabv3plus", "unet", "segformer"]
 SEG_MODELS = ["deeplabv3plus", "unet", "segformer"]
-MODELS = ["resnet"]
+MODELS = ["resnet", "deeplabv3plus", "unet", "segformer", "vit"]
 # MODELS = ["vit", "resnet"]+SEG_MODELS
 DSD_LUT = {value: key for key, value in DSD_PRINT_LUT.items()}
 DATASETS = ["CCT", "OfficeHome", "Office31", "NICO", "Polyp"]

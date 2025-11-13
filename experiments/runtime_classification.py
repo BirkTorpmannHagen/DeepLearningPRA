@@ -273,9 +273,9 @@ def _make_jobs_for_dataset_feature(df, dataset, feature):
 # ---- main entry ----
 def ood_detector_correctness_prediction_accuracy(batch_size, model="resnet", shift="", pretrain=True):
     if pretrain:
-        prefix = "data/nopretrain"
-    else:
         prefix = "data/pretrain"
+    else:
+        prefix = "data/nopretrain"
     df = load_all(batch_size=batch_size, shift=shift, samples=100, pretrain=pretrain)
     df = df[df["Model"] == model]
     df = df[df["fold"] != "train"]
@@ -314,7 +314,7 @@ def ood_detector_correctness_prediction_accuracy(batch_size, model="resnet", shi
     data = pd.DataFrame(flat_success)
     if not data.empty:
         data["feature_name"].replace(DSD_PRINT_LUT, inplace=True)
-
+    os.mkdir(f"{prefix}/{model}/ood_detector_data") if not os.path.exists(f"{prefix}/{model}/ood_detector_data") else None
     if flat_errors:
         pd.DataFrame(flat_errors).to_csv(
             f"{prefix}/{model}/ood_detector_data/ood_detector_errors_{batch_size}.csv",

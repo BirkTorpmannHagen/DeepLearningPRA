@@ -2,7 +2,6 @@ import numpy as np
 import torch.nn
 from segmentation_models_pytorch.utils.metrics import Accuracy
 
-from classifier.cifarresnet import num_classes
 from ooddetectors import *
 from datasets.synthetic_shifts import *
 from torch.utils.data import DataLoader, ConcatDataset, random_split, Subset
@@ -42,14 +41,7 @@ class BaseTestBed:
 
 
     def dl(self, dataset):
-        if self.sampler=="RandomSampler":
-            return DataLoader(dataset, batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers, drop_last=True)
-        elif self.sampler=="SequentialSampler":
-            return DataLoader(dataset, batch_size=self.batch_size, num_workers=self.num_workers, drop_last=True, sampler=SequentialSampler(dataset))
-        elif self.sampler=="ClassOrderSampler":
-            return DataLoader(dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers, drop_last=True, sampler=ClassOrderSampler(dataset, num_classes))
-        elif self.sampler=="ClusterSampler":
-            return DataLoader(dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers, drop_last=True, sampler=ClusterSampler(dataset, self.classifier, self.batch_size))
+        return DataLoader(dataset, batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers, drop_last=True)
 
 
     def ind_loader(self):
@@ -122,7 +114,6 @@ class BaseTestBed:
         elif self.mode=="jpeg":
             ood_sets = [self.dl(TransformedDataset(self.ind_test, jpeg, "jpeg", noise)) for noise in self.noise_range]
             loaders = dict(zip(["jpeg_{}".format(noise_val) for noise_val in self.noise_range], ood_sets))
-
         elif self.mode=="normal":
             loaders =  self.get_ood_dict()
         else:

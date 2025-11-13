@@ -132,11 +132,11 @@ class EndoCV2020(Dataset):
 
 
     def __getitem__(self, i):
-        image = Image.open(self.img_locs[i])
-        mask = Image.open(self.mask_locs[i])
-        image = self.trans(image)
-        mask = self.trans(mask)
-        return image, mask[0].unsqueeze(0).int(), i
+        image = np.asarray(Image.open(self.img_locs[i]))
+        mask = np.asarray(Image.open(self.mask_locs[i]))
+
+        image, mask = self.trans(image=image, mask=mask).values()
+        return self.tensor(image), self.tensor(mask)[0].unsqueeze(0).int(), i
 
     def __len__(self):
         # return 16 #debug

@@ -15,7 +15,7 @@ def compute_stats_no_ind(ood_features, ood_losses, fname, feature_names):
         df.to_csv(f"{fname}_{feature_name}.csv")
 
 def collect_data(testbed_constructor, dataset_name, mode="noise", model="resnet", pretrain=True):
-    if os.path.exists(f"data/{'pretrained' if pretrain else 'nopretrain'}/{model}/feature_data/{dataset_name}_{mode}_knn.csv"):
+    if os.path.exists(f"data/{'pretrain' if pretrain else 'nopretrain'}/{model}/feature_data/{dataset_name}_{mode}_knn.csv"):
         print(f"Data for {dataset_name} in {mode} mode already exists, skipping...")
         return
     print("Collecting data for", dataset_name, "in", mode, "mode")
@@ -28,10 +28,10 @@ def collect_data(testbed_constructor, dataset_name, mode="noise", model="resnet"
     tsd.register_testbed(bench)
     if mode=="normal": #just compute ind and organic oods for normal mode; saves on computation time
         compute_stats(*tsd.compute_pvals_and_loss(),
-                      fname=f"data/{'pretrained' if pretrain else 'nopretrain'}/{model}/feature_data/{dataset_name}_{mode}", feature_names=[f.__name__ for f in features])
+                      fname=f"data/{'pretrain' if pretrain else 'nopretrain'}/{model}/feature_data/{dataset_name}_{mode}", feature_names=[f.__name__ for f in features])
     else:
         compute_stats_no_ind(*tsd.compute_pvals_and_loss(noind=True),
-                             fname=f"data/{'pretrained' if pretrain else 'nopretrain'}/{model}/feature_data/{dataset_name}_{mode}",
+                             fname=f"data/{'pretrain' if pretrain else 'nopretrain'}/{model}/feature_data/{dataset_name}_{mode}",
                              feature_names=[f.__name__ for f in features])
     # compute_stats(*tsd.compute_pvals_and_loss(),
     #               fname=f"final_data/{dataset_name}_{mode}", feature_names=[f.__name__ for f in features])
@@ -142,17 +142,18 @@ def collect_bias_data():
 def collect_single_data(testbed):
     dataset_name = testbed.__name__.split("TestBed")[0]
 
-    pretrain = False
+    pretrain = True
 
     for model in MODELS:
-        if model!="resnet":
+
+        if dataset_name=="Polyp" and model not in SEG_MODELS:
             continue
-        if not os.path.exists(f"data/{'pretrained' if pretrain else 'nopretrain'}/{model}/feature_data"):
-            os.makedirs(f"data/{'pretrained' if pretrain else 'nopretrain'}/{model}/feature_data")
+        if not os.path.exists(f"data/{'pretrain' if pretrain else 'nopretrain'}/{model}/feature_data"):
+            os.makedirs(f"data/{'pretrain' if pretrain else 'nopretrain'}/{model}/feature_data")
 
         for mode in SYNTHETIC_SHIFTS+["normal"]:
-            if mode!="fgsm":
-                continue
+            # if mode=="fgsm":
+            #     continue
             if mode=="autoattack":
                 continue
             if dataset_name=="Polyp" and mode=="fgsm":
@@ -173,10 +174,10 @@ if __name__ == '__main__':
     # collect_data(CCTTestBed, "CCT",mode="normal")
     # collect_bias_data(5)
 
-    collect_single_data(OfficeHomeTestBed)
-    collect_single_data(Office31TestBed)
-    collect_single_data(NICOTestBed)
-    collect_single_data(CCTTestBed)
+    # collect_single_data(OfficeHomeTestBed)
+    # collect_single_data(Office31TestBed)
+    # collect_single_data(NICOTestBed)
+    # collect_single_data(CCTTestBed)
     collect_single_data(PolypTestBed)
 
 

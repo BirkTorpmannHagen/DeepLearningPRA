@@ -3,7 +3,6 @@ import torch.nn
 from torch.utils.data import ConcatDataset
 
 from datasets.polyps import build_polyp_dataset
-from vae.vae_experiment import VAEXperiment
 from segmentor.deeplab import SegmentationModel
 import yaml
 from glow.plmodules import GlowPL
@@ -15,7 +14,6 @@ from testbeds.base import BaseTestBed
 from datasets.synthetic_shifts import *
 from torch.utils.data import DataLoader, ConcatDataset, random_split, Subset
 import torch.nn as nn
-from vae.models.vanilla_vae import VanillaVAE
 import torchvision.transforms as transforms
 # import segmentation_models_pytorch as smp
 DEFAULT_PARAMS = {
@@ -30,17 +28,17 @@ DEFAULT_PARAMS = {
 
 
 class PolypTestBed(BaseTestBed):
-    def __init__(self,rep_model, mode="normal", model_name="deeplabv3plus", batch_size=16, sampler="RandomSampler"):
-        super().__init__(num_workers=5, mode=mode, sampler=sampler, batch_size=batch_size)
+    def __init__(self, mode="normal", model="deeplabv3plus", batch_size=16, sampler="RandomSampler", pretrained=True):
+        super().__init__(num_workers=5, model=model, mode=mode, sampler=sampler, batch_size=batch_size)
         self.mode = mode
 
-        self.ind_train, self.ind_val, self.ind_test, self.etis, self.cvc, self.endo = build_polyp_dataset("../../Datasets/Polyps", img_size=INPUT_SIZE)
+        self.ind_train, self.ind_val, self.ind_test, self.etis, self.cvc, self.endo = build_polyp_dataset("../../Datasets/Polyps")
         self.batch_size=batch_size
         #vae
 
         #segmodel
         self.classifier = SegmentationModel.load_from_checkpoint(
-            f"segmentation_logs/checkpoints/{model_name}/best.ckpt", model_name=model_name).to("cuda")
+            f"segmentation_logs/checkpoints/{model}/best.ckpt", model_name=model).to("cuda")
         self.classifier.eval()
 
         #assign rep model

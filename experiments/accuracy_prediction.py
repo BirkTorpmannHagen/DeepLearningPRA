@@ -15,8 +15,7 @@ from components import OODDetector
 from experiments.runtime_classification import get_all_ood_detector_data
 from utils import *
 
-
-def test_generalization_gap_estimation(batch_size, pretrain=False):
+def get_merged(batch_size=1, pretrain=True):
     df_raw = load_all(batch_size, shift="", pretrain=pretrain)
     print(df_raw.groupby(["Dataset"])[["shift"]].value_counts())
     df = get_all_ood_detector_data(batch_size, filter_organic=False, filter_best=True, pretrain=pretrain)
@@ -52,6 +51,10 @@ def test_generalization_gap_estimation(batch_size, pretrain=False):
     # acc["Generalization Gap"] = acc["acc_diff"] / acc["ind_val_acc"]  # e.g., 0.10 == +10%
     # acc["Generalization Gap"] = - acc["Generalization Gap"] * 100  # convert to percentage
     merged = merged.merge(acc, on=["Dataset", "fold", "Model"], how="left")
+    return merged
+
+def test_generalization_gap_estimation(batch_size, pretrain=False):
+    merged = get_merged(batch_size, pretrain=pretrain)
 
     g = sns.FacetGrid(merged, col="Dataset", col_wrap=3)
     g.map_dataframe(sns.scatterplot, x="Detection Rate", y="Generalization Gap", hue="Shift", alpha=0.7, edgecolor=None)
@@ -95,44 +98,7 @@ def test_generalization_gap_estimation(batch_size, pretrain=False):
             # print(model.summary())
 
 def get_acc_prediction_results(batch_size, model="resnet", pretrain=False):
-    df = get_all_ood_detector_data(batch_size, filter_organic=False, filter_best=False, pretrain=pretrain)
-    prefix = "data/pretrain" if pretrain else "data/nopretrain"
-    df = df[df["Model"]==model]
-
-    assert df["Model"].unique()[0]==model
-    df_synth = df[df["Shift Intensity"]!="Organic"]
-    df_synth.replace(SHIFT_PRINT_LUT, inplace=True)
-    unique_shifts  = df_synth["Shift"].unique().tolist()
-    max_intensity = df_synth["Shift Intensity"].max()
-    df_raw = load_all(batch_size, shift="", pretrain=pretrain)
-
-    acc_by_dataset_and_shift = df_raw.groupby(["Dataset", "feature_name", "fold"])["correct_prediction"].mean().reset_index()
-    acc_by_dataset_and_shift.replace(DSD_PRINT_LUT, inplace=True)
-
-    ood_accs = df.groupby(["Dataset","feature_name", "OoD Test Fold"])["tpr"].mean().reset_index()
-    ind_accs = df.groupby(["Dataset","feature_name", "InD Test Fold"])["tnr"].mean().reset_index()
-    ind_accs["tnr"]=1-ind_accs["tnr"]
-    ind_accs.rename(columns={"InD Test Fold":"fold", "tnr":"Detection Rate"}, inplace=True)
-    ood_accs.rename(columns={"OoD Test Fold":"fold", "tpr":"Detection Rate"}, inplace=True)
-
-    merged = pd.concat([ood_accs, ind_accs], ignore_index=True)
-
-    merged = merged.merge(acc_by_dataset_and_shift, on=["Dataset", "feature_name", "fold"])
-
-    merged["Shift"] = merged["fold"].apply(lambda x: x.split("_")[0] if "_" in x else "Organic")
-    merged["Organic"] = merged["Shift"].apply(lambda x: "Synthetic" if x in SYNTHETIC_SHIFTS else "Organic")
-
-    acc = merged.groupby(["Dataset","feature_name", "fold"], as_index=False)["correct_prediction"].mean()
-    # pull the per-dataset ind_val baseline
-    ind = (acc.loc[acc["fold"] == "ind_val", ["Dataset","feature_name", "correct_prediction"]]
-           .rename(columns={"correct_prediction": "ind_val_acc"}))
-
-    # join baseline back to every shift of the same dataset
-    acc = acc.merge(ind, on=["Dataset", "feature_name"], how="left")
-    # absolute and relative differences vs ind_val
-    acc["Generalization Gap"] = acc["correct_prediction"] - acc["ind_val_acc"]
-    acc["Accuracy"] = acc["correct_prediction"]
-    merged = merged.merge(acc, on=["Dataset","feature_name", "fold"], how="left")
+    merged = get_merged(batch_size, pretrain=pretrain)
 
     g = sns.FacetGrid(merged, col="Dataset", row="feature_name", sharex=False, sharey=False)
     g.map_dataframe(sns.scatterplot, x="Detection Rate", y="Generalization Gap", hue="Organic", hue_order=["Organic", "Synthetic"], alpha=0.7, edgecolor=None)
@@ -248,20 +214,23 @@ def acc_prediction_table(pretrain):
             dfs.append(df)
             df["Model"]=model
         except FileNotFoundError:
-            print(f"No data for model {model}")
+            print(f"No data in {prefix}/{model}/ood_detector_data/{dataset}_acc_prediction_results.csv")
             continue
         except pd.errors.EmptyDataError:
             print(f"Empty data for model {model} dataset {dataset}")
             continue
     df = pd.concat(dfs, ignore_index=True)
 
-    print(df.groupby(["Dataset", "Model", "feature_name"])[["mae", "naive baseline mae"]].mean())
+    meaned = df.groupby(["Dataset", "Model", "feature_name"])[["mae", "naive baseline mae"]].mean()
+    print(meaned.groupby(["Dataset"])[["mae", "naive baseline mae"]].min())
 
-def get_all_acc_prediction_results():
+def get_all_acc_prediction_results(pretrain=True):
+    prefix = "data/pretrain" if pretrain else "data/nopretrain"
     dfs = []
+
     for model, dataset in itertools.product(MODELS, DATASETS):
         try:
-            df = pd.read_csv(f"data/{model}/ood_detector_data/{dataset}_acc_prediction_results.csv")
+            df = pd.read_csv(f"{prefix}/{model}/ood_detector_data/{dataset}_acc_prediction_results.csv")
         except FileNotFoundError:
             print(f"No data for model {model}")
             continue
