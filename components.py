@@ -177,6 +177,10 @@ class OODDetector:
 
     def get_accuracy(self, data):
         return 0.5*(self.get_tpr(data)+self.get_tnr(data))
+    def get_dr(self, data):
+
+        return data.apply(lambda row: self.predict(row), axis=1).mean()
+
 
     def get_metrics(self, data):
         return self.get_tpr(data), self.get_tnr(data), self.get_accuracy(data)

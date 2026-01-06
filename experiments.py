@@ -1,7 +1,7 @@
 # from albumentations.random_utils import normal
 
 import warnings
-
+from experiments.pra import collect_re_accuracy_estimation_data
 
 warnings.filterwarnings("ignore")
 from experiments.accuracy_prediction import *
@@ -31,24 +31,25 @@ def get_dsd_verdicts_given_true_trace(trace, tpr, tnr):
 
 
 
-
+def ood_detector_ba():
+    df = get_all_ood_detector_data(1, filter_organic=True, filter_best=True, pretrain=True)
+    print(df.columns)
+    print(df.groupby(["Dataset", "Fold"])[["DR", "BA", "Accuracy"]].mean())
 
 
 def run_acc_prediction_experiments():
-    test_generalization_gap_estimation(1, pretrain=True)
+    # test_generalization_gap_estimation(1, pretrain=True)
     # for model in MODELS:
-    #     if model=="resnet" or model=="deeplabv3plus":
-    #         continue
-    #     if os.path.exists(f"data/pretrain/{model}/ood_detector_data"):
-    #         continue
-    #     get_acc_prediction_results(1, model=model, pretrain=True)
+    # get_acc_prediction_results(1, pretrain=True)
     # ood_detector_correctness_prediction_accuracy(1, model="deeplabv3plus", shift="")
 
-    acc_prediction_table(pretrain=True)
+    # acc_prediction_table(pretrain=True)
     # collect_re_accuracy_estimation_data()
     # get_all_pre_data()
-    # error_heatmap(pretrain=True)
+    # error_heatmap()
     # error_per_accuracy()
+    ood_detector_ba()
+
 
 
 if __name__ == '__main__':

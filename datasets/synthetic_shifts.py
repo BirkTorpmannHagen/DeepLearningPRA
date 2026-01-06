@@ -66,7 +66,7 @@ def snow(img, intensity):
 def fog(img, intensity):
     seed_all(0)
     x = img.permute(1, 2, 0).numpy()
-    fog = albumentations.RandomFog(fog_coef_lower=0.1, fog_coef_upper=0.3+intensity*0.7, alpha_coef=0.08, always_apply=True)
+    fog = albumentations.RandomFog(fog_coef_lower=intensity, fog_coef_upper=intensity, always_apply=True)
     transforms = alb.Compose([fog])
     transformed = transforms(image=x)["image"]
     transformed = ToTensor()(transformed)
@@ -108,7 +108,7 @@ def jpeg(x, intensity):
     x = x.permute(1, 2, 0).numpy()
     transforms = alb.Compose([
         alb.ImageCompression(quality_lower = int(100-intensity*50),
-                             quality_upper = 100-int(intensity*50), always_apply=True)])
+                             quality_upper = int(100-intensity*50), always_apply=True)])
 
     transformed = transforms(image=x)["image"]
     transformed = ToTensor()(transformed)

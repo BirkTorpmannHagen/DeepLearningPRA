@@ -267,19 +267,22 @@ def collect_tpr_tnr_sensitivity_data():
         df_final.to_csv(f"pra_data/{dataset}_sensitivity_results.csv")
 
 
-def collect_re_accuracy_estimation_data():
+def collect_re_accuracy_estimation_data(pretrain=True):
     bins = 11
 
-    best = get_all_ood_detector_data(batch_size=1, filter_organic=False, filter_best=True)
-    for dataset, model in itertools.product(DATASETS, MODELS):
+    best = get_all_ood_detector_data(batch_size=1, filter_organic=False, filter_best=True, pretrain=pretrain)
+
+    for dataset in best["Dataset"].unique():
+        assert best[best["Dataset"] == dataset]["Model"].unique().shape[0] == 1, "Multiple models found for dataset"
+        model = best[best["Dataset"] == dataset]["Model"].unique()[0]
         dsd_accuracies = best[(best["Dataset"] == dataset)&(best["Model"]==model)]
         if dsd_accuracies.empty:
             continue
         dfs = []
-        config = dsd_accuracies.groupby(["feature_name"])[["tpr", "tnr", "ba"]].mean().reset_index()
-        feature_name, _, _, _ = config.iloc[0]
+        feature_name = dsd_accuracies["feature_name"].values[0]
+
         data = load_data(dataset, DSD_LUT[feature_name], batch_size=1, samples=1000, shift="",
-                         model=model)
+                         model=model, pretrain=pretrain)
         if data.empty:
             continue
 

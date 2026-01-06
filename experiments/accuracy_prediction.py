@@ -15,26 +15,18 @@ from components import OODDetector
 from experiments.runtime_classification import get_all_ood_detector_data
 from utils import *
 
-def get_merged(batch_size=1, pretrain=True):
-    df_raw = load_all(batch_size, shift="", pretrain=pretrain)
-    print(df_raw.groupby(["Dataset"])[["shift"]].value_counts())
-    df = get_all_ood_detector_data(batch_size, filter_organic=False, filter_best=True, pretrain=pretrain)
-    print(df.groupby(["Dataset"])[["OoD Test Fold"]].value_counts())
+def get_merged(batch_size=1, pretrain=True, filter_best=True):
+    df = get_all_ood_detector_data(batch_size, filter_organic=False, filter_best=filter_best, pretrain=pretrain)
 
     df_synth = df[df["Shift Intensity"]!="Organic"]
     df_synth.replace(SHIFT_PRINT_LUT, inplace=True)
-    print(df.columns)
 
-    acc_by_dataset_and_shift = df_raw.groupby(["Dataset", "fold", "Model"])["correct_prediction"].mean().reset_index()
-    ood_accs = df.groupby(["Dataset", "OoD Test Fold", "Model"])["tpr"].mean().reset_index()
-    ind_accs = df.groupby(["Dataset", "InD Test Fold", "Model"])["tnr"].mean().reset_index()
+    df_raw = load_all(batch_size, shift="", pretrain=pretrain)
 
-    ind_accs["tnr"]=1-ind_accs["tnr"]
-    ind_accs.rename(columns={"InD Test Fold":"fold", "tnr":"Detection Rate"}, inplace=True)
-    ood_accs.rename(columns={"OoD Test Fold":"fold", "tpr":"Detection Rate"}, inplace=True)
-
-    merged = pd.concat([ood_accs, ind_accs], ignore_index=True)
-    merged = merged.merge(acc_by_dataset_and_shift, on=["Dataset", "fold", "Model"], how="left")
+    acc_by_dataset_and_shift = df_raw.groupby(["Dataset", "Model", "fold"])["correct_prediction"].mean().reset_index()
+    acc_by_dataset_and_shift.replace(DSD_PRINT_LUT, inplace=True)
+    df.rename(columns={"Fold":"fold"}, inplace=True)
+    merged = df.merge(acc_by_dataset_and_shift, on=["Dataset", "fold", "Model"], how="left")
     merged["Shift"] = merged["fold"].apply(lambda x: x.split("_")[0] if "_" in x else "Organic")
     merged["Organic"] = merged["Shift"].apply(lambda x: "Synthetic" if x in SYNTHETIC_SHIFTS else "Organic")
     acc = merged.groupby(["Dataset", "fold", "Model"], as_index=False)["correct_prediction"].mean()
@@ -42,28 +34,29 @@ def get_merged(batch_size=1, pretrain=True):
     # pull the per-dataset ind_val baseline
     ind = (acc.loc[acc["fold"] == "ind_val", ["Dataset", "correct_prediction"]]
            .rename(columns={"correct_prediction": "ind_val_acc"}))
+
     # join baseline back to every shift of the same dataset
     acc = acc.merge(ind, on="Dataset", how="left")
 
     # absolute and relative differences vs ind_val
     acc["Generalization Gap"] = acc["correct_prediction"] - acc["ind_val_acc"]
     acc["Accuracy"] = acc["correct_prediction"]
-    # acc["Generalization Gap"] = acc["acc_diff"] / acc["ind_val_acc"]  # e.g., 0.10 == +10%
-    # acc["Generalization Gap"] = - acc["Generalization Gap"] * 100  # convert to percentage
     merged = merged.merge(acc, on=["Dataset", "fold", "Model"], how="left")
     return merged
 
 def test_generalization_gap_estimation(batch_size, pretrain=False):
     merged = get_merged(batch_size, pretrain=pretrain)
-
+    print(merged[merged["Dataset"]=="Polyp"].head(10))
+    merged[merged["Dataset"] == "Polyp"].to_csv("test.csv")
+    input()
     g = sns.FacetGrid(merged, col="Dataset", col_wrap=3)
-    g.map_dataframe(sns.scatterplot, x="Detection Rate", y="Generalization Gap", hue="Shift", alpha=0.7, edgecolor=None)
+    g.map_dataframe(sns.scatterplot, x="DR", y="Generalization Gap", hue="Shift", alpha=0.7, edgecolor=None)
 
+    g.set_titles(col_template="{col_name}")
     merged["shift"] = merged.replace(SHIFT_PRINT_LUT, inplace=True)
     gam_data = []
     for dataset in DATASETS:
         for_dataset = merged[merged["Dataset"]==dataset]
-        print(for_dataset.columns)
         for shift in for_dataset["Shift"].unique():
 
             train = for_dataset[(for_dataset["Shift"]!=shift)&(for_dataset["Shift"]!="FGSM")]
@@ -71,16 +64,14 @@ def test_generalization_gap_estimation(batch_size, pretrain=False):
             test = for_dataset[for_dataset["Shift"]==shift]
             # model = LinearGAM(constraints="monotonic_dec")
             reg_model = LinearRegression()
-            reg_model.fit(train["Detection Rate"].values.reshape(-1,1), train["Generalization Gap"].values.reshape(-1,1))
-            mae = mean_absolute_error(test["Generalization Gap"].values.reshape(-1,1), reg_model.predict(test["Detection Rate"].values.reshape(-1,1)))
+            reg_model.fit(train["DR"].values.reshape(-1,1), train["Generalization Gap"].values.reshape(-1,1))
+            mae = mean_absolute_error(test["Generalization Gap"].values.reshape(-1,1), reg_model.predict(test["DR"].values.reshape(-1,1)))
             baseline = mean_absolute_error(test["Generalization Gap"], [0]*len(test))
             # score = model.score(test["Detection Rate"], test["Generalization Gap"])
-            print(f"{dataset:<15} {shift:<20} {mae:>10.4f} {baseline:>10.4f}")
+            #print(f"{dataset:<15} {shift:<20} {mae:>10.4f} {baseline:>10.4f}")
             gam_data.append({"Dataset":dataset, "Model":for_dataset["Model"].unique()[0], "Shift":shift, "mae":mae, "baseline mae": baseline,  "x":np.linspace(0,1,2), "y":reg_model.predict(np.linspace(0,1,2).reshape(-1,1))})
     gam_df = pd.DataFrame(gam_data)
-    print(gam_df.head())
 
-    print(gam_df.groupby(["Dataset"])[["mae", "baseline mae"]].mean()) # print simple evaluation
 
     def plot_gam_fits(data, color=None, **kwargs):
         dataset = data["Dataset"].unique()[0]
@@ -97,97 +88,94 @@ def test_generalization_gap_estimation(batch_size, pretrain=False):
 
             # print(model.summary())
 
-def get_acc_prediction_results(batch_size, model="resnet", pretrain=False):
-    merged = get_merged(batch_size, pretrain=pretrain)
-
+def get_acc_prediction_results(batch_size, pretrain=False):
+    merged = get_merged(batch_size, pretrain=pretrain, filter_best=False)
+    prefix = "data/pretrain" if pretrain else "data/nopretrain"
     g = sns.FacetGrid(merged, col="Dataset", row="feature_name", sharex=False, sharey=False)
-    g.map_dataframe(sns.scatterplot, x="Detection Rate", y="Generalization Gap", hue="Organic", hue_order=["Organic", "Synthetic"], alpha=0.7, edgecolor=None)
+    g.map_dataframe(sns.scatterplot, x="DR", y="Generalization Gap", hue="Organic", hue_order=["Organic", "Synthetic"], alpha=0.7, edgecolor=None)
 
     merged["shift"] = merged.replace(SHIFT_PRINT_LUT, inplace=True)
-
-    for dataset in DATASETS:
-        model_data = []
-        for feature_name in merged["feature_name"].unique():
-            for_dataset = merged[(merged["Dataset"]==dataset)&(merged["feature_name"]==feature_name)]
-            if for_dataset.empty:
-                continue
-            raw_data = load_data(dataset_name=dataset, feature_name=DSD_LUT[feature_name], batch_size=batch_size,
-                                 shift="", model=model)
-            if raw_data.empty:
-                continue
-            for shift in list(for_dataset["Shift"].unique())+["all"]:
-                if shift=="adv" or shift=="ind":
+    for model in MODELS:
+        for dataset in DATASETS:
+            model_data = []
+            for feature_name in merged["feature_name"].unique():
+                for_dataset = merged[(merged["Dataset"]==dataset)&(merged["feature_name"]==feature_name)]
+                if for_dataset.empty:
                     continue
-                train = for_dataset[(for_dataset["Shift"]!=shift)&(for_dataset["Shift"]!="FGSM")]
-                # model = LinearGAM(constraints="monotonic_dec")
-                reg_model = LinearRegression()
-
-                reg_model.fit(train["Detection Rate"].values.reshape(-1, 1), train["Generalization Gap"].values.reshape(-1, 1))
-                # print(raw_data.head(10))
-
-                if shift=="Organic":
-                    test = raw_data[raw_data["Organic"]==True]
-                elif shift=="all":
-                    test = raw_data.sample(len(raw_data[raw_data["Organic"]==True]))
-                else:
-                    test = raw_data[raw_data["shift"]==SHIFT_LUT[shift]]
-
-                test_organic = raw_data[raw_data["Organic"]==True]
-
-
-                test = test[test["fold"]!="train"]
-                test_organic = test_organic[test_organic["fold"]!="train"]
-
-                for ood_folds in test_organic["fold"].unique():
-                    if ood_folds in ["train", "ind_val", "ind_test"]:
+                raw_data = load_data(dataset_name=dataset, feature_name=DSD_LUT[feature_name], batch_size=batch_size,
+                                     shift="", model=model)
+                if raw_data.empty:
+                    continue
+                for shift in list(for_dataset["Shift"].unique())+["all"]:
+                    if shift=="adv" or shift=="ind":
                         continue
-
-                    calib_ood = test_organic[(test_organic["fold"]==ood_folds)|(test_organic["fold"]=="ind_val")]
-
+                    train = for_dataset[(for_dataset["Shift"]!=shift)&(for_dataset["Shift"]!="FGSM")]
+                    reg_model = LinearRegression()
+                    reg_model.fit(train["DR"].values.reshape(-1, 1), train["Generalization Gap"].values.reshape(-1, 1))
 
                     if shift=="Organic":
-                        test_ood = test[(test["fold"]!=ood_folds)&(test["ood"]==True)] #makes sure no overlap when normal
+                        test = raw_data[raw_data["Organic"]==True]
+                    elif shift=="all":
+                        test = raw_data.sample(len(raw_data[raw_data["Organic"]==True]))
                     else:
-                        test_ood = test[test["ood"]==True]
+                        test = raw_data[raw_data["shift"]==SHIFT_LUT[shift]]
 
-                    test_ind = test_organic[test_organic["fold"] == "ind_test"]
-                    assert not test_ind.empty
+                    test_organic = raw_data[raw_data["Organic"]==True]
 
-                    for intensity in test_ood["shift_intensity"].unique():
-                        print(intensity)
-                        test_ood_filt = test_ood[test_ood["shift_intensity"]==intensity]
-                        if test_ood.empty:
+
+                    test = test[test["fold"]!="train"]
+                    test_organic = test_organic[test_organic["fold"]!="train"]
+
+                    for ood_folds in test_organic["fold"].unique():
+                        if ood_folds in ["train", "ind_val", "ind_test"]:
                             continue
-                        ood_detector = OODDetector(calib_ood, "val_optimal")
-                        ood_dr = test_ood.apply(lambda row: ood_detector.predict(row), axis=1).mean()
-                        ind_dr =  test_ind.apply(lambda row: ood_detector.predict(row), axis=1).mean()
-                        ind_acc = test_organic[test_organic["fold"]=="ind_val"]["correct_prediction"].mean()
-                        test_ood_filt["Generalization Gap"] = test_ood_filt["correct_prediction"]-ind_acc
-                        test_ind["Generalization Gap"] = test_ind["correct_prediction"]-ind_acc
+
+                        calib_ood = test_organic[(test_organic["fold"]==ood_folds)|(test_organic["fold"]=="ind_val")]
 
 
-                        for proportion in np.linspace(0, 1, 11):
-                            detection_rate = proportion * ood_dr + (1 - proportion) * ind_dr
+                        if shift=="Organic":
+                            test_ood = test[(test["fold"]!=ood_folds)&(test["ood"]==True)] #makes sure no overlap when normal
+                        else:
+                            test_ood = test[test["ood"]==True]
 
-                            gap = (proportion*test_ood_filt["Generalization Gap"].mean() + (1-proportion)*test_ind["Generalization Gap"].mean())
-                            pred = reg_model.predict(detection_rate.reshape(1, -1))
-                            mae = np.abs(gap - pred)[0][0]
-                            baseline =np.abs(gap - 0)
-                            model_data.append({"Dataset":dataset, "feature_name":feature_name, "Shift":shift,
-                                               "intensity":intensity, "proportion":proportion,
-                                             "mae":mae, "naive baseline mae": baseline, "pred": pred[0][0], "gap": gap,
-                                               "detection_rate": detection_rate, "m":reg_model.coef_[0][0], "b":reg_model.intercept_[0]})
+                        test_ind = test_organic[test_organic["fold"] == "ind_test"]
+                        assert not test_ind.empty
 
-        model_df = pd.DataFrame(model_data)
-        if model_df.empty:
-            continue
-        model_df.to_csv(f"{prefix}/{model}/ood_detector_data/{dataset}_acc_prediction_results.csv", index=False)
-        print(model_df.groupby(["Dataset", "feature_name", "Shift"])[["mae", "naive baseline mae"]].mean())
+                        for intensity in test_ood["shift_intensity"].unique():
+                            print(intensity)
+                            test_ood_filt = test_ood[test_ood["shift_intensity"]==intensity]
+                            if test_ood.empty:
+                                continue
+                            ood_detector = OODDetector(calib_ood, "val_optimal")
+                            ood_dr = test_ood.apply(lambda row: ood_detector.predict(row), axis=1).mean()
+                            ind_dr =  test_ind.apply(lambda row: ood_detector.predict(row), axis=1).mean()
+                            ind_acc = test_organic[test_organic["fold"]=="ind_val"]["correct_prediction"].mean()
+                            test_ood_filt["Generalization Gap"] = test_ood_filt["correct_prediction"]-ind_acc
+                            test_ind["Generalization Gap"] = test_ind["correct_prediction"]-ind_acc
+
+
+                            for proportion in np.linspace(0, 1, 11):
+                                detection_rate = proportion * ood_dr + (1 - proportion) * ind_dr
+
+                                gap = (proportion*test_ood_filt["Generalization Gap"].mean() + (1-proportion)*test_ind["Generalization Gap"].mean())
+                                pred = reg_model.predict(detection_rate.reshape(1, -1))
+                                mae = np.abs(gap - pred)[0][0]
+                                baseline =np.abs(gap - 0)
+                                model_data.append({"Dataset":dataset, "feature_name":feature_name, "Shift":shift,
+                                                   "intensity":intensity, "proportion":proportion,
+                                                 "mae":mae, "naive baseline mae": baseline, "pred": pred[0][0], "gap": gap,
+                                                   "detection_rate": detection_rate, "m":reg_model.coef_[0][0], "b":reg_model.intercept_[0]})
+
+            model_df = pd.DataFrame(model_data)
+            if model_df.empty:
+                continue
+            model_df.to_csv(f"{prefix}/{model}/ood_detector_data/{dataset}_acc_prediction_results.csv", index=False)
+            print(model_df.groupby(["Dataset", "feature_name", "Shift"])[["mae", "naive baseline mae"]].mean())
 
         # print(gam.summary())
 
 
-def get_all_pre_data(pretrain=False):
+def get_all_pre_data(pretrain=True):
     all_data = []
     prefix = "data/pretrain" if pretrain else "data/nopretrain"
 
@@ -197,10 +185,9 @@ def get_all_pre_data(pretrain=False):
             df["Dataset"] = dataset
             all_data.append(df)
         except FileNotFoundError:
-            print(f"No data for model {model} dataset {dataset} ")
+            print(f"No data for {prefix}/{model}/pra_data/{dataset}_pre_results.csv")
             continue
     all_df = pd.concat(all_data, ignore_index=True)
-    print(all_df.groupby(["Dataset", "Model"])["Accuracy Error"].mean())
     return all_df
 
 
@@ -220,9 +207,9 @@ def acc_prediction_table(pretrain):
             print(f"Empty data for model {model} dataset {dataset}")
             continue
     df = pd.concat(dfs, ignore_index=True)
-
-    meaned = df.groupby(["Dataset", "Model", "feature_name"])[["mae", "naive baseline mae"]].mean()
-    print(meaned.groupby(["Dataset"])[["mae", "naive baseline mae"]].min())
+    df = df[(df["Shift"]!="all")&(df["proportion"]==1)]
+    meaned = df.groupby(["Dataset", "Model", "feature_name"])[["mae", "naive baseline mae"]].mean().reset_index()
+    print(meaned.groupby(["Dataset",  "feature_name"])[["mae", "naive baseline mae"]].min())
 
 def get_all_acc_prediction_results(pretrain=True):
     prefix = "data/pretrain" if pretrain else "data/nopretrain"
@@ -250,21 +237,28 @@ def error_heatmap():
         ood_detector_data.append(for_model)
     ood_detector_data = pd.concat(ood_detector_data, ignore_index=True)
 
-    print(ood_detector_data["Dataset"].unique())
-    pre_data = get_all_pre_data()
+    pre_data = get_all_pre_data(pretrain=True)
+
     pre_data = pre_data.groupby(["Dataset", "dsd", "val_set", "rate", "Model"])["Accuracy Error"].mean().reset_index()
     pre_data["intensity"] = pre_data["val_set"].apply(lambda x: x.split("_")[-1] if "_" in x else "OoD")
     pre_data.rename(columns={"dsd":"feature_name", "Accuracy Error":"mae", "rate":"proportion"}, inplace=True)
     pre_data = pre_data.groupby(["Dataset", "feature_name", "proportion", "intensity", "Model"])[["mae"]].mean().reset_index()
 
-    best_detectors_per_dataset = ood_detector_data.groupby(["Dataset", "feature_name", "Model"])["ba"].mean().reset_index()
-    print(df["Dataset"].unique())
+    scores = df.groupby(["Dataset", "feature_name", "Model"])["mae"].mean().reset_index()
 
-    df = df.merge(best_detectors_per_dataset, on=["Model", "Dataset", "feature_name"], how="inner", suffixes=("", "_detector"))
+    idx = scores.groupby("Dataset")["mae"].idxmin()
+    best_configs = scores.loc[idx, ["Dataset", "Model", "feature_name"]]
+    df = df.merge(
+        best_configs,
+        on=["Dataset", "Model", "feature_name"],
+        how="inner"
+    )
+    # print(df.groupby(["Dataset", "Model", "feature_name"])[["mae", "naive baseline mae"]].mean())
+    # input()
     df = df.round(2)
-    print(df["Dataset"].unique())
 
     pre_data = pre_data.round(2)
+    pre_data = pre_data.groupby(["Dataset", "proportion", "intensity"])[["mae"]].mean().reset_index()
     df["intensity"] = df["intensity"].apply(lambda x: str(round(float(x), 2)) if x!="OoD" else x)
     # df["mae"] = df["mae"].apply(lambda x: float(x.strip("[]")))
     # Mean per (Dataset, feature_name, proportion, intensity)
@@ -274,6 +268,9 @@ def error_heatmap():
         .mean()
         .reset_index()
     )
+
+    print(df_grouped.groupby(["Dataset", "Model", "feature_name"])[["mae", "naive baseline mae"]].mean())
+    print(pre_data.groupby(["Dataset"])[["mae"]].mean())
 
     g = sns.FacetGrid(df_grouped, col="Dataset", sharex=True, sharey=True, margin_titles=False, col_wrap=3)
     from matplotlib.colors import LinearSegmentedColormap, PowerNorm
@@ -311,7 +308,8 @@ def error_heatmap():
         dataset = data["Dataset"].unique()[0]
 
         model = data["Model"].unique()[0]
-        pre_data_filt = pre_data[(pre_data["Dataset"]==dataset)&(pre_data["Model"]==model)]
+        pre_data_filt = pre_data[(pre_data["Dataset"]==dataset) ]
+        # print(pre_data_filt.groupby(["Dataset", "Model", "feature_name", "proportion", "intensity"])[["mae"]].value_counts())
         # split by source
 
 
@@ -442,7 +440,7 @@ def error_per_accuracy():
     # Filter data to keep only the best combinations per dataset
     filtered_data = data.merge(best_combinations, on=["Dataset", "feature_name", "Model"])
     # gam_
-    fits = pd.read_csv("gam_fits.csv")
+    # fits = pd.read_csv("gam_fits.csv")
     filtered_data["relative_error"] = data["pred"] - data["gap"]
     filtered_data = filtered_data[filtered_data["proportion"]==1]
 

@@ -117,7 +117,12 @@ def load_all(batch_size=30, samples=100, shift="normal", pretrain=True):
     dfs = []
     for model in MODELS:
         for dataset in DATASETS:
+            if dataset=="Polyp" and model not in SEG_MODELS:
+                continue
+            if dataset!="Polyp" and model in SEG_MODELS:
+                continue
             for dsd in DSDS:
+
 
                 dfs.append(load_data(dataset, dsd, batch_size=batch_size, samples=samples, model=model, shift=shift, pretrain=pretrain))
     return pd.concat(dfs)
@@ -229,7 +234,7 @@ DATASETWISE_RANDOM_CORRECTNESS = {
 COLUMN_PRINT_LUT = {"feature_name":"Feature", "loss":"Loss", "rate":"p(E)", "shift_intensity":"Shift Intensity", "shift":"Shift", "feature": "Feature Value"}
 BIAS_TYPES = ["Unbiased", "Class", "Synthetic", "Temporal"]
 SAMPLERS = ["RandomSampler",  "ClassOrderSampler", "ClusterSampler", "SequentialSampler",]
-SYNTHETIC_SHIFTS = ["noise", "multnoise", "hue", "saltpepper", "saturation", "brightness", "contrast", "smear", "fgsm", "fog", "autoattack", "jpeg"]
+SYNTHETIC_SHIFTS = ["noise", "multnoise", "hue", "saltpepper", "saturation", "brightness", "contrast", "smear", "fgsm", "fog", "jpeg"]
 
 SHIFT_PRINT_LUT= {"normal": "Organic", "noise": "Additive Noise", "multnoise": "Multiplicative Noise",
              "hue": "Hue", "saltpepper": "Salt+Pepper Noise", "brightness":"Brightness", "contrast":"Contrast", "smear":"Smear", "fgsm": "FGSM", "fog":"Fog", "jpeg":"JPEG"}

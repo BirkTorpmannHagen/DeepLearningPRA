@@ -7,6 +7,7 @@ from pygam import LinearGAM
 from sklearn.linear_model import LinearRegression
 from tensorflow.python.framework.test_ops import int_output
 from tqdm import tqdm
+from scipy.stats import spearmanr
 from multiprocessing import Pool, cpu_count
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -212,24 +213,19 @@ def parallel_compute_ood_detector_prediction_accuracy(data_filtered, threshold_m
             ].copy()
 
             dsd = OODDetector(data_train, threshold_method=threshold_method)
-            for ood_test_fold in data_copy[data_copy["ood"] == True]["fold"].unique():
-                if ood_test_fold in ["train", "ind_val", "ind_test"]:
+            for fold in data_copy["fold"].unique():
+                if fold in ["train"]:
                     continue  # not ood
 
-                data_test = data_copy[
-                    (data_copy["fold"] == ood_test_fold) | (data_copy["fold"] == ind_test_fold)
-                ].copy()
+                data_test = data_copy[(data_copy["fold"] == fold)].copy()
 
-                shift = ood_test_fold.split("_")[0]
-                shift_intensity = ood_test_fold.split("_")[-1] if "_" in ood_test_fold else "Organic"
-                tpr, tnr, ba = dsd.get_metrics(data_test)
+                shift = fold.split("_")[0]  if "_" in fold else "Organic"
+                shift_intensity = fold.split("_")[-1] if "_" in fold else "Organic"
+                dr  = dsd.get_dr(data_test)
                 # if ba<0.5:
                 #     print(f"Warning: BA<<0.5 for {data_test['Model'].unique()} {dataset} {feature} {threshold_method} OOD Val: {ood_val_fold} OOD Test: {ood_test_fold} InD Val: {ind_val_fold} InD Test: {ind_test_fold} BA: {ba},  {dsd.threshold}")
                 #     dsd.plot_hist()
 
-
-                if np.isnan(ba):
-                    continue
 
                 data_dict.append({
                     "Dataset": dataset,
@@ -237,13 +233,11 @@ def parallel_compute_ood_detector_prediction_accuracy(data_filtered, threshold_m
                     "Threshold Method": threshold_method,
                     "OoD Val Fold": ood_val_fold,
                     "InD Val Fold": ind_val_fold,
-                    "OoD Test Fold": ood_test_fold,
-                    "InD Test Fold": ind_test_fold,
+                    "Fold": fold,
                     "Shift": shift,
                     "Shift Intensity": shift_intensity,
-                    "tpr": tpr,
-                    "tnr": tnr,
-                    "ba": ba,
+                    "DR": dr,
+                    "Accuracy": data_test["correct_prediction"].mean(),
                 })
     return data_dict
 
@@ -342,6 +336,10 @@ def get_all_ood_detector_data(batch_size, filter_organic=False, filter_best=Fals
         if len(os.listdir(f"{prefix}/{model}/ood_detector_data"))==0:
             ood_detector_correctness_prediction_accuracy(batch_size, model=model, shift="", pretrain=pretrain)
         for dataset, feature in itertools.product(DATASETS, DSDS):
+            if dataset=="Polyp" and model not in SEG_MODELS:
+                continue
+            if dataset!="Polyp" and model in SEG_MODELS:
+                continue
             try:
                 df = pd.read_csv(f"{prefix}/{model}/ood_detector_data/ood_detector_correctness_{dataset}_{batch_size}.csv")
             except FileNotFoundError:
@@ -351,21 +349,58 @@ def get_all_ood_detector_data(batch_size, filter_organic=False, filter_best=Fals
             dfs.append(df)
     df = pd.concat(dfs)
     print(df.columns)
+    df = df.groupby(["Dataset", "feature_name", "Threshold Method", "Fold", "Shift", "Shift Intensity", "Model"])[["DR", "Accuracy"]].mean(numeric_only=True).reset_index()
+
     if "OOD==f(x)=y" in df.columns:
         df = df[df["OOD==f(x)=y"]==False]
     if "Performance Calibrated" in df.columns:
         df = df[df["Performance Calibrated"]==True]
     if "Threshold Method" in df.columns:
         df = df[df["Threshold Method"]=="val_optimal"]
+
     if filter_organic:
         df = df[df["Shift Intensity"] == "Organic"]
+
 
     if filter_best:
         #filter for best models and features per dataset
         df_organic = df[df["Shift Intensity"] == "Organic"] #just consider the organic data for best selection
-        meaned_ba = df_organic.groupby(["Dataset", "Model", "feature_name"])["ba"].mean().reset_index() #
-        best_ba = meaned_ba.loc[meaned_ba.groupby(["Dataset"])["ba"].idxmax()]
-        df = df.merge(best_ba[["Dataset", "Model", "feature_name"]], on=["Dataset", "Model", "feature_name"], how="inner")
+
+        def tpr_acc_corr(g):
+            # guard against degenerate groups
+            if len(g) < 2:
+                return np.nan
+            if g["DR"].nunique() <= 1 or g["Accuracy"].nunique() <= 1:
+                return np.nan
+            return g["DR"].corr(g["Accuracy"])
+
+        corrs = (
+            df
+            .groupby(["Dataset", "Model", "feature_name"])
+            .apply(tpr_acc_corr)
+            .reset_index(name="tpr_acc_corr")
+        )
+
+        # strongest correlation = largest absolute value
+        corrs["abs_corr"] = corrs["tpr_acc_corr"].abs()
+
+        # pick the (Model, feature_name) with strongest |corr| per Dataset
+        best_corr = corrs.loc[
+            corrs.groupby("Dataset")["abs_corr"].idxmax()
+        ]
+
+        # filter original df to only those best (Dataset, Model, feature_name)
+        df = df.merge(
+            best_corr[["Dataset", "Model", "feature_name"]],
+            on=["Dataset", "Model", "feature_name"],
+            how="inner",
+        )
+
+
+        # meaned_ba = df_organic.groupby(["Dataset", "Model", "feature_name"])["ba"].mean().reset_index() #
+        #
+        # best_ba = meaned_ba.loc[meaned_ba.groupby(["Dataset"])["ba"].idxmax()]
+        # df = df.merge(best_ba[["Dataset", "Model", "feature_name"]], on=["Dataset", "Model", "feature_name"], how="inner")
 
     return df
 
