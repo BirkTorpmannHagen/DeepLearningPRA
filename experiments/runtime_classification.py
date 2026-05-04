@@ -332,7 +332,15 @@ def get_all_ood_detector_data(batch_size, filter_organic=False, filter_best=Fals
     for model in MODELS:
         if not os.path.exists(f"{prefix}/{model}/ood_detector_data"):
             os.makedirs(f"{prefix}/{model}/ood_detector_data")
-        if len(os.listdir(f"{prefix}/{model}/ood_detector_data"))==0:
+        # Determine which datasets are expected for this model.
+        expected_datasets = (
+            ["Polyp"] if model in SEG_MODELS else [d for d in DATASETS if d != "Polyp"]
+        )
+        missing = any(
+            not os.path.exists(f"{prefix}/{model}/ood_detector_data/ood_detector_correctness_{d}_{batch_size}.csv")
+            for d in expected_datasets
+        )
+        if missing:
             ood_detector_correctness_prediction_accuracy(batch_size, model=model, shift="", pretrain=pretrain)
         for dataset, feature in itertools.product(DATASETS, DSDS):
             if dataset=="Polyp" and model not in SEG_MODELS:
