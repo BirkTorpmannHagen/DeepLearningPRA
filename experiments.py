@@ -46,7 +46,7 @@ def run_acc_prediction_experiments():
     # acc_prediction_table(pretrain=True)
     # collect_re_accuracy_estimation_data()
     # get_all_pre_data()
-    # error_heatmap()
+    error_heatmap()
     # error_per_accuracy()
     ood_detector_ba()
 

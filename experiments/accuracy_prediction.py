@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 from matplotlib import pyplot as plt
-from panel.widgets.indicators import ptqdm
 from sklearn.linear_model import LinearRegression
 
 from mpl_toolkits.axes_grid1 import make_axes_locatable

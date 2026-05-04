@@ -5,7 +5,6 @@ from matplotlib.patches import Patch
 
 from pygam import LinearGAM
 from sklearn.linear_model import LinearRegression
-from tensorflow.python.framework.test_ops import int_output
 from tqdm import tqdm
 from scipy.stats import spearmanr
 from multiprocessing import Pool, cpu_count

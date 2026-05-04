@@ -3,7 +3,6 @@ import os.path
 from multiprocessing import Pool
 
 import seaborn as sns
-from gast import descr
 from matplotlib import pyplot as plt
 
 from experiments.runtime_classification import get_all_ood_detector_data, ood_verdict_shiftwise_accuracy_tables
