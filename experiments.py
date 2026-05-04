@@ -20,26 +20,26 @@ def ood_detector_ba():
 
 
 def run_acc_prediction_experiments():
-    test_generalization_gap_estimation(1, pretrain=True)   # Figure 1
-    error_per_accuracy()                                   # Figure 3
-    dr_gap_correlation_distribution(1, pretrain=True)      # robustness of DR-gap relationship
-    threshold_method_comparison(1, pretrain=True)          # ID-only thresholding viability
-    atc_comparison(1, pretrain=True)                       # ATC head-to-head, per-fold
+    test_generalization_gap_estimation(1, pretrain=True)
+    dr_gap_correlation_distribution(1, pretrain=True)
+    threshold_method_comparison(1, pretrain=True)
 
-    import pandas as pd
-    p1 = loo_fold_comparison(1, pretrain=True, anchor=False)
-    p2 = loo_fold_comparison(1, pretrain=True, anchor=True)
-    if not p1.empty and not p2.empty:
-        combined = pd.concat([p1, p2[["Ours-anchored"]]], axis=1)
-        combined = combined.reindex(columns=["Ours", "Ours-anchored", "ATC-MC", "ATC-NE"])
-        combined.to_csv("figures/loo_fold_comparison.csv")
-        print("\n=== LOO per-fold MAE (saved to figures/loo_fold_comparison.csv) ===")
-        print(combined.round(4).to_string())
+    pivot, corrected_rows = accuracy_prediction_table(
+        batch_size=1,
+        pretrain=True,
+    )
 
-    intensity_breakdown_plot(1, pretrain=True)             # MAE vs shift intensity, per shift type
+    pivot.to_csv("figures/corrected_shift_type_loo_comparison.csv")
+    corrected_rows.to_csv("figures/corrected_shift_type_loo_rows.csv", index=False)
+
+    print("\n=== Corrected leave-one-shift-type-out MAE ===")
+    print(pivot.round(4).to_string())
+
+    predicted_vs_true_gap_grid(corrected_rows)
+    error_per_accuracy(corrected_rows)
+    intensity_breakdown_plot(corrected_rows)
 
     ood_detector_ba()
-
 
 if __name__ == '__main__':
     run_acc_prediction_experiments()
