@@ -1,0 +1,264 @@
+% CVPR 2022 Paper Template
+% based on the CVPR template provided by Ming-Ming Cheng (https://github.com/MCG-NKU/CVPR_Template)
+% modified and extended by Stefan Roth (stefan.roth@NOSPAMtu-darmstadt.de)
+
+\documentclass[10pt,twocolumn,letterpaper]{article}
+
+%%%%%%%%% PAPER TYPE  - PLEASE UPDATE FOR FINAL VERSION
+\usepackage[review]{cvpr}      % To produce the REVIEW version
+%\usepackage{cvpr}              % To produce the CAMERA-READY version
+%\usepackage[pagenumbers]{cvpr} % To force page numbers, e.g. for an arXiv version
+
+
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{makecell}
+
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{glossaries}
+\usepackage[pagebackref,breaklinks,colorlinks]{hyperref}
+
+
+% Support for easy cross-referencing
+\usepackage[capitalize]{cleveref}
+\crefname{section}{Sec.}{Secs.}
+\Crefname{section}{Section}{Sections}
+\Crefname{table}{Table}{Tables}
+\crefname{table}{Tab.}{Tabs.}
+
+
+%%%%%%%%% PAPER ID  - PLEASE UPDATE
+\def\cvprPaperID{*****} % *** Enter the CVPR Paper ID here
+\def\confName{CVPR}
+\def\confYear{2026}
+\input{glossaries}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\begin{document}
+
+%%%%%%%%% TITLE - PLEASE UPDATE
+\title{Modeling Generalization via Out-of-Distribution Detection in Visual Deep Neural Networks}
+
+\author{Birk Torpmann-Hagen\\
+UiT: The Arctic University of Norway\\
+{\tt\small birk.s.torpmannhagen@uit.no}
+\and
+Michael A. Riegler\\
+SimulaMet\\
+{\tt\small michael@simula.no}
+\and
+Pål Halvorsen\\
+SimulaMet\\
+{\tt\small paalh@simula.no}
+\and
+Dag Johansen\\
+UiT: The Arctic University of Norway\\
+{\tt\small dag.johansen@uit.no}
+}
+
+
+
+
+\maketitle
+%%%%%%%%% ABSTRACT
+\begin{abstract}
+    Deep learning vision systems are known to be sensitive to data that exhibit certain properties not well represented in the training data. When data of this nature manifest in real-world settings, it is often referred to as a covariate shift and is associated with a performance gap compared to initial evaluations. In this paper, we study the extent to which these types of performance gaps and the shifts that precede them can be effectively predicted using out-of-distribution (OOD) detection algorithms. OOD detectors have been studied extensively in the context of open-set recognition and semantic shift detection, often achieving high accuracy. However, covariate shifts represent a more difficult detection target due to the high similarity of the resulting data to in-distribution data, as well as the varying scope and severity that may characterize these shifts. We therefore assess the circumstances and conditions under which OOD detectors can successfully detect covariate shifts. We observe that there is a strong relationship between the rate at which OOD detectors return positive verdicts for a given shift and the generalization gap that is typically induced. We exploit this relationship to build predictive models of generalization, which we demonstrate can provide low-error estimates of network accuracy, with the best-performing OOD detectors attaining mean absolute errors ranging from 0.04 to 0.13, out-performing competing methods. We position OOD detectors as underutilized tools for providing deep neural networks with a greater degree of reliability under covariate shift.  
+\end{abstract}
+
+\section{Introduction}\label{sec:intro}
+Despite their remarkable performance on benchmarks compared to competing approaches, visual \glspl{dnn} has been shown to frequently fail in real-world scenarios, a phenomenon known as \textit{generalization failure}\cite{shortcut_learning, skin_shortcut, shortcut_learning, damour2020underspecification, endocv2021_review, large-scale-ml-deployment, polyp_ai_use_reduces_adr}. In essence, these failures arise from a misalignment between the nature of the data on which \glspl{dnn} is typically trained and evaluated and the broader, more variable data distributions encountered in deployment. This misalignment is commonly described as a \textit{covariate shift} and adversely impacts \gls{dnn} reliability. Under covariate shifts, \glspl{dnn} are not guaranteed to yield correct predictions at the rate specified from initial evaluations, which are typically based on \gls{ind} data extracted from the overall training set. These limitations pose serious challenges to the safe deployment of visual \glspl{dnn}, particularly in high-stakes domains such as medical imaging and autonomous vehicles.
+
+Although significant strides have been made with respect to improving the generalization capabilities of \glspl{dnn} under covariate shift~\cite{oodg_survey}, notably through domain-adaptation frameworks~\cite{domain_adaptation, domain_adaptation_2} and, recently incorporating text-corpora~\cite{clip_generalization}, attaining sufficient levels of generalization for responsible deployment in high-risk settings remains an open problem. As a result, emerging work is instead focusing on the implementation of support components that can mitigate the risks associated with poor generalization. Notable examples thereof include the implementation of guardrails for \glspl{llm}~\cite{llm_monitoring_i1, llm_monitoring_io2} and abstention classes~\cite{abstention, llm_hallucination_prevention}. \textit{\Gls{ood} detectors} have recently also been explored as a means of ensuring output reliability through the operationalization of abstention in \glspl{dnn}~\cite{enase_rv, ood_position}. In other work, \gls{ood} detectors have been demonstrated to facilitate label-free runtime estimation of loss~\cite{rv_lossregression} and accuracy~\cite{acm_pra,garg2022leveraging}. 
+
+However, as \Gls{ood} detectors have primarily been studied in the context of open-set recognition and class novelty rather than in terms of characterizing generalization, their capabilities under covariate shift are not well understood. 
+
+In this paper, we study how aggregate OOD detector verdict rates can be used to characterize covariate-shift severity and estimate sequence-level generalization performance. While prior work has shown that OOD behavior is coupled to classifier accuracy and shift structure, we operationalize this relationship into a simple label-free accuracy estimator under covariate shift. In particular, we assess the detection rates of several popular \gls{ood} detector implementations on several types and intensities of covariate shift, across multiple datasets, and their relationship to generalization. In general, we observe that \gls{ood} detection rates under covariate shift are modulated by the size of the generalization gap between the shifted data and the \gls{ind} data. We observe a fairly strong relationship between \gls{ood} detector prediction rates and generalization, albeit with varying degrees of linearity and noise. Motivated by these findings, we develop a novel approach to label-free accuracy estimation, where we train a linear model that maps the \gls{ood} detection rate for a sequence of data to an estimated generalization gap. Our approach attains absolute errors ranging between 0.04 and 0.13, outperforming competing approaches.
+
+We summarize our contributions as follows:
+\begin{enumerate}
+    \item We assess the capabilities of of several \gls{ood} detector implementations with respect to detecting different types and intensities of covariate shift.
+    \item We demonstrate a consistent relationship between generalization gaps and OOD detector performance, showing that detection is more reliable when shifts induce substantial performance degradation. This highlights both the potential and the limitations of OOD detection as a covariate shift safeguard.
+    \item We exploit this relationship to build models to predict generalization on novel data and achieve mean absolute errors ranging between 0.04 and 0.13 over a wide range of different covariate shifts.
+\end{enumerate}
+
+The remainder of this paper is organized as follows: \Cref{sec:related_work} discusses adjacent and related work. \Cref{sec:methodology} outlines the methodology used as part of our study. \Cref{sec:results} then shows our results. We then discuss these results in \Cref{sec:discussion} and conclude our work in \Cref{sec:conclusion}. All code used as part of this work is available at our GitHub Repository\footnote{\url{https://anonymous.4open.science/r/GeneralizationPredictionCovariateShift-6A51}}.
+
+\section{Related Work}\label{sec:related_work}
+Distributional shift, also often referred to as dataset shift, is a well-known threat to the reliability of neural networks\cite{unifyingdatashift}. Broadly, distributional shifts can be distinguished according to the variables they affect:
+\begin{itemize}
+    \item A shift in \(P(y)\), i.e., the class distribution, is referred to as a \textit{label shift} or a \textit{prior probability shift}~\cite{unifyingdatashift}.
+    \item A shift in \(P(x)\) is referred to as a \textit{covariate} shift and encompasses changes to the nature of the data while the relationship between the input and output variables remains the same. 
+    \item A shift in \(P(y|x)\) is referred to as a \textit{semantic} shift and encompasses changes to the data to which a \gls{dnn} cannot be expected to generalize, since it represents a completely different data generation process.
+\end{itemize}
+Label shift is often considered relatively benign. Although a shift in the distribution of labels can indeed induce performance degradation, particularly for datasets with class imbalance~\cite{class_imbalance}, modern \gls{dnn} are often made more resilient to these types of shifts through, e.g., importance sampling. Generalization to semantic shifts is generally infeasible, as this corresponds to data on which a given \gls{dnn} simply is not designed to perform inferences. This may, for instance, be a medical imaging system encountering non-medical images, or a classifier encountering classes beyond the scope of its output space~\cite{dsd_survey}. Covariate shifts, however, represent changes in the data to which an ideally trained \gls{dnn} may be expected to generalize~\cite{ood_position, unifyingdatashift}. \Gls{dnn} often fails to generalize under covariate shift; however, such shifts correspond to a violation of the \gls{iid} assumption, undermining the validity of the predictor returned from the training process~\cite{vapnik_statistical_learning}. This is referred to as \textit{generalization failure}. Generalization failure is prevalent in a wide variety of \gls{dnn} domains, notably medical imaging~\cite{endocv2021_review, retinopathy, damour2020underspecification, shortcut_learning, skin_shortcut}, hybrid language vision models~\cite{clip_generalization}, \glspl{llm}~\cite{llm_genfailure, llm_hallucinations}, and even benchmarking datasets~\cite{imagenet_gen, cifar_gen}. 
+
+Several methods have been proposed to address this sensitivity to covariate shift~\cite{oodg_survey}. Several alternatives to \gls{erm} have been proposed, for instance~\cite{IRM, domain_adversarial, dsd_survey}, although it is contested whether these methods actually outperform \gls{erm} outside of certain narrow conditions~\cite{oodbench}. Uncertainty quantification has also been cited as a potential solution~\cite{uq_survey}, but it has been shown that the quality of the resulting uncertainty estimates often degrades in \gls{ood} settings~\cite{eval_uncertainty_estimation}. Other works conceptualize \textit{domain adaptation} as a plausible solution, where incoming samples are aligned to a model of the training distribution~\cite{domain_adaptation, domain_adaptation_2}. While there is significant progress in this field, some works suggest that these methods are only effective for data characterized by certain specific properties~\cite{da_limits}. Finally, the emergence of \gls{clip} and \gls{llm} has permitted visual models to leverage text corpora as part of training and has been shown to often increase generalization~\cite{clip_generalization, data_determines_clip}. However, other analyses indicate that such models are often subject to similar pitfalls in terms of shortcut learning and poor generalization as regular vision models~\cite{clip_shortcuts}. 
+
+Rather than attempting to increase model generalization, some have investigated methods by which the reliability of \gls{dnn} outputs can be assured through other means. Notable examples of this include the implementation of abstention classes~\cite{abstention}, such that \gls{dnn} classifiers can defer predictions when there is insufficient basis for a reliable prediction. In \gls{llm} research, similar approaches have been proposed in order to reduce the incidence of hallucinations~\cite{llm_hallucination_prevention} or to avoid unsafe outputs~\cite{llm_monitoring_i1, llm_monitoring_io1, llm_monitoring_io2}. Recent work has highlighted that \gls{ood} detectors may operationalize this approach in vision domains~\cite{ood_position, rv_lossregression, enase_rv}. 
+
+\Gls{ood} detectors are intended to detect instances of data with near-zero density in the (learned) data distribution, i.e. \(P(x,y)\approx0\). There exists a wide variety of means by which this can be achieved. The first proposed methods of \gls{ood} detection were based on computing simple features from the output logits, such as maximum softmax scores or entropy scores~\cite{dsd_baseline}. More advanced methods, like ODIN, augment this through temperature scaling and adversarial perturbation~\cite{odin}. Energy and other information-theoretic features derived from output logits are also common~\cite{dsd_energy}. Gradient-based methods have also been the subject of significant research, though the mechanisms underpinning their efficacy for \gls{ood} detection are somewhat contested~\cite{gradients_distshift, gradients_distshift_2, gradients_distshift_3}. All of these methods entail computing features that are assumed to more or less approximate \(P(x,y)\) in a much more tractable fashion. Classification is then performed by setting a threshold according to known \gls{ind} (and \gls{ood}) data~\cite{dsd_survey}. More direct density-based methods have also been studied, notably in the form of statistical testing~\cite{combined_dsd, typicality_dsd, failing_loudly}. 
+
+% what are the limitations of previous papers ont he subject
+\Gls{ood} detectors have, in recent work, been leveraged to build models for the label-free prediction of the loss~\cite{rv_lossregression} and accuracy~\cite{acm_pra} associated with a set of predictions. These methods are respectively based on building regression models on \gls{ood} detector features or by computing probabilistic estimates of accuracy according to the incidence rate of distributional shift as estimated from \gls{ood} verdict traces. 
+
+However, as \Gls{ood} detectors have primarily been studied in the context of semantic shift~\cite{dsd_benchmarking, dsd_survey}, it is hitherto underexplored whether \gls{ood} detectors can reliably detect covariate shifts of differing character and intensity. Notably, it was observed as part of the analysis of the aforementioned accuracy estimation method that the estimates are contingent on the assumption that all distributional shifts are associated with an approximately similar loss of accuracy. As was shown in the work on loss-regression, however, different intensities of shift give rise to proportionally higher loss. 
+
+\section{OOD Detection and Covariate Shifts}
+\Glspl{dnn} in vision tasks are generally trained in a supervised fashion through \gls{erm}. \Gls{erm} seeks to solve the optimization problem \(\hat{h} = \argmin_{h} \int l(h(x),y) dP(x,y)\), i.e., to find the network parameter configuration \(\hat{h}\) that is characterized by minimum loss \(l(\cdot)\) over the distribution of input-output data \(P(x,y)\). As this distribution is intractable, it is assumed that it can be approximated empirically by a dataset \(\mathcal{D}=\{x_i, y_i\}_0^n\) through \gls{iid} sampling . The \gls{erm} objective is thus given by \(R(h)=\sum_{i=0}^n l(h(x_i),y_i)\). 
+
+%iid assumption
+The \gls{iid} assumption is frequently violated in practice, as datasets are often characterized by some degree of latent bias~\cite{shortcut_learning, damour2020underspecification}. This greatly impedes the generalizability of the resulting \gls{dnn}, as it is unlikely that any given network will infer the correct predictive patterns for inputs that lack support in the training data.
+
+This notion can be formalized as follows: let \(P(x,y)\) be the total data distribution that the dataset \(\mathcal{D}\) seeks to model empirically. When the \gls{iid} violation is violated, the dataset can be considered to follow a different distribution \(\mathcal{D}\sim P_{train}(x,y)\), \(P_{train}(x,y)\neq P(x,y)\). In this case, the network training will not be significantly influenced by data where \(P_{train}(x,y)\approx0\) and \(P(x,y)\gg 0\), potentially causing a generalization gap. 
+
+\Gls{ood} detectors are intended to detect instances of data with low density in the distribution \(P(x,y)\), with \gls{ood} data commonly defined by the following relation~\cite{dsd_survey}:
+\begin{equation}
+    P(x,y)\approx0
+\end{equation}
+Distributional shifts, on the other hand, are defined by the relation:
+\begin{equation}
+    P_{train}(x,y)\neq P_{test}(x,y)
+\end{equation}
+While the two are not typically considered simultaneously in research, \gls{ood} detection can largely be regarded as a means of distributional shift detection. A distributional shift effectively corresponds to a change in the distribution such that samples drawn from the new distribution can, depending on the severity of the shift, have a near-zero probability in the original training distribution. Thus, by detecting when incoming data has a low probability in \(P_{train}\), it is therefore possible to classify data instances according to whether a distributional shift has occurred. Depending on the implementation, this may encompass all three different types of distributional shift listed previously. 
+
+Recent work has increasingly questioned whether standard OOD detectors primarily measure semantic novelty, covariate shift, classifier quality, or some mixture thereof. Vaze et al.~\cite{vaze2022open} show that open-set recognition performance is strongly coupled to closed-set classification accuracy, while Miller et al.~\cite{miller2021accuracy} demonstrate strong correlations between in-distribution and out-of-distribution generalization across several benchmarks. Roady et al.~\cite{roady2020open} similarly show that open-set/OOD detection becomes more difficult as out-of-distribution data becomes more similar to in-distribution data. More recent work has further problematized standard OOD evaluation: Yang et al.~\cite{yang2024imagenetood} argue that modern OOD detectors are often highly sensitive to covariate shifts; Long et al.~\cite{long2024rethinking} propose a fine-grained benchmark spanning semantic and covariate shift degrees; and Li et al.~\cite{li2025wrongquestions} argue that many supervised OOD detectors answer questions misaligned with semantic novelty detection. Harun et al.~\cite{harun2025neuralcollapse} provide a representation-geometric account connecting OOD behavior and generalization.
+
+Our work is complementary to these findings. Rather than treating this coupling as a failure mode for semantic novelty detection, we study whether detector verdict rates can be used constructively as sequence-level covariate-shift statistics for label-free accuracy estimation.
+
+\section{Methodology}\label{sec:methodology}
+In this section, we outline the methodology used for our analysis. Broadly, we seek to characterize the degree to which different types of \gls{ood} detectors are capable of detecting instances of covariate shift of various types and severities across several datasets. To this end, we consider 5 different datasets and 6 different post-hoc \gls{ood} detector implementations. We also apply varying intensities of synthetic covariate shifts in addition to the organic covariate shifts already present in the datasets. 
+
+\subsection{Datasets}
+To sufficiently study the effects of covariate shifts, we require datasets that contain organic instances of such shifts. To this end, we utilize several domain adaptation datasets, as well as a polyp segmentation benchmark consisting of four independently curated datasets. An overview of these datasets is provided in \Cref{tab:dataset_table}.
+\begin{table*}[!htb]
+    \centering
+    \caption{Overview of Datasets.}
+    \input{tables/datasets}
+    \label{tab:dataset_table}
+\end{table*}
+
+\subsection{Synthetic shifts}
+As the aforementioned datasets contain only one type of covariate shift, we also utilize synthetic shifts to assess how \gls{ood} detectors respond to different types and intensities of covariate shifts. To this end we bootstrap new datasets from the \gls{ind} validation dataset and apply a given intensity and type of data augmentation. The intensity is determined by a parameter \(\alpha\), chosen by visual inspection, such that the classes could still be readily distinguished at maximum intensity. The augmentations are listed in \Cref{tab:aug_table}. 
+\begin{table*}
+    \centering
+    \caption{Overview of synthetic augmentations.}
+    \input{tables/synth_augs}
+    \label{tab:aug_table}
+\end{table*}
+\subsection{OOD Detectors}
+We study a selection of \gls{ood} detectors based on the taxonomy provided in Reference \cite{dsd_survey}. We narrow the scope to post-hoc methods. An overview of the studied \gls{ood} detectors is provided in \Cref{tab:ood_detector_table}.
+\begin{table*}[!htb]
+    \centering
+    \caption{Overview of OoD detectors.}
+    \input{tables/ood_detectors}
+    \label{tab:ood_detector_table}
+\end{table*}
+We calibrate the \gls{ood} detectors by finding the optimal threshold between the \gls{ind} data and one organic \gls{ood} partition. We then evaluate the \gls{ood} detector accuracies on the remaining partitions. This is to avoid any biases from setting the thresholds manually and represents a realistic choice in engineering settings. 
+
+\subsection{Network training}
+For the purposes of generality, we perform assessments on several different architectures. We train a ResNet101\cite{resnet}, a vision-transformer~\cite{vit} for all the classification datasets, and a DeepLabV3, UNet~\cite{unet}, and Segformer~\cite{segformer} for the polyp segmentation datasets. All models are pre-trained on ImageNet. The training configuration is summarized in \Cref{tab:training_table}.
+\begin{table}[!htb]
+    \centering
+    \caption{Overview of Training Method.}
+    \input{tables/training}
+    \label{tab:training_table}
+\end{table}
+\subsection{Evaluation}
+As the labeling of covariate shifts is ambiguous, we do not assess the \gls{ood} detectors in terms of classification accuracy. Instead, we assess the detection rate observed over different covariate shifts, and how they relate to the generalization gap induced by said shift. We expect that shifts of greater intensity as given by the \(\alpha\) parameter induce a correspondingly greater generalization gap, and that they are more readily detected as \gls{ood}. 
+
+\section{Results}\label{sec:results}
+In this section, we first evaluate the extent to which \gls{ood} detector verdicts are predictive of generalization. We observe that there is frequently a fairly strong, albeit imperfect, positive relationship between \gls{ood} detection rates and generalization gaps. We then exploit this relationship to build predictive models of generalization, which attain lower errors compared to competing approaches. 
+\subsection{Shift Detectability and Generalization}
+Covariate shifts differ from semantic shifts in that they can manifest in different degrees of performance degradation. We therefore assess the frequency at which different covariate shifts, with differing induced generalization gaps, are detected. This was achieved by applying varying intensities of synthetic shifts to the \gls{ind} validation fold and computing the resulting accuracy of the \gls{dnn}. For brevity, we present the combination of \gls{ood} detector and network architecture with relationships that are characterized by the strongest correlations for each dataset. The results in \Cref{fig:detection_rate_v_generalization_gap} show a fairly strong positive relationship between the \gls{ood} detection rate for a given shift and the generalization gap it induces. Although we do not expect these relationships to persist uniformly across all detector features and architectures, their emergence nonetheless reveals that \glspl{dnn} may have a latent capacity for characterizing covariate shifts given an appropriate design. 
+
+\begin{figure*}[!hbt]
+    \centering
+    \includegraphics[width=0.8\linewidth]{figures/da_vs_generalization.pdf}
+    \caption{Strongest relationships between \Gls{ood} detection rate and generalization gap across covariate shifts.}
+    \label{fig:detection_rate_v_generalization_gap}
+\end{figure*}
+
+This property can be understood in terms of the density of the data in the learned distribution. Data that has undergone a greater degree of covariate shift has a lower density in the learned distribution. \Gls{ood} detectors approximate this density through various heuristics, albeit with varying degrees of fidelity. As a result, \gls{ood} detection rates represent an approximate signal of density. As lower density data has comparatively smaller effects on training, it follows that it is less likely to be associated with correct predictions, discounting the influence of any inductive biases that may otherwise contribute to accurate predictions. The well-behavedness of the relationship is therefore dependent on the fidelity with which \gls{ood} detectors express the density of a given datum in the learned distribution and any influence of inductive biases. There may, as a result, exist certain shifts that break this pattern, e.g., by eluding detection despite inducing significant generalization gaps. This can be observed to differing degrees
+
+\subsection{Accuracy Prediction}
+We exploit the relationship observed above to build predictive models of generalization. This is achieved by fitting a linear model to the data. While the observed relationships are somewhat non-linear, we impose this linear constraint to facilitate accurate predictions on sequences composed of different types and intensities of shifts. Since the overall detection rate and accuracy of a given sequence is a weighted sum of the detection rates and accuracies associated with the constituent sub-sequences, it follows that a predictive model of accuracy must also exhibit this linear property.  
+
+We assess the accuracy of the resulting predictions as follows: we select one shift as a hold-out set for evaluation and train the regression model on the data corresponding to the remaining shifts. We then bootstrap several sequences composed of a varying proportion of \gls{ind} data and data of a particular intensity of shift. The \gls{mae} in the accuracy estimates are then computed over these sequences. We then compute the average \gls{mae} over over shift types, intensities, and composition ratios. The results are shown in \Cref{tab:accuracy_prediction}, selecting the lowest-error network architecture for each configuration. We compare these errors to a baseline of assuming \gls{ind} generalization, as well as the error of the estimates provided by \gls{re}, the closest competing approach. 
+
+\begin{table*}[!htb]
+    \centering
+\begin{tabular}{lccccc}
+\toprule
+& CCT & NICO & Office31 & OfficeHome & Polyp \\
+\midrule
+Energy     & 0.13 & \textbf{0.05} & 0.09 & 0.11 & 0.14 \\
+Entropy    & 0.24 & 0.25 & 0.10 & 0.12 & \textbf{0.13} \\
+GradNorm   & 0.27 & 0.06 & 0.26 & 0.10 & 0.35 \\
+Softmax    & 0.16 & 0.11 & 0.13 & \textbf{0.07} & -- \\
+Typicality & 0.05 & 0.26 & \textbf{0.05} & 0.21 & 0.25 \\
+kNN        & \textbf{0.04} & 0.15 & 0.11 & 0.09 & 0.17 \\
+\midrule
+Baseline    & 0.17 & 0.18 & 0.14 & 0.12 & 0.17 \\
+Best PRE\cite{acm_pra} & 0.05 & 0.16 & 0.10 & \textbf{0.06} & 0.14 \\
+Best (Ours)       & \textbf{0.04} &\textbf{ 0.05} & \textbf{0.05} & 0.07 & \textbf{0.13}\\
+\bottomrule
+\end{tabular}
+    \caption{MAE comparison for each \gls{ood} detector and baseline across datasets. }
+    \label{tab:accuracy_prediction}
+\end{table*}
+
+The results indicate that our proposed approach, on average, provides lower error estimates of generalization compared to the baseline approach, with \glspl{mae} ranging between 0.04 and 0.13. Our approach generally outperforms \gls{re}, with the exception of OfficeHome, for which \gls{re} attains slightly better results.  
+
+These error rates are averaged over shift intensities and \gls{ind} proportions. To provide a more granular view, we break down these results according to the proportion of \gls{ood} data in a given sequence and the intensity of the shifts. \Cref{fig:heatmap} shows heatmaps of the resulting error estimates. The red, blue, and green palettes respectively correspond to whether the baseline, \gls{re}, or our approach is associated with the lowest error. 
+
+\begin{figure*}
+    \centering
+    \includegraphics[width=0.7\linewidth]{figures/accuracy_prediction_error_heatmap.pdf}
+    \caption{Comparison to baselines across shift intensities and InD proportions.}
+    \label{fig:heatmap}
+\end{figure*}
+
+The results affirm that our approach generally outperforms the competing approaches, albeit with a few caveats. Notably, the naive baseline often yields lower errors for low-intensity shifts and in cases where data sequences are characterized by a lower proportion of \gls{ind} data. This follows naturally from the fact that data sequences of this nature are characterized by near-\gls{ind} performance and thus low generalization gaps. \Gls{re}, on the other hand, often outperforms our approach for the organic \gls{ood} data. This is due to the fact that \gls{re} assumes that the generalization gap of the calibration dataset is applicable to all types of shifts, which does not hold for shifts of significantly differing character. 
+
+In practice, accuracy estimation may provide an increased degree of transparency with respect to the reliability of network outputs under operational conditions. However, if our approach provides high-error estimates for \gls{ind} data, any value judgments will be excessively conservative. We therefore assess how the errors vary across the generalization gaps associated with each tested shift and intensity in \Cref{fig:error_over_gaps}.  
+
+\begin{figure*}[!htb]
+    \centering
+    \includegraphics[width=0.7\linewidth]{figures/accuracy_prediction_error_per_gap.pdf}
+    \caption{MAEs across generalization gaps compared to the baseline (black). The red line is a sliding window average over the errors. }
+    \label{fig:error_over_gaps}
+\end{figure*}
+
+The results show that the estimation errors are, in general, weakly correlated with generalization. Notably, however, there is some degree of variability in the errors, spanning orders of magnitude. On average, as indicated by the red sliding window average, our approach generally outperforms the baseline for data with low generalization, albeit by differing margins depending on the dataset. However, For shifts associated with low generalization gaps, the errors sometimes exceed the baseline.
+
+\section{Discussion }\label{sec:discussion}
+%Summary
+Overall, our results indicate that \gls{ood} detectors are fairly effective as covariate shift detectors, insofar as they are relatively expressive of generalization gaps on sequences of data. We frequently observed high \gls{ood} detection rates for high-intensity shifts, highlighting their ability for runtime verification. For low intensity shifts, the detection rates were correspondingly lower, but in a predictable manner that coincided with the induced generalization gap. We leveraged this property to build predictive models of generalization, attaining fairly low errors and outperforming the baselines. There are a few caveats to these results, however, which we discuss further in the following paragraphs.
+
+The results should not be interpreted as evidence that OOD detectors universally solve covariate-shift detection. Rather, they support a narrower claim: when detector scores vary monotonically with shift-induced degradation, aggregate detection rates provide a useful signal for stream-level reliability estimation. This interpretation is consistent with recent critiques showing that supervised OOD detectors often respond strongly to covariate rather than semantic shifts~\cite{yang2024imagenetood,li2025wrongquestions}. In our setting, this behavior is useful, but it also implies that detector choice, thresholding, architecture, and training recipe must be validated for the deployment distribution.
+
+%Sample size
+We note that our experiments all consider sequences of data, rather than individual data points. However, the strength of the relationships we observe may be modulated by sequence length. Moreover, while the detection rates were observed to coincide strongly with accuracy, it may not be the case that \gls{ood} detectors reliably detect the particular individual data associated with incorrect predictions, as opposed to broadly characterizing a given shift and its influence asymptotically. While this work has demonstrated that \gls{ood} detectors have significant promise for detecting covariate shifts, a stronger runtime-verification-oriented perspective is warranted, e.g., through a study of the precise capabilities of \gls{ood} detectors for classifying the correctness of individual predictions. We assert that the results presented in this work represent compelling initial evidence for the efficacy of \gls{ood} detectors as such.  
+
+%external validity
+However, it is worth noting that the well-behavedness of the relationships observed in this work may not necessarily generalize. Different \gls{ood} detector algorithms and model architectures may exhibit weaker or stronger relationships than what we observed in this work. Moreover, certain shifts may yield somewhat inconsistent behavior, as can be observed in \Cref{fig:detection_rate_v_generalization_gap}. In spite of this, the mere existence of these relationships point to an underexplored latent capability in \glspl{dnn} for covariate shift characterization and management. With continued research on more  \gls{ood} detection features, it may be possible to construct methods with the explicit intent of attaining high correlations between detection rates and generalization. 
+
+%More systematic benchmarking
+We also recognize that a more systematic analysis is warranted. We have considered a fairly small selection of \gls{ood} detectors in our experiments.  An understanding of precisely why different types of \gls{ood} detectors succeed or fail to detect certain types of shifts would be of significant merit, but requires a larger number of different implementations, datasets, and synthetic shifts. 
+
+%more sophisticated shifts
+We have primarily considered fairly simple synthetic shifts in the form of data augmentations in this work. However, more sophisticated augmentation strategies are available. Future analyses may, for instance, benefit from assessment under synthetically generated data from generative models or model-based augmentation~\cite{deepaugment}. Beyond this, it would be useful to curate datasets with different intensities of organic shifts where possible and, in general, to develop a more extensive research infrastructure for the study of covariate shifts. 
+
+A further limitation is that our models use relatively standard fine-tuning recipes. Stronger robustness-oriented training procedures, including RandAugment, MixUp, CutMix, random resized cropping, and self-supervised pretraining, may alter both the magnitude of the generalization gaps and the monotonicity of the detector-rate relationship. Evaluating whether the proposed estimator remains calibrated under such recipes is an important direction for future work.
+
+\section{Conclusion}\label{sec:conclusion}
+In this paper, we have studied the capabilities of \gls{ood} detectors as covariate shift detectors. We observed that \gls{ood} detection rates tend to increase fairly monotonically with larger generalization gaps, which we exploited to build predictive models of generalization that outperformed baseline approaches. This suggests that \gls{ood} detectors may operate as simple runtime verifiers under covariate shift and therefore provide functionality for classifying whether the prediction of a given datum should be deferred. We invite further work for assessing the capabilities of \gls{ood} detectors under covariate shift and for the purposes of reliability enhancement through runtime performance characterizations and runtime verification.
+
+%%%%%%%%% REFERENCES
+{\small
+\bibliographystyle{ieee_fullname}
+\bibliography{bibliography}
+}
+
+\end{document}

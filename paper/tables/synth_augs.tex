@@ -1,0 +1,19 @@
+\begin{tabular}{lccc}  % Last column is 'p{5cm}' for wrapping
+    \toprule
+    \textbf{Shift} & \textbf{Functional Description} & \textbf{\(\alpha\) Range} & \textbf{Real-world analogue} \\
+    \midrule
+    \textbf{Additive noise} & \(x = x + \alpha\text{U}(-1,1)\) & \((0,  0.5]\) & Image noise, interference, etc. \\
+    \textbf{Multiplicative Noise} & \(x = x + \alpha\text{U}(-1,1)x\) & \((0, 0.5]\) & Image noise, interference, etc. \\
+    \textbf{Salt and Pepper Noise} & \(\begin{cases}
+        x[\text{U}(-1,1)<\alpha]=0\\
+        x[\text{U}(-1,1)>\alpha]=1
+    \end{cases}\) & \((0, 0.125]\) & \makecell{Image noise, interference,\\ faulty camera sensor, etc.} \\
+    \textbf{FGSM}~\cite{adversarial_attacks} & \(x = x+\alpha\text{sign}(\nabla_x(L(\theta, x,y)))\) & \([0, 0.5]\) & Adversarial attacks \\
+    \textbf{Hue} & HueJitter(\(\alpha\)) & \([0.05, 0.3]\) & \makecell{Poor camera color correction,\\ lighting changes} \\
+    \textbf{Brightness} & BrightnessJitter(\(\alpha\)) & \([0.05, 1]\) & \makecell{Over- and under-exposure,\\ changes to lighting conditions} \\
+    \textbf{Contrast} & ContrastJitter(\(\alpha\)) & \((0, 1]\) &  Changes to camera settings/hardware \\
+    \textbf{Smear} & GridDistortion(\(\alpha\)) & \((0, 0.5]\) &  Camera movement \\
+    \textbf{JPEG-compression} & ImageCompression(\(\alpha\)) & (0, 75) & Image Quality \\
+    \textbf{Fog} & RandomFog(\(\alpha\)) & \((0, 0.5]\) & Fog/Partial Occlusion \\
+    \bottomrule
+\end{tabular}

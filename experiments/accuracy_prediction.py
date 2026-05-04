@@ -236,6 +236,383 @@ def get_all_acc_prediction_results(pretrain=True):
     all_df = pd.concat(dfs, ignore_index=True)
     return all_df
 
+def _per_fold_method_data(batch_size=1, pretrain=True):
+    """
+    Per-fold MAE for Ours, ATC-MC, ATC-NE, PRE — the same per-(Dataset, Method)
+    selection rule as `loo_fold_comparison` (best Model x feature/variant).
+    Adds parsed `shift_type` and `intensity` columns for downstream plotting.
+    Returns a long DataFrame: Dataset, fold, Method, shift_type, intensity, MAE.
+    """
+    raw = load_all(batch_size=batch_size, shift="", pretrain=pretrain)
+    dr_data = get_all_ood_detector_data(batch_size, filter_organic=False,
+                                        filter_best=False, pretrain=pretrain)
+    if raw.empty or dr_data.empty:
+        return pd.DataFrame()
+
+    rows = []
+
+    # --- Ours: per-fold LOO regression (matches loo_fold_comparison) ---
+    for (dataset, model, feature_name), grp in dr_data.groupby(["Dataset", "Model", "feature_name"]):
+        ind_val_row = grp[grp["Fold"] == "ind_val"]
+        if ind_val_row.empty:
+            continue
+        ind_val_acc = float(ind_val_row["Accuracy"].mean())
+        grp = grp.copy()
+        grp["gap"] = grp["Accuracy"] - ind_val_acc
+        eligible = grp[~grp["Fold"].isin(["train", "ind_val"])]
+        if len(eligible) < 3:
+            continue
+        for held_idx, held_row in eligible.iterrows():
+            train_set = eligible.drop(index=held_idx)
+            if len(train_set) < 2:
+                continue
+            reg = LinearRegression()
+            reg.fit(train_set["DR"].values.reshape(-1, 1), train_set["gap"].values)
+            pred = float(reg.predict(np.array([[float(held_row["DR"])]]))[0])
+            rows.append({"Dataset": dataset, "Model": model,
+                         "feature_name": feature_name, "fold": held_row["Fold"],
+                         "Method": "Ours", "MAE": abs(pred - float(held_row["gap"]))})
+
+    # --- ATC: per-fold standard protocol ---
+    for (dataset, model), df_dm in raw.groupby(["Dataset", "Model"]):
+        ind_val_all = df_dm[df_dm["fold"] == "ind_val"]
+        if ind_val_all.empty:
+            continue
+        for atc_name, feat, transform in [
+            ("ATC-MC", "softmax",       lambda x: x),
+            ("ATC-NE", "cross_entropy", lambda x: -x),
+        ]:
+            iv = ind_val_all[ind_val_all["feature_name"] == feat]
+            if iv.empty:
+                continue
+            tau = _atc_threshold(transform(iv["feature"].values),
+                                 iv["correct_prediction"].values)
+            if np.isnan(tau):
+                continue
+            ind_val_acc = float(iv["correct_prediction"].mean())
+            for fold, fdf in df_dm[df_dm["feature_name"] == feat].groupby("fold"):
+                if fold in ("train", "ind_val"):
+                    continue
+                est = float((transform(fdf["feature"].values) >= tau).mean())
+                true_acc = float(fdf["correct_prediction"].mean())
+                rows.append({"Dataset": dataset, "Model": model,
+                             "feature_name": feat, "fold": fold,
+                             "Method": atc_name,
+                             "MAE": abs((est - ind_val_acc) - (true_acc - ind_val_acc))})
+
+    # --- PRE: per-fold from cached results.
+    # Note: PRE's `val_set` is the (organic-only) calibration fold; `test_set` is
+    # the held-out fold being predicted, which DOES include synthetic shifts.
+    # Per-test-fold MAE: average over val_set calibration choices and Tree.
+    try:
+        pre = get_all_pre_data(pretrain=pretrain)
+    except Exception as e:
+        print(f"[per_fold] PRE unavailable: {e}")
+        pre = pd.DataFrame()
+    if not pre.empty:
+        pre = pre[pre["rate"] == 1].copy()
+        pre_agg = (pre.groupby(["Dataset", "Model", "dsd", "test_set"])["Accuracy Error"]
+                       .mean().reset_index())
+        for _, r in pre_agg.iterrows():
+            rows.append({"Dataset": r["Dataset"], "Model": r["Model"],
+                         "feature_name": r["dsd"], "fold": r["test_set"],
+                         "Method": "PRE", "MAE": float(r["Accuracy Error"])})
+
+    if not rows:
+        return pd.DataFrame()
+    df = pd.DataFrame(rows)
+
+    # Best (Model, feature) per (Dataset, Method) — same selection rule for everyone
+    config_means = (df.groupby(["Dataset", "Model", "feature_name", "Method"])["MAE"]
+                      .mean().reset_index())
+    best = config_means.loc[
+        config_means.groupby(["Dataset", "Method"])["MAE"].idxmin(),
+        ["Dataset", "Model", "feature_name", "Method"]
+    ]
+    df = df.merge(best, on=["Dataset", "Model", "feature_name", "Method"], how="inner")
+
+    # Parse shift_type and intensity from fold name
+    def parse_fold(fold):
+        if "_" in str(fold):
+            parts = str(fold).split("_")
+            shift = parts[0]
+            try:
+                intensity = float(parts[-1])
+                return shift, intensity, "synthetic"
+            except ValueError:
+                return str(fold), np.nan, "organic"
+        return str(fold), np.nan, "organic"
+
+    parsed = df["fold"].apply(parse_fold)
+    df["shift_type"] = [p[0] for p in parsed]
+    df["intensity"] = [p[1] for p in parsed]
+    df["category"] = [p[2] for p in parsed]
+    return df
+
+
+def intensity_breakdown_plot(batch_size=1, pretrain=True):
+    """
+    For each dataset, plot MAE vs synthetic-shift intensity for Ours, ATC, and
+    PRE, with bands across shift types; organic shifts shown as separate
+    markers on the right of each panel. Captures both axes (intensity AND shift
+    type) the reviewers asked for in one figure.
+    """
+    df = _per_fold_method_data(batch_size=batch_size, pretrain=pretrain)
+    if df.empty:
+        print("[intensity_breakdown_plot] no data.")
+        return df
+
+    # Use ATC-NE (single ATC line; ATC-MC and ATC-NE share most of the story
+    # and ATC-NE is defined for Polyp where ATC-MC is not).
+    df = df[df["Method"].isin(["Ours", "ATC-NE", "PRE"])].copy()
+    df["Method"] = df["Method"].replace({"ATC-NE": "ATC"})
+
+    cb = sns.color_palette("colorblind")
+    palette = {"Ours": cb[2], "ATC": cb[1], "PRE": cb[0]}
+    method_order = [m for m in ["Ours", "ATC", "PRE"] if m in df["Method"].unique()]
+
+    synth = df[df["category"] == "synthetic"].copy()
+    organic = df[df["category"] == "organic"].copy()
+
+    fig, axes = plt.subplots(2, 3, figsize=(10.5, 5.6), sharey=False)
+    axes = axes.flatten()
+    for i, dataset in enumerate(DATASETS):
+        ax = axes[i]
+        sub_s = synth[synth["Dataset"] == dataset]
+        sub_o = organic[organic["Dataset"] == dataset]
+        if not sub_s.empty:
+            sns.lineplot(data=sub_s, x="intensity", y="MAE", hue="Method",
+                         hue_order=method_order, palette=palette,
+                         marker="o", markersize=5, errorbar="se", ax=ax)
+        if not sub_o.empty:
+            org_summary = (sub_o.groupby(["Method", "shift_type"])["MAE"]
+                                .mean().reset_index())
+            x_max = sub_s["intensity"].max() if not sub_s.empty else 0.5
+            x_org = x_max + 0.08
+            for method in method_order:
+                vals = org_summary[org_summary["Method"] == method]["MAE"].values
+                if len(vals) == 0:
+                    continue
+                ax.scatter([x_org] * len(vals), vals,
+                           color=palette[method], marker="D", s=28,
+                           edgecolor="black", linewidth=0.4, zorder=5)
+            ax.axvline(x_max + 0.04, color="grey", linestyle=":", linewidth=0.7)
+            ax.text(x_org, ax.get_ylim()[1] * 0.95, "org.", fontsize=7,
+                    ha="center", va="top", color="grey")
+        ax.set_title(dataset, fontsize=10)
+        ax.set_xlabel("Shift intensity")
+        ax.set_ylabel("MAE")
+        if ax.get_legend() is not None:
+            ax.get_legend().remove()
+    # Hide unused 6th panel
+    for j in range(len(DATASETS), len(axes)):
+        axes[j].set_visible(False)
+        axes[j].set_yscale("log")
+    handles = [Patch(color=palette[m], label=m) for m in method_order]
+    fig.legend(handles=handles, loc="lower right", bbox_to_anchor=(0.95, 0.08),
+               frameon=False, ncol=len(method_order), title="Method")
+    plt.tight_layout(rect=[0, 0.02, 1, 1])
+    plt.savefig("figures/intensity_breakdown.pdf", bbox_inches="tight")
+    plt.show()
+
+    print("\n=== Per-shift-type, per-dataset MAE (best config per Method) ===")
+    pivot = (df.groupby(["Dataset", "shift_type", "Method"])["MAE"]
+               .mean().reset_index()
+               .pivot_table(index=["Dataset", "shift_type"],
+                            columns="Method", values="MAE")
+               .reindex(columns=method_order))
+    pivot.to_csv("figures/intensity_breakdown.csv")
+    print(pivot.round(3).to_string())
+    return df
+
+
+def loo_fold_comparison(batch_size=1, pretrain=True, anchor=False):
+    """
+    Leave-one-fold-out per-fold accuracy estimation.
+
+      Ours: fit LinearRegression on (DR, gap) pairs for every non-held-out fold,
+            predict gap on the held-out fold. If anchor=True, the regression is
+            anchored to the InD-val point (no intercept, regressors centered on
+            DR(ind_val)) so the predicted gap is exactly 0 when DR equals InD DR.
+      ATC : standard protocol — threshold tau is set on InD val labels (Garg et
+            al. ICLR 2022); estimate on the held-out fold.
+
+    Both methods are evaluated on the SAME held-out folds (every non-train,
+    non-ind_val fold). Per-dataset MAE is the mean over (held-out fold,
+    architecture, detector/variant) for the best (Model, feature) per
+    (Dataset, Method).
+    """
+    raw = load_all(batch_size=batch_size, shift="", pretrain=pretrain)
+    if raw.empty:
+        return pd.DataFrame()
+    dr_data = get_all_ood_detector_data(batch_size, filter_organic=False,
+                                        filter_best=False, pretrain=pretrain)
+    if dr_data.empty:
+        return pd.DataFrame()
+
+    rows = []
+
+    # ----- Ours: LOO regression of gap on DR -----
+    ours_label = "Ours-anchored" if anchor else "Ours"
+    for (dataset, model, feature_name), grp in dr_data.groupby(["Dataset", "Model", "feature_name"]):
+        ind_val_row = grp[grp["Fold"] == "ind_val"]
+        if ind_val_row.empty:
+            continue
+        ind_val_dr = float(ind_val_row["DR"].mean())
+        ind_val_acc = float(ind_val_row["Accuracy"].mean())
+        grp = grp.copy()
+        grp["gap"] = grp["Accuracy"] - ind_val_acc
+
+        eligible = grp[~grp["Fold"].isin(["train", "ind_val"])]
+        if len(eligible) < 3:  # need enough to LOO
+            continue
+        for held_idx, held_row in eligible.iterrows():
+            train_set = eligible.drop(index=held_idx)
+            if len(train_set) < 2:
+                continue
+            X_train = train_set["DR"].values.reshape(-1, 1)
+            y_train = train_set["gap"].values
+            x_held = float(held_row["DR"])
+            if anchor:
+                # Center on ind_val DR; force intercept = 0 so reg(ind_val_dr) == 0
+                reg = LinearRegression(fit_intercept=False)
+                reg.fit(X_train - ind_val_dr, y_train)
+                pred = float(reg.predict(np.array([[x_held - ind_val_dr]]))[0])
+            else:
+                reg = LinearRegression()
+                reg.fit(X_train, y_train)
+                pred = float(reg.predict(np.array([[x_held]]))[0])
+            mae = abs(pred - float(held_row["gap"]))
+            rows.append({"Dataset": dataset, "Model": model,
+                         "feature_name": feature_name, "fold": held_row["Fold"],
+                         "Method": ours_label, "MAE": mae})
+
+    # ----- ATC: per-fold estimate using the same per-fold raw data -----
+    for (dataset, model), df_dm in raw.groupby(["Dataset", "Model"]):
+        ind_val_all = df_dm[df_dm["fold"] == "ind_val"]
+        if ind_val_all.empty:
+            continue
+        for atc_name, feat, transform in [
+            ("ATC-MC", "softmax",       lambda x: x),
+            ("ATC-NE", "cross_entropy", lambda x: -x),
+        ]:
+            iv = ind_val_all[ind_val_all["feature_name"] == feat]
+            if iv.empty:
+                continue
+            tau = _atc_threshold(transform(iv["feature"].values),
+                                 iv["correct_prediction"].values)
+            if np.isnan(tau):
+                continue
+            ind_val_acc = float(iv["correct_prediction"].mean())
+            for fold, fdf in df_dm[df_dm["feature_name"] == feat].groupby("fold"):
+                if fold in ("train", "ind_val"):
+                    continue
+                est_acc = float((transform(fdf["feature"].values) >= tau).mean())
+                true_acc = float(fdf["correct_prediction"].mean())
+                # Compare in gap space (same units as Ours)
+                mae = abs((est_acc - ind_val_acc) - (true_acc - ind_val_acc))
+                rows.append({"Dataset": dataset, "Model": model,
+                             "feature_name": feat, "fold": fold,
+                             "Method": atc_name, "MAE": mae})
+
+    if not rows:
+        print("[loo_fold_comparison] no rows produced.")
+        return pd.DataFrame()
+
+    df = pd.DataFrame(rows)
+    # Best (Model, feature) per (Dataset, Method) — same selection rule for everyone
+    config_means = (df.groupby(["Dataset", "Model", "feature_name", "Method"])["MAE"]
+                      .mean().reset_index())
+    best = config_means.loc[
+        config_means.groupby(["Dataset", "Method"])["MAE"].idxmin(),
+        ["Dataset", "Model", "feature_name", "Method"]
+    ]
+    df_best = df.merge(best, on=["Dataset", "Model", "feature_name", "Method"], how="inner")
+    summary = (df_best.groupby(["Dataset", "Method"])["MAE"]
+                       .mean().reset_index())
+    pivot = summary.pivot(index="Dataset", columns="Method", values="MAE").reindex(DATASETS)
+    method_order = [c for c in [ours_label, "ATC-MC", "ATC-NE"] if c in pivot.columns]
+    pivot = pivot.reindex(columns=method_order)
+    print(f"\n=== Leave-one-fold-out per-fold MAE (anchor={anchor}) ===")
+    print(pivot.round(4).to_string())
+    return pivot
+
+
+def _atc_per_cell_data(batch_size=1, pretrain=True):
+    """
+    Closed-form ATC MAE per (Dataset, Model, intensity, proportion) cell, mirroring
+    the analytical mixing used by `get_acc_prediction_results` for "Ours":
+
+        mixed_pred  = p * atc_acc(ood_at_intensity) + (1-p) * atc_acc(ind_test)
+        mixed_truth = p * true_acc(ood_at_intensity) + (1-p) * true_acc(ind_test)
+        mae         = |mixed_pred - mixed_truth|
+
+    Per cell we return the *better* of ATC-MC and ATC-NE so the heatmap stays at
+    four winner colours (Ours / Baseline / PRE / ATC).
+    """
+    raw = load_all(batch_size=batch_size, shift="", pretrain=pretrain)
+    if raw.empty:
+        return pd.DataFrame()
+
+    rows = []
+    for (dataset, model), df_dm in raw.groupby(["Dataset", "Model"]):
+        ind_val = df_dm[df_dm["fold"] == "ind_val"]
+        ind_test = df_dm[df_dm["fold"] == "ind_test"]
+        if ind_val.empty or ind_test.empty:
+            continue
+
+        for atc_name, feat, transform in [
+            ("ATC-MC", "softmax",       lambda x: x),
+            ("ATC-NE", "cross_entropy", lambda x: -x),
+        ]:
+            iv = ind_val[ind_val["feature_name"] == feat]
+            it = ind_test[ind_test["feature_name"] == feat]
+            if iv.empty or it.empty:
+                continue
+            tau = _atc_threshold(transform(iv["feature"].values),
+                                 iv["correct_prediction"].values)
+            if np.isnan(tau):
+                continue
+            atc_ind = float((transform(it["feature"].values) >= tau).mean())
+            true_ind = float(it["correct_prediction"].mean())
+
+            for fold, fdf in df_dm[df_dm["feature_name"] == feat].groupby("fold"):
+                if fold in ("train", "ind_val", "ind_test"):
+                    continue
+                if "_" in fold:
+                    intensity_raw = fold.split("_")[-1]
+                    try:
+                        intensity = str(round(float(intensity_raw), 2))
+                    except ValueError:
+                        intensity = intensity_raw
+                else:
+                    intensity = "OoD"
+                atc_ood = float((transform(fdf["feature"].values) >= tau).mean())
+                true_ood = float(fdf["correct_prediction"].mean())
+                for proportion in np.linspace(0, 1, 11):
+                    pred = proportion * atc_ood + (1 - proportion) * atc_ind
+                    truth = proportion * true_ood + (1 - proportion) * true_ind
+                    rows.append({
+                        "Dataset": dataset, "Model": model, "ATC variant": atc_name,
+                        "intensity": intensity,
+                        "proportion": round(float(proportion), 2),
+                        "mae": abs(pred - truth),
+                    })
+    if not rows:
+        return pd.DataFrame()
+    df_atc = pd.DataFrame(rows)
+    # Mirror the "best (Model, feature) per Dataset" rule used for Ours:
+    # pick the (Model, ATC variant) combination with the lowest mean MAE per Dataset.
+    config_means = (df_atc.groupby(["Dataset", "Model", "ATC variant"])["mae"]
+                          .mean().reset_index())
+    best = config_means.loc[config_means.groupby("Dataset")["mae"].idxmin(),
+                            ["Dataset", "Model", "ATC variant"]]
+    df_atc = df_atc.merge(best, on=["Dataset", "Model", "ATC variant"], how="inner")
+    df_atc = (df_atc.groupby(["Dataset", "intensity", "proportion"])["mae"]
+                    .mean().reset_index())
+    return df_atc
+
+
 def error_heatmap():
     df = get_all_acc_prediction_results()
     ood_detector_data = []
@@ -269,6 +646,8 @@ def error_heatmap():
     pre_data = pre_data.groupby(["Dataset", "proportion", "intensity"])[["mae"]].mean().reset_index()
     df["intensity"] = df["intensity"].apply(lambda x: str(round(float(x), 2)) if x!="OoD" else x)
 
+    atc_data = _atc_per_cell_data(batch_size=1, pretrain=True).round(2)
+
     df_grouped = (
         df.groupby(["Dataset", "Model", "feature_name", "proportion", "intensity"])[["mae", "naive baseline mae"]]
         .mean()
@@ -296,8 +675,9 @@ def error_heatmap():
     cb = sns.color_palette("colorblind")
     palette = {
         "model": saturation_cmap_from_rgb(cb[2]),     # bluish-green for "Ours"
-        "baseline": saturation_cmap_from_rgb(cb[3]),  # vermillion for baseline
+        "baseline": saturation_cmap_from_rgb(cb[3]),  # vermillion for Baseline
         "pre": saturation_cmap_from_rgb(cb[0]),       # blue for PRE
+        "atc": saturation_cmap_from_rgb(cb[1]),       # orange for ATC
     }
 
     def sort_mixed_index(df):
@@ -321,32 +701,33 @@ def error_heatmap():
         # split by source
 
 
+        atc_data_filt = atc_data[atc_data["Dataset"] == dataset] if not atc_data.empty else atc_data
+
         # pivots (align grids)
         model_p = data.pivot(index="intensity", columns="proportion", values="mae")
         base_p = data.pivot(index="intensity", columns="proportion", values="naive baseline mae")
         pre_p = pre_data_filt.pivot(index="intensity", columns="proportion", values="mae")
+        atc_p = (atc_data_filt.pivot(index="intensity", columns="proportion", values="mae")
+                 if not atc_data_filt.empty else pd.DataFrame(index=model_p.index, columns=model_p.columns, dtype=float))
 
         # union index/columns
-        all_idx = model_p.index.union(base_p.index if base_p is not None else model_p.index).union(
-            pre_p.index if pre_p is not None else model_p.index)
-        all_col = model_p.columns.union(base_p.columns if base_p is not None else model_p.columns).union(
-            pre_p.columns if pre_p is not None else model_p.columns)
+        all_idx = model_p.index.union(base_p.index).union(pre_p.index).union(atc_p.index)
+        all_col = model_p.columns.union(base_p.columns).union(pre_p.columns).union(atc_p.columns)
         model_p = model_p.reindex(index=all_idx, columns=all_col)
         base_p = base_p.reindex(index=all_idx, columns=all_col)
         pre_p = pre_p.reindex(index=all_idx, columns=all_col)
+        atc_p = atc_p.reindex(index=all_idx, columns=all_col)
 
-        # 3D stack to get mins/argmins (order: model, baseline, pre)
+        # 4D stack: order matches palette key order (model, baseline, pre, atc)
         stack = np.stack([
             model_p.values,
             base_p.values,
-            pre_p.values
+            pre_p.values,
+            atc_p.values,
         ], axis=0)
-        # nan-aware min/argmin
         min_vals = np.nanmin(stack, axis=0)
-        # for argmin with nans: replace nans with +inf so they won't win
         stack_for_arg = np.where(np.isnan(stack), np.inf, stack)
-        winners = np.argmin(stack_for_arg, axis=0)  # 0=model,1=baseline,2=pre
-        # cells where all nan -> mask out entirely
+        winners = np.argmin(stack_for_arg, axis=0)  # 0=model,1=baseline,2=pre,3=atc
         all_nan_mask = np.all(np.isnan(stack), axis=0)
 
         # Shared normalization over min values (exclude nans)
@@ -361,26 +742,18 @@ def error_heatmap():
         mask_model = ~(winners == 0) | all_nan_mask
         mask_baseline = ~(winners == 1) | all_nan_mask
         mask_pre = ~(winners == 2) | all_nan_mask
+        mask_atc = ~(winners == 3) | all_nan_mask
 
-        # We'll plot the same numeric matrix (min_vals) three times, each with its own mask & cmap
-        # Use consistent DataFrame for seaborn
         min_df = pd.DataFrame(min_vals, index=all_idx, columns=all_col)
 
-        # PRE (Blues)
-        sns.heatmap(
-            min_df, cmap=palette["pre"], norm=norm,
-            mask=mask_pre, cbar=False, ax=ax, **kwargs
-        )
-        # BASELINE (Reds)
-        sns.heatmap(
-            min_df, cmap=palette["baseline"], norm=norm,
-            mask=mask_baseline, cbar=False, ax=ax, **kwargs
-        )
-        # MODEL (Greens)
-        hm = sns.heatmap(
-            min_df, cmap=palette["model"], norm=norm,
-            mask=mask_model, cbar=False, ax=ax, **kwargs
-        )
+        sns.heatmap(min_df, cmap=palette["pre"], norm=norm,
+                    mask=mask_pre, cbar=False, ax=ax, **kwargs)
+        sns.heatmap(min_df, cmap=palette["baseline"], norm=norm,
+                    mask=mask_baseline, cbar=False, ax=ax, **kwargs)
+        sns.heatmap(min_df, cmap=palette["atc"], norm=norm,
+                    mask=mask_atc, cbar=False, ax=ax, **kwargs)
+        hm = sns.heatmap(min_df, cmap=palette["model"], norm=norm,
+                         mask=mask_model, cbar=False, ax=ax, **kwargs)
 
         # Single greyscale colorbar (winner colour communicates which method wins;
         # darkness shows the magnitude of the min error, on a shared scale).
@@ -405,9 +778,10 @@ def error_heatmap():
         Patch(color=palette["model"](0.0), label="Ours"),
         Patch(color=palette["baseline"](0.0), label="Baseline"),
         Patch(color=palette["pre"](0.0), label="PRE"),
+        Patch(color=palette["atc"](0.0), label="ATC"),
     ]
     plt.tight_layout(rect=[0, 0.06, 1, 1])
-    g.figure.legend(handles=handles, loc="lower center", ncol=3,
+    g.figure.legend(handles=handles, loc="lower center", ncol=4,
                     bbox_to_anchor=(0.5, -0.02), frameon=False, title="Winner (lowest MAE)")
     plt.savefig("figures/accuracy_prediction_error_heatmap.pdf", bbox_inches="tight")
     plt.show()
@@ -632,4 +1006,156 @@ def threshold_method_comparison(batch_size=1, pretrain=True):
     plt.savefig("figures/threshold_method_comparison.pdf", bbox_inches="tight")
     plt.show()
     return summary
+
+
+def _atc_threshold(scores, correct):
+    """
+    Garg et al., ICLR 2022 (Average Threshold Confidence).
+    Pick tau on labeled InD validation s.t. P(score < tau) = 1 - acc.
+    Equivalently: tau is the (1 - acc) quantile of the InD-val score distribution.
+    """
+    scores = np.asarray(scores, dtype=float)
+    correct = np.asarray(correct).astype(bool)
+    if len(scores) == 0:
+        return np.nan
+    err_rate = 1.0 - float(correct.mean())
+    err_rate = float(np.clip(err_rate, 0.0, 1.0))
+    return float(np.quantile(scores, err_rate))
+
+
+def atc_comparison(batch_size=1, pretrain=True):
+    """
+    Compare label-free accuracy estimators per dataset:
+      - Naive       : assume InD-val accuracy on every fold
+      - ATC-MC      : Garg et al. ICLR 2022, max-softmax confidence
+      - ATC-NE      : Garg et al. ICLR 2022, negative entropy
+      - Ours        : OOD-detection-rate -> linear regression -> accuracy gap
+      - PRE         : Probabilistic Runtime Estimation (Mihaylov et al.)
+
+    ATC and Naive are computed here from raw feature data; Ours and PRE are
+    pulled from cached results to keep apples-to-apples (per-fold, no
+    bootstrap mixing).
+    """
+    raw = load_all(batch_size=batch_size, shift="", pretrain=pretrain)
+    if raw.empty:
+        print("[atc_comparison] no raw feature data found.")
+        return pd.DataFrame()
+
+    rows_atc = []
+    for (dataset, model), df_dm in raw.groupby(["Dataset", "Model"]):
+        ind_val_acc_per_feat = (
+            df_dm[df_dm["fold"] == "ind_val"]
+                 .groupby("feature_name")["correct_prediction"]
+                 .mean()
+        )
+        if ind_val_acc_per_feat.empty:
+            continue
+        ind_val_acc = float(ind_val_acc_per_feat.iloc[0])  # invariant across feature
+
+        for atc_method, score_feature, score_transform in [
+            ("ATC-MC", "softmax",       lambda x: x),       # higher = more confident
+            ("ATC-NE", "cross_entropy", lambda x: -x),      # entropy: invert sign
+        ]:
+            sub = df_dm[df_dm["feature_name"] == score_feature]
+            if sub.empty:
+                continue
+            ind_val = sub[sub["fold"] == "ind_val"]
+            if ind_val.empty:
+                continue
+            tau = _atc_threshold(score_transform(ind_val["feature"].values),
+                                 ind_val["correct_prediction"].values)
+            if np.isnan(tau):
+                continue
+
+            for fold, fdf in sub.groupby("fold"):
+                if fold in ("train", "ind_val"):
+                    continue
+                est_acc = float((score_transform(fdf["feature"].values) >= tau).mean())
+                true_acc = float(fdf["correct_prediction"].mean())
+                rows_atc.append({
+                    "Dataset": dataset, "Model": model, "fold": fold,
+                    "Method": atc_method,
+                    "MAE": abs(est_acc - true_acc),
+                    "estimated_acc": est_acc, "true_acc": true_acc,
+                })
+                rows_atc.append({
+                    "Dataset": dataset, "Model": model, "fold": fold,
+                    "Method": "Naive",
+                    "MAE": abs(ind_val_acc - true_acc),
+                    "estimated_acc": ind_val_acc, "true_acc": true_acc,
+                })
+
+    atc_df = pd.DataFrame(rows_atc)
+    if atc_df.empty:
+        print("[atc_comparison] no ATC rows produced.")
+        return pd.DataFrame()
+    # de-dup Naive entries (one per fold/model/dataset is enough)
+    naive = atc_df[atc_df["Method"] == "Naive"].drop_duplicates(
+        subset=["Dataset", "Model", "fold"])
+    atc_only = atc_df[atc_df["Method"] != "Naive"]
+    atc_df = pd.concat([naive, atc_only], ignore_index=True)
+
+    # --- Ours: take per-(Dataset, Model, feature) results at proportion=1 (pure shift),
+    #     then pick the best (Model, feature) per Dataset to mirror Table 5.
+    ours = get_all_acc_prediction_results(pretrain=pretrain)
+    if not ours.empty:
+        ours = ours[ours["proportion"] == 1].copy()
+        scores = ours.groupby(["Dataset", "feature_name", "Model"])["mae"].mean().reset_index()
+        idx = scores.groupby("Dataset")["mae"].idxmin()
+        best = scores.loc[idx, ["Dataset", "feature_name", "Model"]]
+        ours = ours.merge(best, on=["Dataset", "feature_name", "Model"], how="inner")
+        ours_rows = ours[["Dataset", "Model", "mae"]].rename(columns={"mae": "MAE"})
+        ours_rows["Method"] = "Ours"
+        ours_rows["fold"] = "agg"
+    else:
+        ours_rows = pd.DataFrame(columns=["Dataset", "Model", "fold", "Method", "MAE"])
+
+    # --- PRE
+    try:
+        pre = get_all_pre_data(pretrain=pretrain)
+    except Exception as e:
+        print(f"[atc_comparison] PRE data unavailable: {e}")
+        pre = pd.DataFrame()
+    if not pre.empty:
+        pre = pre.rename(columns={"Accuracy Error": "MAE", "rate": "proportion",
+                                  "dsd": "feature_name"})
+        pre = pre[pre["proportion"] == 1].copy()
+        pre_rows = pre[["Dataset", "Model", "MAE"]].copy()
+        pre_rows["Method"] = "PRE"
+        pre_rows["fold"] = "agg"
+    else:
+        pre_rows = pd.DataFrame(columns=["Dataset", "Model", "fold", "Method", "MAE"])
+
+    full = pd.concat([atc_df[["Dataset", "Model", "fold", "Method", "MAE"]],
+                      ours_rows[["Dataset", "Model", "fold", "Method", "MAE"]],
+                      pre_rows[["Dataset", "Model", "fold", "Method", "MAE"]]],
+                     ignore_index=True)
+
+    summary = (full.groupby(["Dataset", "Method"])["MAE"]
+                   .mean().reset_index())
+    print("\n=== Label-free accuracy estimation (mean MAE per dataset) ===")
+    pivot = summary.pivot(index="Dataset", columns="Method", values="MAE").reindex(DATASETS)
+    pivot = pivot.reindex(columns=[c for c in ["Naive", "ATC-MC", "ATC-NE", "PRE", "Ours"]
+                                   if c in pivot.columns])
+    print(pivot.round(4).to_string())
+
+    method_order = [m for m in ["Naive", "ATC-MC", "ATC-NE", "PRE", "Ours"]
+                    if m in summary["Method"].unique()]
+    cb = sns.color_palette("colorblind")
+    palette = {"Naive": "lightgrey", "ATC-MC": cb[1], "ATC-NE": cb[7],
+               "PRE": cb[0], "Ours": cb[2]}
+    palette = {k: v for k, v in palette.items() if k in method_order}
+
+    fig, ax = plt.subplots(figsize=(8.5, 3.4))
+    sns.barplot(data=summary, x="Dataset", y="MAE", hue="Method",
+                order=DATASETS, hue_order=method_order, palette=palette, ax=ax)
+    ax.set_ylabel("MAE")
+    ax.set_xlabel("")
+    ax.legend(title="", frameon=False, fontsize="x-small",
+              bbox_to_anchor=(1.02, 1.0), loc="upper left")
+    plt.tight_layout()
+    plt.savefig("figures/atc_comparison.pdf", bbox_inches="tight")
+    plt.show()
+    pivot.to_csv("figures/atc_comparison.csv")
+    return pivot
 

@@ -1,0 +1,16 @@
+
+\begin{tabularx}{\linewidth}{p{3cm}X}
+\toprule
+     \textbf{Component} & \textbf{Choice} \\
+\midrule
+     Framework & Pytorch Lightning~\cite{lightning}.\\
+     Pretraining & Imagenet\\
+     Optimizer & Adam~\cite{adam}\\
+     Scheduler & Cosine Annealing w/ Warm Restarts\\
+     Batch size & 16 \\
+     Data augmentation & Random flip, Random rotate\\
+     Initial learning Rate & 1e-3 \\
+     Model Selection & Early Stopping \\
+     Loss & Cross Entropy Loss / Jaccard loss \\
+\bottomrule
+\end{tabularx}
