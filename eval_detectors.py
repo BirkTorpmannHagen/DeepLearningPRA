@@ -1,5 +1,3 @@
-# from yellowbrick.features import PCA
-
 from testbeds import *
 from utils import *
 
@@ -20,10 +18,7 @@ def collect_data(testbed_constructor, dataset_name, mode="noise", model="resnet"
         return
     print("Collecting data for", dataset_name, "in", mode, "mode")
     bench = testbed_constructor(model=model, mode=mode, batch_size=8, pretrained=pretrain)
-    # features = [mahalanobis]
     features = [cross_entropy,energy,knn, typicality, softmax,  grad_magnitude]
-    # features = [cross_entropy,energy,knn, typicality, softmax]
-    # features = [knn]
     tsd = FeatureSD(bench.classifier,features)
     tsd.register_testbed(bench)
     if mode=="normal": #just compute ind and organic oods for normal mode; saves on computation time
@@ -33,12 +28,9 @@ def collect_data(testbed_constructor, dataset_name, mode="noise", model="resnet"
         compute_stats_no_ind(*tsd.compute_pvals_and_loss(noind=True),
                              fname=f"data/{'pretrain' if pretrain else 'nopretrain'}/{model}/feature_data/{dataset_name}_{mode}",
                              feature_names=[f.__name__ for f in features])
-    # compute_stats(*tsd.compute_pvals_and_loss(),
-    #               fname=f"final_data/{dataset_name}_{mode}", feature_names=[f.__name__ for f in features])
 
 
 def collect_debiased_data(testbed_constructor, dataset_name, mode="noise", sampler="RandomSampler", k=5, batch_size=8):
-    # features=[cross_entropy, energy, softmax]
     features = [cross_entropy, energy, softmax, typicality, knn]
     if k!=-1:
         features.remove(knn)
@@ -59,8 +51,6 @@ def collect_debiased_data(testbed_constructor, dataset_name, mode="noise", sampl
     print(f"Collecting data for {dataset_name} in {mode} mode with {sampler} sampler and batch size {batch_size} and k={k}")
     bench = testbed_constructor("classifier", mode=mode, sampler=sampler, batch_size=batch_size)
 
-    # features = [typicality]
-    # features = [rabanser_ks]
     tsd = BatchedFeatureSD(bench.classifier,features,k=k)
     tsd.register_testbed(bench)
     compute_stats(*tsd.compute_pvals_and_loss(),
@@ -95,8 +85,6 @@ def collect_knn_featurewise_data(testbed_constructor, dataset_name, mode="noise"
         features = uncollected_features
         print(
             f"Collecting {features} data for {dataset_name} in {mode} mode with {sampler} sampler and batch size {batch_size} and k={k}")
-        # features = [typicality]
-        # features = [rabanser_ks]
         tsd = KNNFeaturewiseSD(bench.classifier, features, k=k)
         tsd.register_testbed(bench)
         compute_stats(*tsd.compute_pvals_and_loss(),
@@ -107,31 +95,20 @@ def collect_knn_featurewise_data(testbed_constructor, dataset_name, mode="noise"
 def collect_model_wise_data(testbed_constructor, dataset_name, mode="noise"):
     for model_name in ["deeplabv3plus", "unet", "segformer"]:
         bench = testbed_constructor("classifier", mode=mode, model_name=model_name)
-        # features = [mahalanobis]
         features = [cross_entropy, energy, mahalanobis, softmax, knn, typicality]
 
-        # features = [knn]
         tsd = FeatureSD(bench.classifier,features)
         tsd.register_testbed(bench)
         compute_stats(*tsd.compute_pvals_and_loss(),
                       fname=f"final_data/{dataset_name}_{mode}_{model_name}", feature_names=[f.__name__ for f in features])
 
-    # bench = testbed_constructor("glow", mode=mode)
-    # features = [typicality]
-    # tsd = FeatureSD(bench.glow, features)
-    # tsd.register_testbed(bench)
-    # compute_stats(*tsd.compute_pvals_and_loss(),
-    #               fname=f"single_data/{dataset_name}_{mode}", feature_names=[f.__name__ for f in features])
-
 
 def collect_bias_data():
     for k in [0, 5, 1, 10]:
         for batch_size in BATCH_SIZES[1:-1]:
-        # for sampler in ["RandomSampler","ClusterSampler",  "ClassOrderSampler"]:
             for sampler in [ "RandomSampler","ClusterSampler", "SequentialSampler", "ClassOrderSampler"]:
                 if sampler!="ClassOrderSampler":
                     collect_debiased_data(PolypTestBed, "Polyp", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-                    # collect_rabanser_data(PolypTestBed, "Polyp", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
 
                 collect_debiased_data(CCTTestBed, "CCT", mode="normal",k=k, sampler=sampler, batch_size=batch_size)
                 collect_debiased_data(OfficeHomeTestBed, "OfficeHome", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
@@ -152,52 +129,15 @@ def collect_single_data(testbed):
             os.makedirs(f"data/{'pretrain' if pretrain else 'nopretrain'}/{model}/feature_data")
 
         for mode in SYNTHETIC_SHIFTS+["normal"]:
-            # if mode=="fgsm":
-            #     continue
             if mode=="autoattack":
                 continue
             if dataset_name=="Polyp" and mode=="fgsm":
                 continue # FGSM not applicable to segmentation
-            # if os.path.exists(f"data/{model}/feature_data/{dataset_name}_{mode}_knn.csv"):
-            #     continue
             print(mode)
             collect_data(testbed, dataset_name, mode=mode, model=model, pretrain=pretrain)
-
 
 
 if __name__ == '__main__':
     from features import *
     torch.multiprocessing.set_start_method('spawn')
-    # collect_bias_data(-1)
-    # collect_bias_data()
-
-    # collect_data(CCTTestBed, "CCT",mode="normal")
-    # collect_bias_data(5)
-
-    # collect_single_data(OfficeHomeTestBed)
-    # collect_single_data(Office31TestBed)
-    # collect_single_data(NICOTestBed)
-    # collect_single_data(CCTTestBed)
     collect_single_data(PolypTestBed)
-
-
-    # collect_single_data(PolypTestBed)
-    # collect_single_data(OfficeHomeTestBed)
-
-    # collect_single_data(Office31TestBed)
-    # collect_single_data(NICOTestBed)
-    # collect_single_data(CCTTestBed)
-
-
-    # from experiments.runtime_classification import ood_detector_correctness_prediction_accuracy
-    # for batch_size in BATCH_SIZES:
-    #     print(f"Running batch size {batch_size}")
-    #     ood_detector_correctness_prediction_accuracy(batch_size, shift="")
-    # bench = NjordTestBed(10)
-    # collect_bias_data(5)
-    # collect_bias_data(-1)
-    # # collect_bias_data(0)
-    # collect_bias_data(1)
-    # collect_bias_data(10)
-
-    # bench.split_datasets()

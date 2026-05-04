@@ -215,7 +215,7 @@ DATASETS = ["CCT", "OfficeHome", "Office31", "NICO", "Polyp"]
 DSDS = ["knn", "grad_magnitude", "cross_entropy", "energy", "typicality", "softmax"]
 # BATCH_SIZES = [32]
 BATCH_SIZES = [1]
-THRESHOLD_METHODS = ["val_optimal"]
+THRESHOLD_METHODS = ["val_optimal", "id_quantile"]
 DATASETWISE_RANDOM_LOSS = {
     "CCT": -np.log(1/15),
     "OfficeHome": -np.log(1/65),

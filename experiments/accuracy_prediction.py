@@ -44,48 +44,61 @@ def get_merged(batch_size=1, pretrain=True, filter_best=True):
     return merged
 
 def test_generalization_gap_estimation(batch_size, pretrain=False):
+    """Figure 1: DR vs generalization gap, one panel per dataset, single row.
+    Colorblind-safe palette, explicit shift legend, marker outlines."""
     merged = get_merged(batch_size, pretrain=pretrain)
-    print(merged[merged["Dataset"]=="Polyp"].head(10))
-    merged[merged["Dataset"] == "Polyp"].to_csv("test.csv")
-    input()
-    g = sns.FacetGrid(merged, col="Dataset", col_wrap=3)
-    g.map_dataframe(sns.scatterplot, x="DR", y="Generalization Gap", hue="Shift", alpha=0.7, edgecolor=None)
+    merged.replace(SHIFT_PRINT_LUT, inplace=True)
+    # Drop pseudo-shifts that aren't covariate-shift augmentations
+    merged = merged[~merged["Shift"].isin(["adv", "ind"])]
+    hue_order = sorted([s for s in merged["Shift"].unique() if pd.notna(s)])
+    palette = sns.color_palette("colorblind", n_colors=len(hue_order))
 
-    g.set_titles(col_template="{col_name}")
-    merged["shift"] = merged.replace(SHIFT_PRINT_LUT, inplace=True)
     gam_data = []
     for dataset in DATASETS:
-        for_dataset = merged[merged["Dataset"]==dataset]
+        for_dataset = merged[merged["Dataset"] == dataset]
+        if for_dataset.empty:
+            continue
         for shift in for_dataset["Shift"].unique():
-
-            train = for_dataset[(for_dataset["Shift"]!=shift)&(for_dataset["Shift"]!="FGSM")]
-
-            test = for_dataset[for_dataset["Shift"]==shift]
-            # model = LinearGAM(constraints="monotonic_dec")
+            train = for_dataset[(for_dataset["Shift"] != shift) & (for_dataset["Shift"] != "FGSM")]
+            test = for_dataset[for_dataset["Shift"] == shift]
+            if train.empty or test.empty:
+                continue
             reg_model = LinearRegression()
-            reg_model.fit(train["DR"].values.reshape(-1,1), train["Generalization Gap"].values.reshape(-1,1))
-            mae = mean_absolute_error(test["Generalization Gap"].values.reshape(-1,1), reg_model.predict(test["DR"].values.reshape(-1,1)))
-            baseline = mean_absolute_error(test["Generalization Gap"], [0]*len(test))
-            # score = model.score(test["Detection Rate"], test["Generalization Gap"])
-            #print(f"{dataset:<15} {shift:<20} {mae:>10.4f} {baseline:>10.4f}")
-            gam_data.append({"Dataset":dataset, "Model":for_dataset["Model"].unique()[0], "Shift":shift, "mae":mae, "baseline mae": baseline,  "x":np.linspace(0,1,2), "y":reg_model.predict(np.linspace(0,1,2).reshape(-1,1))})
+            reg_model.fit(train["DR"].values.reshape(-1, 1), train["Generalization Gap"].values.reshape(-1, 1))
+            mae = mean_absolute_error(test["Generalization Gap"].values.reshape(-1, 1),
+                                      reg_model.predict(test["DR"].values.reshape(-1, 1)))
+            baseline = mean_absolute_error(test["Generalization Gap"], [0] * len(test))
+            gam_data.append({"Dataset": dataset, "Model": for_dataset["Model"].unique()[0],
+                             "Shift": shift, "mae": mae, "baseline mae": baseline,
+                             "x": np.linspace(0, 1, 2),
+                             "y": reg_model.predict(np.linspace(0, 1, 2).reshape(-1, 1))})
     gam_df = pd.DataFrame(gam_data)
 
+    g = sns.FacetGrid(merged, col="Dataset", col_order=DATASETS, col_wrap=3,
+                      sharex=True, sharey=True, height=2.4, aspect=1.0)
+    g.map_dataframe(sns.scatterplot, x="DR", y="Generalization Gap",
+                    hue="Shift", hue_order=hue_order, palette=palette,
+                    alpha=0.7, s=22, edgecolor="black", linewidth=0.3)
+    g.set_titles(col_template="{col_name}")
 
     def plot_gam_fits(data, color=None, **kwargs):
         dataset = data["Dataset"].unique()[0]
         model = data["Model"].unique()[0]
-        fit_to_plot = gam_df[(gam_df["Shift"]=="Organic")&(gam_df["Dataset"]==dataset)&(gam_df["Model"]==model)]
-        plt.plot(fit_to_plot["x"].values[0], fit_to_plot["y"].values[0], color="black", linestyle="--", label="Linear Fit")
+        fit_to_plot = gam_df[(gam_df["Shift"] == "Organic") &
+                             (gam_df["Dataset"] == dataset) & (gam_df["Model"] == model)]
+        if not fit_to_plot.empty:
+            plt.plot(fit_to_plot["x"].values[0], fit_to_plot["y"].values[0],
+                     color="black", linestyle="--", linewidth=1.0, label="Linear Fit")
 
     g.map_dataframe(plot_gam_fits)
     for ax in g.axes.flatten():
-        ax.set_ylim(0.1,-1)
-        ax.set_xlim(0,1)
-    plt.savefig("figures/da_vs_generalization.pdf")
+        ax.set_ylim(0.1, -1)
+        ax.set_xlim(0, 1)
+    g.add_legend(title="Shift Type", bbox_to_anchor=(1.0, 0.5), loc="center left",
+                 frameon=True, fontsize="x-small")
+    plt.savefig("figures/da_vs_generalization.pdf", bbox_inches="tight")
     plt.show()
 
-            # print(model.summary())
 
 def get_acc_prediction_results(batch_size, pretrain=False):
     merged = get_merged(batch_size, pretrain=pretrain, filter_best=False)
@@ -171,8 +184,6 @@ def get_acc_prediction_results(batch_size, pretrain=False):
             model_df.to_csv(f"{prefix}/{model}/ood_detector_data/{dataset}_acc_prediction_results.csv", index=False)
             print(model_df.groupby(["Dataset", "feature_name", "Shift"])[["mae", "naive baseline mae"]].mean())
 
-        # print(gam.summary())
-
 
 def get_all_pre_data(pretrain=True):
     all_data = []
@@ -252,15 +263,11 @@ def error_heatmap():
         on=["Dataset", "Model", "feature_name"],
         how="inner"
     )
-    # print(df.groupby(["Dataset", "Model", "feature_name"])[["mae", "naive baseline mae"]].mean())
-    # input()
     df = df.round(2)
 
     pre_data = pre_data.round(2)
     pre_data = pre_data.groupby(["Dataset", "proportion", "intensity"])[["mae"]].mean().reset_index()
     df["intensity"] = df["intensity"].apply(lambda x: str(round(float(x), 2)) if x!="OoD" else x)
-    # df["mae"] = df["mae"].apply(lambda x: float(x.strip("[]")))
-    # Mean per (Dataset, feature_name, proportion, intensity)
 
     df_grouped = (
         df.groupby(["Dataset", "Model", "feature_name", "proportion", "intensity"])[["mae", "naive baseline mae"]]
@@ -271,24 +278,26 @@ def error_heatmap():
     print(df_grouped.groupby(["Dataset", "Model", "feature_name"])[["mae", "naive baseline mae"]].mean())
     print(pre_data.groupby(["Dataset"])[["mae"]].mean())
 
-    g = sns.FacetGrid(df_grouped, col="Dataset", sharex=True, sharey=True, margin_titles=False, col_wrap=3)
+    # Single-row layout: one panel per dataset
+    g = sns.FacetGrid(df_grouped, col="Dataset", col_order=DATASETS,
+                      sharex=True, sharey=False, margin_titles=False,
+                      col_wrap=3, height=2.6, aspect=1.0)
     from matplotlib.colors import LinearSegmentedColormap, PowerNorm
-    from matplotlib.colors import hsv_to_rgb
-    def saturation_only_cmap(hue, value=0.75, n=256):
-        """
-        Colormap that holds brightness (V) constant and varies only saturation (S):
-        t=0 -> fully saturated color, t=1 -> gray with same brightness.
-        """
-        t = np.linspace(0, 1, n)
-        sats = 1.0 - t  # high saturation for low error
-        hsv = np.stack([np.full(n, hue), sats, np.full(n, value)], axis=1)
-        rgb = hsv_to_rgb(hsv)
-        return LinearSegmentedColormap.from_list(f"sats_only_{hue:.2f}", rgb)
 
+    def saturation_cmap_from_rgb(rgb_color, n=256):
+        """Colormap from light-grey -> saturated colorblind-safe color (low error = saturated)."""
+        t = np.linspace(0, 1, n)[:, None]
+        base = np.array(rgb_color)[None, :]
+        grey = np.array([0.85, 0.85, 0.85])[None, :]
+        rgb = (1.0 - t) * base + t * grey
+        return LinearSegmentedColormap.from_list("cb_sat", rgb)
+
+    # Colorblind-safe distinct hues (Wong palette): blue, vermillion, bluish-green
+    cb = sns.color_palette("colorblind")
     palette = {
-        "model": saturation_only_cmap(hue=0.33, value=0.75),  # green
-        "baseline": saturation_only_cmap(hue=0.00, value=0.75),  # red
-        "pre": saturation_only_cmap(hue=0.60, value=0.75),  # blue
+        "model": saturation_cmap_from_rgb(cb[2]),     # bluish-green for "Ours"
+        "baseline": saturation_cmap_from_rgb(cb[3]),  # vermillion for baseline
+        "pre": saturation_cmap_from_rgb(cb[0]),       # blue for PRE
     }
 
     def sort_mixed_index(df):
@@ -373,108 +382,254 @@ def error_heatmap():
             mask=mask_model, cbar=False, ax=ax, **kwargs
         )
 
-        # --- replace the Greys colorbar section with this ---
+        # Single greyscale colorbar (winner colour communicates which method wins;
+        # darkness shows the magnitude of the min error, on a shared scale).
         divider = make_axes_locatable(ax)
+        cax = divider.append_axes("right", size="3%", pad=0.04)
+        sm = plt.cm.ScalarMappable(norm=norm, cmap=plt.cm.Greys)
+        sm.set_array([])
+        cb = ax.figure.colorbar(sm, cax=cax)
+        cb.outline.set_visible(False)
+        cb.ax.set_ylabel("Min error", rotation=270, labelpad=10, fontsize=8)
+        cb.ax.tick_params(labelsize=7)
 
-        # three slim, stacked colorbars (inner→outer)
-        cax_model = divider.append_axes("right", size="3%", pad=0.015)
-        cax_base = divider.append_axes("right", size="3%", pad=0.030)
-        cax_pre = divider.append_axes("right", size="3%", pad=0.045)
-
-        sm_model = plt.cm.ScalarMappable(norm=norm, cmap=palette["model"])
-        sm_base = plt.cm.ScalarMappable(norm=norm, cmap=palette["baseline"])
-        sm_pre = plt.cm.ScalarMappable(norm=norm, cmap=palette["pre"])
-        for sm in (sm_model, sm_base, sm_pre):
-            sm.set_array([])
-
-        cb_model = ax.figure.colorbar(sm_model, cax=cax_model)
-        cb_base = ax.figure.colorbar(sm_base, cax=cax_base)
-        cb_pre = ax.figure.colorbar(sm_pre, cax=cax_pre)
-
-        # aesthetics: show ticks only on the outermost (blue/PRE) bar
-        for cb in (cb_model, cb_base):
-            cb.ax.set_yticklabels([])
-            cb.ax.tick_params(length=0)
-        for cb in (cb_model, cb_base, cb_pre):
-            cb.outline.set_visible(False)
-
-        cb_pre.ax.set_ylabel("Min error (low = saturated)", rotation=270, labelpad=10)
-
-        # Legend: which color == which configuration
-        handles = [
-            Patch(color=palette["model"](0.0), label="Model"),  # t=0 → saturated
-            Patch(color=palette["baseline"](0.0), label="Baseline"),
-            Patch(color=palette["pre"](0.0), label="PRE"),
-        ]
-        if not getattr(ax, "_legend_added", False):
-            ax.legend(handles=handles, frameon=False, loc="upper right", fontsize="small", title="Winner")
-            ax._legend_added = True
-
-        # Tidy axes
+        # Tidy axes (legend drawn once at figure level below)
         ax.set_xlabel("Proportion OoD")
         ax.set_ylabel("Shift Intensity")
         ax.invert_yaxis()
 
     g.map_dataframe(draw_min_config_heatmap)
     g.set_axis_labels("Proportion OoD", "Shift Intensity")
-    plt.tight_layout()
-    plt.savefig("figures/accuracy_prediction_error_heatmap.pdf")
+    # single shared legend (winner color key)
+    handles = [
+        Patch(color=palette["model"](0.0), label="Ours"),
+        Patch(color=palette["baseline"](0.0), label="Baseline"),
+        Patch(color=palette["pre"](0.0), label="PRE"),
+    ]
+    plt.tight_layout(rect=[0, 0.06, 1, 1])
+    g.figure.legend(handles=handles, loc="lower center", ncol=3,
+                    bbox_to_anchor=(0.5, -0.02), frameon=False, title="Winner (lowest MAE)")
+    plt.savefig("figures/accuracy_prediction_error_heatmap.pdf", bbox_inches="tight")
     plt.show()
 
 def error_per_accuracy():
+    """Figure 3: MAE vs generalization gap, colorblind-safe; Q-Q residual inset per dataset."""
+    from scipy import stats
     data = get_all_acc_prediction_results()
 
-    # Compute mean MAE per (Dataset, feature_name, Model)
     mae_means = (
-        data.groupby(["Dataset", "feature_name", "Model"], as_index=False)["mae"]
-        .mean()
+        data.groupby(["Dataset", "feature_name", "Model"], as_index=False)["mae"].mean()
     )
-
-    # Find (feature_name, Model) combination with lowest MAE per Dataset
     best_combinations = (
         mae_means.loc[mae_means.groupby("Dataset")["mae"].idxmin(),
-        ["Dataset", "feature_name", "Model"]]
+                      ["Dataset", "feature_name", "Model"]]
     )
 
-    # Filter data to keep only the best combinations per dataset
     filtered_data = data.merge(best_combinations, on=["Dataset", "feature_name", "Model"])
-    # gam_
-    # fits = pd.read_csv("gam_fits.csv")
-    filtered_data["relative_error"] = data["pred"] - data["gap"]
-    filtered_data = filtered_data[filtered_data["proportion"]==1]
+    filtered_data["residual"] = filtered_data["pred"] - filtered_data["gap"]
+    filtered_data = filtered_data[filtered_data["proportion"] == 1]
+
+    cb = sns.color_palette("colorblind")
+    scatter_color = cb[0]   # blue
+    mean_color = cb[3]      # vermillion
+    baseline_color = "black"
 
     def scatter_with_sliding_mean(data, x, y, window=31, **kwargs):
-        """
-        Overlay a centered rolling (sliding-window) mean on top of scatter points.
-        `window` is the number of points in the rolling window (use an odd number).
-        """
         ax = plt.gca()
-
-        # scatter
-        sns.scatterplot(data=data, x=x, y=y, alpha=0.5, ax=ax)
-
-        # rolling mean (by count, not by x-width)
+        sns.scatterplot(data=data, x=x, y=y, alpha=0.45, ax=ax,
+                        color=scatter_color, s=12, edgecolor="none")
         df = data[[x, y]].dropna().sort_values(x)
         if len(df) >= window:
             m = df[y].rolling(window=window, center=True).mean()
-            ax.plot(df[x], m, linewidth=2, linestyle='-', color='red', label='Sliding Mean')
+            ax.plot(df[x], m, linewidth=2, linestyle='-', color=mean_color, label='Sliding mean')
         else:
-            # if too few points for rolling mean, just connect them
-            ax.plot(df[x], df[y], linewidth=2, linestyle='-', color='red', label='Line')
+            ax.plot(df[x], df[y], linewidth=2, linestyle='-', color=mean_color, label='Line')
 
-    g = sns.FacetGrid(filtered_data, col="Dataset", sharex=False, sharey=False, col_wrap=3)
-
-    # scatter + sliding window average over the scatter points
+    g = sns.FacetGrid(filtered_data, col="Dataset", col_order=DATASETS,
+                      sharex=False, sharey=False, col_wrap=3,
+                      height=2.6, aspect=1.0)
     g.map_dataframe(scatter_with_sliding_mean, x="gap", y="mae", window=31)
-
-    # keep the baseline as a dashed line
-    g.map_dataframe(sns.lineplot, x="gap", y="naive baseline mae", color="black", linestyle="--")
-
-    g.set_axis_labels("Generalization Gap", "Accuracy Prediction Error (MAE)")
+    g.map_dataframe(sns.lineplot, x="gap", y="naive baseline mae",
+                    color=baseline_color, linestyle="--", label="Baseline")
+    g.set_axis_labels("Generalization Gap", "MAE")
     g.set_titles(col_template="{col_name}")
     for ax in g.axes.flat:
         ax.set_yscale("log")
-        ax.set_ylim(1e-3,1)
+        ax.set_ylim(1e-3, 1)
+
+    # Residual Q-Q inset per panel — quick visual answer to the "non-Gaussian residuals" critique
+    for ax, dataset in zip(g.axes.flat, DATASETS):
+        sub = filtered_data[filtered_data["Dataset"] == dataset]["residual"].dropna()
+        if sub.empty:
+            continue
+        inset = ax.inset_axes([0.05, 0.06, 0.32, 0.32])
+        stats.probplot(sub.values, dist="norm", plot=inset)
+        inset.set_title("")
+        inset.set_xlabel("")
+        inset.set_ylabel("")
+        inset.set_xticks([])
+        inset.set_yticks([])
+        for line in inset.get_lines():
+            line.set_markersize(1.5)
+            line.set_linewidth(0.6)
+        inset.set_facecolor((1, 1, 1, 0.9))
+        for spine in inset.spines.values():
+            spine.set_linewidth(0.4)
+        inset.text(0.04, 0.92, "Q-Q (resid.)", transform=inset.transAxes,
+                   fontsize=5.5, va="top", ha="left")
+
     plt.savefig("figures/accuracy_prediction_error_per_gap.pdf", bbox_inches="tight")
     plt.show()
+
+
+def dr_gap_correlation_distribution(batch_size=1, pretrain=True):
+    """
+    Robustness figure addressing the 'cherry-picking' critique.
+
+    For every (Dataset x Architecture x Detector) configuration, computes the
+    Spearman rank-correlation between OOD detection rate (DR) and the induced
+    generalization gap, aggregating across all shifts and intensities. Renders
+    the distribution as a swarm + box per dataset, with each architecture
+    coloured. Demonstrates that the DR-gap relationship is broadly positive,
+    not an artefact of the single best (detector, architecture) pair.
+    """
+    from scipy.stats import spearmanr
+
+    merged = get_merged(batch_size=batch_size, pretrain=pretrain, filter_best=False)
+    rows = []
+    for (dataset, model, feature_name), grp in merged.groupby(["Dataset", "Model", "feature_name"]):
+        sub = grp[["DR", "Generalization Gap"]].dropna()
+        if len(sub) < 4 or sub["DR"].nunique() < 2 or sub["Generalization Gap"].nunique() < 2:
+            continue
+        rho, _ = spearmanr(sub["DR"], sub["Generalization Gap"])
+        if np.isnan(rho):
+            continue
+        # |rho|: detector orientation can flip sign per (detector, architecture) — magnitude
+        # captures monotonic coupling between DR and gap regardless of sign.
+        rows.append({"Dataset": dataset, "Model": model,
+                     "Detector": feature_name, "abs_rho": abs(float(rho))})
+    corr_df = pd.DataFrame(rows)
+    if corr_df.empty:
+        print("No correlations could be computed; skipping figure.")
+        return corr_df
+
+    print("Correlation summary (|Spearman rho| per dataset):")
+    print(corr_df.groupby("Dataset")["abs_rho"]
+                 .agg(["median", "mean", "min", "max", "count"]))
+
+    cb = sns.color_palette("colorblind")
+    models_present = sorted(corr_df["Model"].unique().tolist())
+    palette = {m: cb[i % len(cb)] for i, m in enumerate(models_present)}
+
+    fig, ax = plt.subplots(figsize=(7.5, 3.0))
+    sns.boxplot(data=corr_df, x="Dataset", y="abs_rho", order=DATASETS,
+                color="lightgrey", fliersize=0, ax=ax, width=0.55)
+    sns.swarmplot(data=corr_df, x="Dataset", y="abs_rho", order=DATASETS,
+                  hue="Model", palette=palette, size=4, ax=ax,
+                  edgecolor="black", linewidth=0.4)
+    ax.axhline(0.5, color="black", linewidth=0.6, linestyle="--")
+    ax.set_ylabel(r"$|$Spearman $\rho|$ (DR vs. gap)")
+    ax.set_xlabel("")
+    ax.set_ylim(0, 1.05)
+    ax.legend(title="Architecture", bbox_to_anchor=(1.02, 1.0),
+              loc="upper left", frameon=False, fontsize="x-small")
+    plt.tight_layout()
+    plt.savefig("figures/dr_gap_correlation_distribution.pdf", bbox_inches="tight")
+    plt.show()
+    return corr_df
+
+
+def threshold_method_comparison(batch_size=1, pretrain=True):
+    """
+    Deployability figure addressing the 'threshold protocol' critique.
+
+    Re-runs the accuracy-prediction pipeline (linear regression of gap on DR)
+    for two thresholding regimes:
+      - val_optimal: threshold tuned against an OOD calibration partition
+      - id_quantile: threshold set as the 95th-percentile of InD scores only
+    Reports per-dataset MAE for each regime alongside the naive baseline so
+    the reader can see whether the linear model degrades when no OOD
+    calibration data is available.
+    """
+    rows = []
+    for tm in ("val_optimal", "id_quantile"):
+        try:
+            df_tm = get_all_ood_detector_data(batch_size, filter_organic=False,
+                                              filter_best=True, pretrain=pretrain,
+                                              threshold_method=tm)
+        except Exception as e:
+            print(f"[threshold_method_comparison] no rows for threshold_method={tm}: {e}")
+            continue
+        if df_tm.empty:
+            print(f"[threshold_method_comparison] empty data for threshold_method={tm}; "
+                  f"re-run ood_detector_correctness_prediction_accuracy (delete the existing "
+                  f"data/pretrain/<model>/ood_detector_data/*.csv first) to populate id_quantile rows.")
+            continue
+
+        df_raw = load_all(batch_size, shift="", pretrain=pretrain)
+        acc = df_raw.groupby(["Dataset", "Model", "fold"])["correct_prediction"].mean().reset_index()
+        df_tm.rename(columns={"Fold": "fold"}, inplace=True)
+        merged_tm = df_tm.merge(acc, on=["Dataset", "fold", "Model"], how="left")
+        ind = (merged_tm[merged_tm["fold"] == "ind_val"]
+                  .groupby("Dataset")["correct_prediction"].mean()
+                  .rename("ind_val_acc").reset_index())
+        merged_tm = merged_tm.merge(ind, on="Dataset", how="left")
+        merged_tm["Generalization Gap"] = merged_tm["correct_prediction"] - merged_tm["ind_val_acc"]
+        merged_tm.replace(SHIFT_PRINT_LUT, inplace=True)
+        merged_tm["Shift"] = merged_tm["fold"].apply(
+            lambda x: x.split("_")[0] if "_" in x else "Organic")
+
+        for dataset in DATASETS:
+            sub = merged_tm[merged_tm["Dataset"] == dataset].dropna(subset=["DR", "Generalization Gap"])
+            if sub["Shift"].nunique() < 2 or len(sub) < 5:
+                continue
+            for shift in sub["Shift"].unique():
+                train = sub[(sub["Shift"] != shift) & (sub["Shift"] != "FGSM")]
+                test = sub[sub["Shift"] == shift]
+                if len(train) < 2 or test.empty:
+                    continue
+                reg = LinearRegression()
+                reg.fit(train["DR"].values.reshape(-1, 1),
+                        train["Generalization Gap"].values.reshape(-1, 1))
+                pred = reg.predict(test["DR"].values.reshape(-1, 1)).ravel()
+                mae = float(np.mean(np.abs(test["Generalization Gap"].values - pred)))
+                base = float(np.mean(np.abs(test["Generalization Gap"].values)))
+                rows.append({"Dataset": dataset, "Threshold": tm,
+                             "Shift": shift, "MAE": mae, "Baseline MAE": base})
+
+    if not rows:
+        print("[threshold_method_comparison] no results — id_quantile data not yet collected.")
+        return pd.DataFrame()
+    res = pd.DataFrame(rows)
+    summary = (res.groupby(["Dataset", "Threshold"])[["MAE", "Baseline MAE"]]
+                  .mean().reset_index())
+    print("Threshold-method MAE summary:")
+    print(summary)
+
+    cb = sns.color_palette("colorblind")
+    palette = {"val_optimal": cb[0], "id_quantile": cb[1]}
+    fig, ax = plt.subplots(figsize=(7.5, 3.2))
+    sns.barplot(data=summary, x="Dataset", y="MAE", hue="Threshold",
+                order=DATASETS, palette=palette, ax=ax)
+    methods_present = sorted(summary["Threshold"].unique().tolist())
+    if "id_quantile" not in methods_present:
+        ax.set_title("id_quantile rows missing — re-collect OOD detector data "
+                     "(delete data/pretrain/*/ood_detector_data/*.csv) to populate",
+                     fontsize=8, color="grey")
+    base_line = (res.groupby("Dataset")["Baseline MAE"].mean()
+                    .reindex(DATASETS).values)
+    for i, b in enumerate(base_line):
+        if not np.isnan(b):
+            ax.hlines(b, i - 0.4, i + 0.4, colors="black",
+                      linestyles="--", linewidth=1.2,
+                      label="Baseline" if i == 0 else None)
+    ax.set_ylabel("Accuracy-prediction MAE")
+    ax.set_xlabel("")
+    handles, labels = ax.get_legend_handles_labels()
+    ax.legend(handles, labels, frameon=False, fontsize="x-small",
+              bbox_to_anchor=(1.02, 1.0), loc="upper left", title="Threshold")
+    plt.tight_layout()
+    plt.savefig("figures/threshold_method_comparison.pdf", bbox_inches="tight")
+    plt.show()
+    return summary
 

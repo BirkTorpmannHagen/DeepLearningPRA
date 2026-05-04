@@ -323,7 +323,7 @@ def ood_detector_correctness_prediction_accuracy(batch_size, model="resnet", shi
             index=False
         )
 
-def get_all_ood_detector_data(batch_size, filter_organic=False, filter_best=False, pretrain=True):
+def get_all_ood_detector_data(batch_size, filter_organic=False, filter_best=False, pretrain=True, threshold_method="val_optimal"):
     dfs = []
     if pretrain:
         prefix = "data/pretrain"
@@ -355,13 +355,15 @@ def get_all_ood_detector_data(batch_size, filter_organic=False, filter_best=Fals
     if "Performance Calibrated" in df.columns:
         df = df[df["Performance Calibrated"]==True]
     if "Threshold Method" in df.columns:
-        df = df[df["Threshold Method"]=="val_optimal"]
+        df = df[df["Threshold Method"] == threshold_method]
 
     if filter_organic:
         df = df[df["Shift Intensity"] == "Organic"]
 
 
     if filter_best:
+        if df.empty:
+            return df
         #filter for best models and features per dataset
         df_organic = df[df["Shift Intensity"] == "Organic"] #just consider the organic data for best selection
 
@@ -377,8 +379,11 @@ def get_all_ood_detector_data(batch_size, filter_organic=False, filter_best=Fals
             df
             .groupby(["Dataset", "Model", "feature_name"])
             .apply(tpr_acc_corr)
-            .reset_index(name="tpr_acc_corr")
         )
+        # Robust to pandas versions where .apply may return Series or DataFrame:
+        if isinstance(corrs, pd.DataFrame):
+            corrs = corrs.iloc[:, 0]
+        corrs = corrs.rename("tpr_acc_corr").reset_index()
 
         # strongest correlation = largest absolute value
         corrs["abs_corr"] = corrs["tpr_acc_corr"].abs()

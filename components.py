@@ -72,7 +72,7 @@ def get_optimal_threshold(ind, ood):
 
 class OODDetector:
 
-    def __init__(self, df, threshold_method="val_optimal"):
+    def __init__(self, df, threshold_method="val_optimal", id_quantile=0.95):
         assert df["feature_name"].nunique() == 1, df["feature_name"].unique()
         assert df["Dataset"].nunique() == 1
         assert df["Model"].nunique() == 1
@@ -89,6 +89,14 @@ class OODDetector:
 
         if threshold_method == "val_optimal":
             self.threshold = get_optimal_threshold(self.ind_val["feature"], self.ood_val["feature"])
+        if threshold_method == "id_quantile":
+            # ID-only thresholding: threshold is the q-th quantile of InD scores; no OOD calibration.
+            # Direction (higher_is_ood) is inferred from val data, but the threshold itself uses InD only.
+            q = float(id_quantile)
+            if self.higher_is_ood:
+                self.threshold = float(self.ind_val["feature"].quantile(q))
+            else:
+                self.threshold = float(self.ind_val["feature"].quantile(1.0 - q))
         if threshold_method == "ind_span":
             lower = self.ind_val["feature"].quantile(0.01)
             upper = self.ind_val["feature"].quantile(0.99)
@@ -147,7 +155,7 @@ class OODDetector:
         feature = batch["feature"]
         if self.threshold_method == "ind_span":
             return not (self.threshold[0] <= feature <= self.threshold[1])
-        elif self.threshold_method=="val_optimal":
+        elif self.threshold_method in ("val_optimal", "id_quantile"):
             if self.higher_is_ood:
                 return  feature > self.threshold
             else:
