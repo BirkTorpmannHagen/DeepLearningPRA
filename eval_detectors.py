@@ -1,143 +1,160 @@
-from testbeds import *
-from utils import *
+"""Collect post-hoc OOD-detector feature data for all (dataset, model, shift) cells.
+
+Output convention (consumed by `utils.load_data`):
+    data/{pretrain|nopretrain}/{model}/feature_data/{dataset}_{mode}_{feature}.csv
+
+Edit `DETECTORS` below to restrict which detectors are recomputed (e.g. only
+`grad_magnitude` after fixing the GradNorm implementation).
+"""
+
+import os
+
+import torch
+
+from features import (
+    cross_entropy,
+    energy,
+    grad_magnitude,
+    knn,
+    softmax,
+    typicality,
+)
+from ooddetectors import FeatureSD, convert_to_pandas_df, convert_to_pandas_df_no_ind
+from testbeds import (
+    CCTTestBed,
+    NICOTestBed,
+    Office31TestBed,
+    OfficeHomeTestBed,
+    PolypTestBed,
+)
+from utils import MODELS, SEG_MODELS, SYNTHETIC_SHIFTS
+
+# ---------------------------------------------------------------------------
+# Configure which detectors to (re)collect. Comment out any you want to skip.
+# ---------------------------------------------------------------------------
+DETECTORS = [
+    grad_magnitude,
+    # cross_entropy,
+    # energy,
+    # knn,
+    # softmax,
+    # typicality,
+]
+
+TESTBEDS = {
+    "CCT": CCTTestBed,
+    "OfficeHome": OfficeHomeTestBed,
+    "Office31": Office31TestBed,
+    "NICO": NICOTestBed,
+    "Polyp": PolypTestBed,
+}
 
 
-def compute_stats(train_features, train_losses, ind_val_features, ind_val_losses, ind_test_features, ind_test_losses, ood_features, ood_losses, fname, feature_names):
-    dfs = convert_to_pandas_df(train_features, train_losses, ind_val_features, ind_val_losses, ind_test_features, ind_test_losses, ood_features, ood_losses, feature_names)
-    for df, feature_name in zip(dfs, feature_names):
-        df.to_csv(f"{fname}_{feature_name}.csv")
+def _feature_data_dir(model, pretrain):
+    return f"data/{'pretrain' if pretrain else 'nopretrain'}/{model}/feature_data"
 
-def compute_stats_no_ind(ood_features, ood_losses, fname, feature_names):
-    dfs = convert_to_pandas_df_no_ind(ood_features, ood_losses, feature_names)
-    for df, feature_name in zip(dfs, feature_names):
-        df.to_csv(f"{fname}_{feature_name}.csv")
 
-def collect_data(testbed_constructor, dataset_name, mode="noise", model="resnet", pretrain=True):
-    if os.path.exists(f"data/{'pretrain' if pretrain else 'nopretrain'}/{model}/feature_data/{dataset_name}_{mode}_knn.csv"):
-        print(f"Data for {dataset_name} in {mode} mode already exists, skipping...")
-        return
-    print("Collecting data for", dataset_name, "in", mode, "mode")
-    bench = testbed_constructor(model=model, mode=mode, batch_size=8, pretrained=pretrain)
-    features = [cross_entropy,energy,knn, typicality, softmax,  grad_magnitude]
-    tsd = FeatureSD(bench.classifier,features)
-    tsd.register_testbed(bench)
-    if mode=="normal": #just compute ind and organic oods for normal mode; saves on computation time
-        compute_stats(*tsd.compute_pvals_and_loss(),
-                      fname=f"data/{'pretrain' if pretrain else 'nopretrain'}/{model}/feature_data/{dataset_name}_{mode}", feature_names=[f.__name__ for f in features])
+def _csv_path(model, pretrain, dataset_name, mode, feature_name):
+    return os.path.join(
+        _feature_data_dir(model, pretrain),
+        f"{dataset_name}_{mode}_{feature_name}.csv",
+    )
+
+
+def _missing_detectors(detectors, model, pretrain, dataset_name, mode, overwrite):
+    if overwrite:
+        return list(detectors)
+    missing = []
+    for fn in detectors:
+        path = _csv_path(model, pretrain, dataset_name, mode, fn.__name__)
+        if os.path.exists(path):
+            print(f"  [skip] {path} exists")
+        else:
+            missing.append(fn)
+    return missing
+
+
+def _save(features_tuple, model, pretrain, dataset_name, mode, feature_names, noind):
+    out_prefix = os.path.join(
+        _feature_data_dir(model, pretrain), f"{dataset_name}_{mode}"
+    )
+    if noind:
+        dfs = convert_to_pandas_df_no_ind(*features_tuple, feature_names)
     else:
-        compute_stats_no_ind(*tsd.compute_pvals_and_loss(noind=True),
-                             fname=f"data/{'pretrain' if pretrain else 'nopretrain'}/{model}/feature_data/{dataset_name}_{mode}",
-                             feature_names=[f.__name__ for f in features])
+        dfs = convert_to_pandas_df(*features_tuple, feature_names)
+    for df, feature_name in zip(dfs, feature_names):
+        df.to_csv(f"{out_prefix}_{feature_name}.csv")
 
 
-def collect_debiased_data(testbed_constructor, dataset_name, mode="noise", sampler="RandomSampler", k=5, batch_size=8):
-    features = [cross_entropy, energy, softmax, typicality, knn]
-    if k!=-1:
-        features.remove(knn)
-    uncollected_features = features.copy()
-
-    for feature in features:
-        print(feature)
-        fname = f"{dataset_name}_{mode}_{sampler}_{batch_size}_k={k}_{feature.__name__}.csv"
-        if fname in os.listdir("debiased_data"):
-            uncollected_features.remove(feature)
-            print(f"{fname} already exists, skipping...")
-    if (uncollected_features== []):
-        print(f"No features left to compute for {dataset_name} in {mode} mode with {sampler} sampler and batch size {batch_size} and k={k}")
+def collect_features(
+    testbed_constructor,
+    dataset_name,
+    detectors,
+    mode="normal",
+    model="resnet",
+    pretrain=True,
+    batch_size=8,
+    overwrite=False,
+):
+    """Collect feature CSVs for the requested detectors on a single (dataset, model, mode) cell."""
+    todo = _missing_detectors(detectors, model, pretrain, dataset_name, mode, overwrite)
+    if not todo:
+        print(f"  nothing to do for {dataset_name} / {model} / {mode}")
         return
-    features = uncollected_features
-    if k!=-1 and knn in features:
-        features.remove(knn)
-    print(f"Collecting data for {dataset_name} in {mode} mode with {sampler} sampler and batch size {batch_size} and k={k}")
-    bench = testbed_constructor("classifier", mode=mode, sampler=sampler, batch_size=batch_size)
 
-    tsd = BatchedFeatureSD(bench.classifier,features,k=k)
-    tsd.register_testbed(bench)
-    compute_stats(*tsd.compute_pvals_and_loss(),
-                  fname=f"debiased_data/{dataset_name}_{mode}_{sampler}_{batch_size}_k={k}", feature_names=[f.__name__ for f in features])
+    print(f"  collecting {[fn.__name__ for fn in todo]} for {dataset_name} / {model} / {mode}")
+    os.makedirs(_feature_data_dir(model, pretrain), exist_ok=True)
 
-def collect_rabanser_data(testbed_constructor, dataset_name, mode="noise", sampler="RandomSampler", k=5, batch_size=8):
-    fname = f"{dataset_name}_{mode}_{sampler}_{batch_size}_k={k}_rabanser.csv"
-    if fname in os.listdir("debiased_data"):
-        print(f"{fname} already exists, skipping...")
-        return
-    print(f"Collecting Rabanser data for {dataset_name} in {mode} mode with {sampler} sampler and batch size {batch_size} and k={k}")
-    bench = testbed_constructor("classifier", mode=mode, sampler=sampler, batch_size=batch_size)
-    tsd = RabanserSD(bench.classifier,k=k)
-    tsd.register_testbed(bench)
-    compute_stats(*tsd.compute_pvals_and_loss(),
-                  fname=f"debiased_data/{dataset_name}_{mode}_{sampler}_{batch_size}_k={k}", feature_names=["rabanser"])
+    bench = testbed_constructor(model=model, mode=mode, batch_size=batch_size, pretrained=pretrain)
+    fsd = FeatureSD(bench.classifier, todo)
+    fsd.register_testbed(bench)
 
-def collect_knn_featurewise_data(testbed_constructor, dataset_name, mode="noise", sampler="RandomSampler", k=5, batch_size=8):
-    bench = testbed_constructor("classifier", mode=mode, sampler=sampler, batch_size=batch_size)
-    features = [cross_entropy, energy, softmax, typicality]
-    uncollected_features = features.copy()
-    for feature in features:
-        fname = f"{dataset_name}_{mode}_{sampler}_{batch_size}_k={k}_{feature.__name__}.csv"
-        if fname in os.listdir("debiased_data"):
-            uncollected_features.remove(feature)
-            print(f"{fname} already exists, skipping...")
-    if (uncollected_features == []):
-        print(
-            f"No features left to compute for {dataset_name} in {mode} mode with {sampler} sampler and batch size {batch_size} and k={k}")
-        return
-    else:
-        features = uncollected_features
-        print(
-            f"Collecting {features} data for {dataset_name} in {mode} mode with {sampler} sampler and batch size {batch_size} and k={k}")
-        tsd = KNNFeaturewiseSD(bench.classifier, features, k=k)
-        tsd.register_testbed(bench)
-        compute_stats(*tsd.compute_pvals_and_loss(),
-                      fname=f"debiased_data/{dataset_name}_{mode}_{sampler}_{batch_size}_k=featurewise_{k}",
-                      feature_names=[f.__name__ for f in features])
+    noind = mode != "normal"
+    features_tuple = fsd.compute_pvals_and_loss(noind=noind)
+    _save(features_tuple, model, pretrain, dataset_name, mode,
+          [fn.__name__ for fn in todo], noind=noind)
 
 
-def collect_model_wise_data(testbed_constructor, dataset_name, mode="noise"):
-    for model_name in ["deeplabv3plus", "unet", "segformer"]:
-        bench = testbed_constructor("classifier", mode=mode, model_name=model_name)
-        features = [cross_entropy, energy, mahalanobis, softmax, knn, typicality]
+def collect_all(
+    detectors=None,
+    datasets=None,
+    models=None,
+    modes=None,
+    pretrain=True,
+    batch_size=8,
+    overwrite=False,
+):
+    """Sweep over (dataset, model, mode) cells, collecting only the listed detectors."""
+    detectors = detectors if detectors is not None else DETECTORS
+    datasets = datasets if datasets is not None else list(TESTBEDS.keys())
+    models = models if models is not None else MODELS
+    modes = modes if modes is not None else SYNTHETIC_SHIFTS + ["normal"]
 
-        tsd = FeatureSD(bench.classifier,features)
-        tsd.register_testbed(bench)
-        compute_stats(*tsd.compute_pvals_and_loss(),
-                      fname=f"final_data/{dataset_name}_{mode}_{model_name}", feature_names=[f.__name__ for f in features])
-
-
-def collect_bias_data():
-    for k in [0, 5, 1, 10]:
-        for batch_size in BATCH_SIZES[1:-1]:
-            for sampler in [ "RandomSampler","ClusterSampler", "SequentialSampler", "ClassOrderSampler"]:
-                if sampler!="ClassOrderSampler":
-                    collect_debiased_data(PolypTestBed, "Polyp", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-
-                collect_debiased_data(CCTTestBed, "CCT", mode="normal",k=k, sampler=sampler, batch_size=batch_size)
-                collect_debiased_data(OfficeHomeTestBed, "OfficeHome", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-                collect_debiased_data(Office31TestBed, "Office31", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-                collect_debiased_data(NICOTestBed, "NICO", mode="normal", k=k, sampler=sampler, batch_size=batch_size)
-
-
-def collect_single_data(testbed):
-    dataset_name = testbed.__name__.split("TestBed")[0]
-
-    pretrain = True
-
-    for model in MODELS:
-
-        if dataset_name=="Polyp" and model not in SEG_MODELS:
-            continue
-        if not os.path.exists(f"data/{'pretrain' if pretrain else 'nopretrain'}/{model}/feature_data"):
-            os.makedirs(f"data/{'pretrain' if pretrain else 'nopretrain'}/{model}/feature_data")
-
-        for mode in SYNTHETIC_SHIFTS+["normal"]:
-            if mode=="autoattack":
+    for dataset_name in datasets:
+        constructor = TESTBEDS[dataset_name]
+        for model in models:
+            if dataset_name == "Polyp" and model not in SEG_MODELS:
                 continue
-            if dataset_name=="Polyp" and mode=="fgsm":
-                continue # FGSM not applicable to segmentation
-            print(mode)
-            collect_data(testbed, dataset_name, mode=mode, model=model, pretrain=pretrain)
+            if dataset_name != "Polyp" and model in SEG_MODELS:
+                continue
+            for mode in modes:
+                if mode == "autoattack":
+                    continue
+                if dataset_name == "Polyp" and mode == "fgsm":
+                    continue  # FGSM not applicable to segmentation
+                print(f"\n=== {dataset_name} | {model} | {mode} ===")
+                collect_features(
+                    constructor,
+                    dataset_name,
+                    detectors,
+                    mode=mode,
+                    model=model,
+                    pretrain=pretrain,
+                    batch_size=batch_size,
+                    overwrite=overwrite,
+                )
 
 
-if __name__ == '__main__':
-    from features import *
-    torch.multiprocessing.set_start_method('spawn')
-    collect_single_data(PolypTestBed)
+if __name__ == "__main__":
+    torch.multiprocessing.set_start_method("spawn")
+    collect_all(overwrite=True)
