@@ -143,6 +143,7 @@ def collect_all(
                 if dataset_name == "Polyp" and mode == "fgsm":
                     continue  # FGSM not applicable to segmentation
                 print(f"\n=== {dataset_name} | {model} | {mode} ===")
+
                 collect_features(
                     constructor,
                     dataset_name,
