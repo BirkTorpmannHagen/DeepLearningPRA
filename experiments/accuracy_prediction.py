@@ -2011,7 +2011,7 @@ def sequence_length_sensitivity(lengths, n_samples=50, error="sem"):
         marker="o",
         capsize=4,
     )
-
+    plt.xscale("log")
     plt.xlabel("Sequence length")
     plt.ylabel("Mean MAE")
     plt.title("Sequence length sensitivity")
