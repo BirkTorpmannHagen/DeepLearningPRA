@@ -1481,7 +1481,7 @@ def predicted_vs_true_gap_grid(rows):
 
     return calib, summary
 
-def shift_type_loo_predictions(batch_size=1, pretrain=True):
+def shift_type_loo_predictions(batch_size=1, pretrain=True, seq_length=-1):
     """
     Correct leave-one-shift-type-out protocol.
 
@@ -1532,7 +1532,8 @@ def shift_type_loo_predictions(batch_size=1, pretrain=True):
         for held_shift_type in synthetic_pool["shift_type"].unique():
             train = synthetic_pool[synthetic_pool["shift_type"] != held_shift_type]
             test = synthetic_pool[synthetic_pool["shift_type"] == held_shift_type]
-
+            print(test)
+            input()
             if len(train) < 2 or test.empty:
                 continue
 
@@ -1794,4 +1795,229 @@ def accuracy_prediction_table(batch_size=1, pretrain=True):
     print(pivot.round(4).to_string())
 
     return pivot, df_best
+def shift_type_loo_predictions_subsampled(
+    batch_size=1,
+    pretrain=True,
+    seq_length=-1,
+    n_samples=1,
+    random_state=0,
+):
+    """
+    Leave-one-shift-type-out protocol, but test targets are evaluated on
+    sequence-level averages.
 
+    If seq_length > 0, each test set is repeatedly subsampled into sequences
+    of length `seq_length`; DR and gap are averaged within each sampled sequence
+    before prediction.
+
+    If seq_length <= 0, this reduces to the original row-level protocol.
+    """
+
+    df = _prepare_dr_gap_data(
+        batch_size=batch_size,
+        pretrain=pretrain,
+        filter_best=True,
+    )
+
+    if df.empty:
+        return pd.DataFrame()
+
+    rng = np.random.default_rng(random_state)
+    rows = []
+
+    def _sample_means(test_df, seq_length, n_samples):
+        """
+        Return a dataframe where each row is the mean of a sampled sequence.
+        Non-numeric metadata is copied from the first sampled row.
+        """
+        test_df = test_df.copy()
+
+        if seq_length is None or seq_length <= 0:
+            return test_df.reset_index(drop=True)
+
+        if test_df.empty:
+            return test_df
+
+        sampled_rows = []
+
+        for sample_idx in range(n_samples):
+            replace = len(test_df) < seq_length
+            sampled = test_df.sample(
+                n=seq_length,
+                replace=replace,
+                random_state=int(rng.integers(0, 2**32 - 1)),
+            )
+
+            base = sampled.iloc[0].copy()
+
+            base["DR"] = sampled["DR"].astype(float).mean()
+            base["gap"] = sampled["gap"].astype(float).mean()
+            base["fold"] = sampled["fold"].iloc[0]
+            base["sequence_id"] = sample_idx
+            base["sequence_length"] = seq_length
+            base["n_available"] = len(test_df)
+
+            sampled_rows.append(base)
+
+        return pd.DataFrame(sampled_rows).reset_index(drop=True)
+
+    for (dataset, model, feature_name), grp in df.groupby(
+        ["Dataset", "Model", "feature_name"]
+    ):
+        grp = grp.copy()
+
+        # Exclude non-evaluation pseudo-folds.
+        grp = grp[~grp["fold"].isin(["train", "ind_val"])]
+
+        # Synthetic calibration pool only.
+        synthetic_pool = grp[
+            (grp["category"] == "Synthetic")
+            & (~grp["shift_type"].isin(["FGSM", "adv", "ind"]))
+        ].copy()
+
+        if len(synthetic_pool) < 2:
+            continue
+
+        # ------------------------------------------------------------
+        # 1. Synthetic held-out shift types
+        # ------------------------------------------------------------
+        for held_shift_type in synthetic_pool["shift_type"].unique():
+            train = synthetic_pool[synthetic_pool["shift_type"] != held_shift_type]
+            raw_test = synthetic_pool[
+                synthetic_pool["shift_type"] == held_shift_type
+            ]
+
+            if len(train) < 2 or raw_test.empty:
+                continue
+
+            test = _sample_means(raw_test, seq_length, n_samples)
+
+            reg = LinearRegression()
+            reg.fit(
+                train["DR"].values.reshape(-1, 1),
+                train["gap"].values,
+            )
+
+            preds = reg.predict(test["DR"].values.reshape(-1, 1))
+
+            for (_, r), pred in zip(test.iterrows(), preds):
+                rows.append({
+                    "Dataset": dataset,
+                    "Model": model,
+                    "feature_name": feature_name,
+                    "fold": r["fold"],
+                    "shift_type": held_shift_type,
+                    "category": "Synthetic",
+                    "observed_gap": float(r["gap"]),
+                    "predicted_gap": float(pred),
+                    "MAE": abs(float(pred) - float(r["gap"])),
+                    "Method": "Ours",
+                    "sequence_id": r.get("sequence_id", np.nan),
+                    "sequence_length": r.get("sequence_length", seq_length),
+                    "n_available": r.get("n_available", len(raw_test)),
+                })
+
+        # ------------------------------------------------------------
+        # 2. Organic held-out folds/domains
+        # ------------------------------------------------------------
+        organic_targets = grp[
+            (grp["category"] == "Organic")
+            & (~grp["fold"].isin(["train", "ind_val", "ind_test"]))
+        ].copy()
+
+        for organic_fold, raw_test in organic_targets.groupby("fold"):
+            if len(synthetic_pool) < 2 or raw_test.empty:
+                continue
+
+            test = _sample_means(raw_test, seq_length, n_samples)
+
+            reg = LinearRegression()
+            reg.fit(
+                synthetic_pool["DR"].values.reshape(-1, 1),
+                synthetic_pool["gap"].values,
+            )
+
+            preds = reg.predict(test["DR"].values.reshape(-1, 1))
+
+            for (_, r), pred in zip(test.iterrows(), preds):
+                rows.append({
+                    "Dataset": dataset,
+                    "Model": model,
+                    "feature_name": feature_name,
+                    "fold": organic_fold,
+                    "shift_type": "Organic",
+                    "category": "Organic",
+                    "observed_gap": float(r["gap"]),
+                    "predicted_gap": float(pred),
+                    "MAE": abs(float(pred) - float(r["gap"])),
+                    "Method": "Ours",
+                    "sequence_id": r.get("sequence_id", np.nan),
+                    "sequence_length": r.get("sequence_length", seq_length),
+                    "n_available": r.get("n_available", len(raw_test)),
+                })
+
+    return pd.DataFrame(rows)
+
+def sequence_length_sensitivity(lengths, n_samples=50, error="sem"):
+    rows = []
+
+    for length in lengths:
+        ours = shift_type_loo_predictions_subsampled(
+            batch_size=1,
+            pretrain=True,
+            seq_length=length,
+            n_samples=n_samples,
+        )
+
+        if ours.empty:
+            continue
+
+        # Mean MAE per sampled sequence replicate
+        rep_mae = (
+            ours
+            .groupby("sequence_id", dropna=False)["MAE"]
+            .mean()
+            .reset_index(name="replicate_mean_mae")
+        )
+
+        mean_mae = rep_mae["replicate_mean_mae"].mean()
+        std_mae = rep_mae["replicate_mean_mae"].std(ddof=1)
+        sem_mae = std_mae / np.sqrt(len(rep_mae))
+
+        rows.append({
+            "sequence_length": length,
+            "mean_mae": mean_mae,
+            "std_mae": std_mae,
+            "sem_mae": sem_mae,
+            "n_replicates": len(rep_mae),
+        })
+
+    res_df = pd.DataFrame(rows).sort_values("sequence_length")
+
+    if error == "std":
+        yerr = res_df["std_mae"]
+    elif error == "sem":
+        yerr = res_df["sem_mae"]
+    elif error == "ci95":
+        yerr = 1.96 * res_df["sem_mae"]
+    else:
+        raise ValueError("error must be one of: 'std', 'sem', 'ci95'")
+
+    plt.figure(figsize=(6, 4))
+    plt.errorbar(
+        res_df["sequence_length"],
+        res_df["mean_mae"],
+        yerr=yerr,
+        marker="o",
+        capsize=4,
+    )
+
+    plt.xlabel("Sequence length")
+    plt.ylabel("Mean MAE")
+    plt.title("Sequence length sensitivity")
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig("seq_length_analysis.pdf")
+    plt.show()
+
+    return res_df

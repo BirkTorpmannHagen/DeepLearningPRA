@@ -12,14 +12,20 @@ from experiments.accuracy_prediction import *
 np.set_printoptions(precision=3, suppress=True)
 
 
-def ood_detector_ba():
-    df = get_all_ood_detector_data(1, filter_organic=True, filter_best=True, pretrain=True)
-    print(df.columns)
-    cols = [c for c in ["DR", "BA", "Accuracy"] if c in df.columns]
-    print(df.groupby(["Dataset", "Fold"])[cols].mean())
+# def ood_detector_ba():
+#     df = get_all_ood_detector_data(1, filter_organic=True, filter_best=True, pretrain=True)
+#     print(df.columns)
+#     cols = [c for c in ["DR", "BA", "Accuracy"] if c in df.columns]
+#     print(df.groupby(["Dataset", "Fold"])[cols].mean())
 
 
 def run_acc_prediction_experiments():
+    seq_df = sequence_length_sensitivity(
+        lengths=[1, 5, 10, 25, 50, 100, 250, 500],
+        n_samples=100,
+        error="ci95",
+    )
+    input("done!")
     test_generalization_gap_estimation(1, pretrain=True)
     dr_gap_correlation_distribution(1, pretrain=True)
     threshold_method_comparison(1, pretrain=True)
@@ -39,7 +45,7 @@ def run_acc_prediction_experiments():
     error_per_accuracy(corrected_rows)
     intensity_breakdown_plot(corrected_rows)
 
-    ood_detector_ba()
+    # ood_detector_ba()
 
 if __name__ == '__main__':
     run_acc_prediction_experiments()
