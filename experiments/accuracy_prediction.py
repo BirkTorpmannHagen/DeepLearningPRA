@@ -1176,7 +1176,7 @@ def dr_gap_correlation_distribution(batch_size=1, pretrain=True):
     ax.axhline(0.5, color="black", linewidth=0.6, linestyle="--")
     ax.set_ylabel(r"Spearman $\rho$ (DR vs. gap)")
     ax.set_xlabel("")
-    ax.set_ylim(0, 1.05)
+    # ax.set_ylim(0, 1.05)
     ax.legend(title="Architecture", bbox_to_anchor=(1.02, 1.0),
               loc="upper left", frameon=False, fontsize="x-small")
     plt.tight_layout()
