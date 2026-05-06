@@ -1153,14 +1153,14 @@ def dr_gap_correlation_distribution(batch_size=1, pretrain=True):
         # |rho|: detector orientation can flip sign per (detector, architecture) — magnitude
         # captures monotonic coupling between DR and gap regardless of sign.
         rows.append({"Dataset": dataset, "Model": model,
-                     "Detector": feature_name, "abs_rho": abs(float(rho))})
+                     "Detector": feature_name, "rho": float(rho)})
     corr_df = pd.DataFrame(rows)
     if corr_df.empty:
         print("No correlations could be computed; skipping figure.")
         return corr_df
 
     print("Correlation summary (|Spearman rho| per dataset):")
-    print(corr_df.groupby("Dataset")["abs_rho"]
+    print(corr_df.groupby("Dataset")["rho"]
                  .agg(["median", "mean", "min", "max", "count"]))
 
     cb = sns.color_palette("colorblind")
@@ -1168,13 +1168,13 @@ def dr_gap_correlation_distribution(batch_size=1, pretrain=True):
     palette = {m: cb[i % len(cb)] for i, m in enumerate(models_present)}
 
     fig, ax = plt.subplots(figsize=(7.5, 3.0))
-    sns.boxplot(data=corr_df, x="Dataset", y="abs_rho", order=DATASETS,
+    sns.boxplot(data=corr_df, x="Dataset", y="rho", order=DATASETS,
                 color="lightgrey", fliersize=0, ax=ax, width=0.55)
-    sns.swarmplot(data=corr_df, x="Dataset", y="abs_rho", order=DATASETS,
+    sns.swarmplot(data=corr_df, x="Dataset", y="rho", order=DATASETS,
                   hue="Model", palette=palette, size=4, ax=ax,
                   edgecolor="black", linewidth=0.4)
     ax.axhline(0.5, color="black", linewidth=0.6, linestyle="--")
-    ax.set_ylabel(r"$|$Spearman $\rho|$ (DR vs. gap)")
+    ax.set_ylabel(r"Spearman $\rho$ (DR vs. gap)")
     ax.set_xlabel("")
     ax.set_ylim(0, 1.05)
     ax.legend(title="Architecture", bbox_to_anchor=(1.02, 1.0),
