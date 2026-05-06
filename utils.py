@@ -234,7 +234,7 @@ DATASETWISE_RANDOM_CORRECTNESS = {
 COLUMN_PRINT_LUT = {"feature_name":"Feature", "loss":"Loss", "rate":"p(E)", "shift_intensity":"Shift Intensity", "shift":"Shift", "feature": "Feature Value"}
 BIAS_TYPES = ["Unbiased", "Class", "Synthetic", "Temporal"]
 SAMPLERS = ["RandomSampler",  "ClassOrderSampler", "ClusterSampler", "SequentialSampler",]
-SYNTHETIC_SHIFTS = ["noise", "multnoise", "hue", "saltpepper", "saturation", "brightness", "contrast", "smear", "fgsm", "fog", "jpeg"]
+SYNTHETIC_SHIFTS = ["noise", "multnoise", "hue", "saltpepper", "saturation", "brightness", "contrast", "smear", "fog", "jpeg"]
 
 SHIFT_PRINT_LUT= {"normal": "Organic", "noise": "Additive Noise", "multnoise": "Multiplicative Noise",
              "hue": "Hue", "saltpepper": "Salt+Pepper Noise", "brightness":"Brightness", "contrast":"Contrast", "smear":"Smear", "fgsm": "FGSM", "fog":"Fog", "jpeg":"JPEG"}

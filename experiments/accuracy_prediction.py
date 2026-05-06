@@ -33,6 +33,11 @@ def _parse_shift_type_from_fold(fold):
 
     return "Organic"
 
+def _first_existing_col(df, candidates):#hacky patch
+    for c in candidates:
+        if c in df.columns:
+            return c
+    return None
 
 def _is_synthetic_shift_type(shift_type):
     return shift_type in SYNTHETIC_SHIFTS
@@ -176,7 +181,104 @@ def test_generalization_gap_estimation(batch_size, pretrain=False):
     plt.savefig("figures/da_vs_generalization.pdf", bbox_inches="tight")
     plt.show()
 
+def pre_predictions(pretrain=True):
+    """
+    PRE results normalized to the same calibration schema as Ours/ATC.
 
+    Requires cached PRE output to contain both a true/observed accuracy and a
+    predicted/estimated accuracy column. If only `Accuracy Error` is cached,
+    PRE can be used in MAE tables but not calibration plots.
+    """
+    try:
+        pre = get_all_pre_data(pretrain=pretrain)
+    except Exception as e:
+        print(f"[pre_predictions] PRE unavailable: {e}")
+        return pd.DataFrame()
+
+    if pre.empty:
+        return pd.DataFrame()
+
+    pre = pre.copy()
+    pre = pre[pre["rate"] == 1].copy()
+
+    pred_col = _first_existing_col(
+        pre,
+        [
+            "predicted_acc",
+            "estimated_acc",
+            "Predicted Accuracy",
+            "Estimated Accuracy",
+            "Prediction",
+            "PRE Accuracy",
+        ],
+    )
+
+    true_col = _first_existing_col(
+        pre,
+        [
+            "true_acc",
+            "observed_acc",
+            "Accuracy",
+            "True Accuracy",
+            "Observed Accuracy",
+        ],
+    )
+
+    # Need an InD baseline to express PRE in gap space.
+    raw = load_all(batch_size=1, shift="", pretrain=pretrain)
+    if raw.empty:
+        print("[pre_predictions] raw data unavailable; cannot compute PRE gaps.")
+        return pd.DataFrame()
+
+    ind_val = (
+        raw[raw["fold"] == "ind_val"]
+        .groupby(["Dataset", "Model"], as_index=False)["correct_prediction"]
+        .mean()
+        .rename(columns={"correct_prediction": "ind_val_acc"})
+    )
+
+    pre = pre.merge(ind_val, on=["Dataset", "Model"], how="left")
+
+    rows = []
+
+    for _, r in pre.iterrows():
+        fold = r["test_set"]
+        shift_type = _parse_shift_type_from_fold(fold)
+
+        if shift_type in ("FGSM", "adv", "ind", "train", "ind_val"):
+            continue
+
+        mae = float(r["Accuracy Error"])
+
+        if pred_col is not None and true_col is not None and pd.notna(r.get("ind_val_acc")):
+            predicted_gap = float(r[pred_col]) - float(r["ind_val_acc"])
+            observed_gap = float(r[true_col]) - float(r["ind_val_acc"])
+        else:
+            predicted_gap = np.nan
+            observed_gap = np.nan
+
+        rows.append({
+            "Dataset": r["Dataset"],
+            "Model": r["Model"],
+            "feature_name": r["dsd"],
+            "fold": fold,
+            "shift_type": shift_type,
+            "category": "Synthetic" if _is_synthetic_shift_type(shift_type) else "Organic",
+            "observed_gap": observed_gap,
+            "predicted_gap": predicted_gap,
+            "MAE": mae,
+            "Method": "PRE",
+        })
+
+    out = pd.DataFrame(rows)
+
+    if out[["observed_gap", "predicted_gap"]].isna().all().all():
+        print(
+            "[pre_predictions] PRE has only error values, not predicted/true "
+            "accuracy columns; PRE will appear in MAE tables but not calibration grid."
+        )
+
+    return out
 def get_acc_prediction_results(batch_size, pretrain=False):
     merged = get_merged(batch_size, pretrain=pretrain, filter_best=False)
     prefix = "data/pretrain" if pretrain else "data/nopretrain"
@@ -438,9 +540,7 @@ def intensity_breakdown_plot(rows):
         print("[intensity_breakdown_plot] no rows.")
         return df
 
-    df = df[df["Method"].isin(["Ours", "ATC-NE", "PRE"])].copy()
-    df["Method"] = df["Method"].replace({"ATC-NE": "ATC"})
-
+    df = df[df["Method"].isin(["Ours", "ATC-MC", "ATC-NE", "PRE"])].copy()
     def parse_intensity(fold):
         fold = str(fold)
         if "_" not in fold:
@@ -453,8 +553,8 @@ def intensity_breakdown_plot(rows):
     df["intensity"] = df["fold"].apply(parse_intensity)
 
     cb = sns.color_palette("colorblind")
-    palette = {"Ours": cb[2], "ATC": cb[1], "PRE": cb[0]}
-    method_order = [m for m in ["Ours", "ATC", "PRE"] if m in df["Method"].unique()]
+    palette = {"Ours": cb[2], "ATC-MC": cb[1], "ATC-NE": cb[3], "PRE": cb[0]}
+    method_order = [m for m in ["Ours", "ATC-MC", "ATC-NE", "PRE"] if m in df["Method"].unique()]
 
     synth = df[df["category"] == "Synthetic"].copy()
     organic = df[df["category"] == "Organic"].copy()
@@ -484,7 +584,7 @@ def intensity_breakdown_plot(rows):
 
         if not sub_o.empty:
             org_summary = (
-                sub_o.groupby(["Method", "fold"])["MAE"]
+                sub_o.groupby(["Method"])["MAE"]
                 .mean()
                 .reset_index()
             )
@@ -528,15 +628,16 @@ def intensity_breakdown_plot(rows):
 
     for j in range(len(DATASETS), len(axes)):
         axes[j].set_visible(False)
-
+    for ax in axes:
+        ax.set_yscale("log")
     handles = [Patch(color=palette[m], label=m) for m in method_order]
 
     fig.legend(
         handles=handles,
         loc="lower right",
-        bbox_to_anchor=(0.95, 0.08),
+        bbox_to_anchor=(0.95, 0.15),
         frameon=False,
-        ncol=len(method_order),
+        ncol=2,
         title="Method",
     )
 
@@ -1346,9 +1447,17 @@ def predicted_vs_true_gap_grid(rows):
     calib["abs_error"] = calib["residual"].abs()
 
     method_order = [
-        m for m in ["Ours", "ATC-MC", "ATC-NE"]
+        m for m in ["Ours", "ATC-MC", "ATC-NE", "PRE"]
         if m in calib["Method"].unique()
     ]
+
+    cb = sns.color_palette("colorblind")
+    palette = {
+        "Ours": cb[2],
+        "ATC-MC": cb[1],
+        "ATC-NE": cb[7],
+        "PRE": cb[0],
+    }
 
     summary = (
         calib.groupby(["Dataset", "Method"])
@@ -1704,9 +1813,9 @@ def pre_predictions(pretrain=True):
             "fold": fold,
             "shift_type": shift_type,
             "category": "Synthetic" if _is_synthetic_shift_type(shift_type) else "Organic",
-            "observed_gap": np.nan,
-            "predicted_gap": np.nan,
-            "MAE": float(r["Accuracy Error"]),
+            "observed_gap": float(r["Accuracy"]) - float(r["ind_acc"]),
+            "predicted_gap": float(r["E[f(x)=y]"]) - float(r["ind_acc"]),
+            "MAE": abs(float(r["E[f(x)=y]"]) - float(r["Accuracy"])),
             "Method": "PRE",
         })
 
@@ -2019,3 +2128,231 @@ def sequence_length_sensitivity(lengths, n_samples=50, error="sem"):
     plt.show()
 
     return res_df
+
+def method_statistical_tests(batch_size=1, pretrain=True, alpha=0.05):
+    """
+    Paired statistical comparison of accuracy-prediction methods.
+
+    Unit of comparison:
+        (Dataset, fold)
+
+    Input rows:
+        Uses df_best from accuracy_prediction_table(), so it inherits the same
+        best Model x feature_name selection rule.
+
+    Tests:
+        - Friedman test across all methods
+        - Pairwise Wilcoxon signed-rank tests
+        - Benjamini-Hochberg FDR correction
+        - Paired median MAE difference
+        - Paired win rate
+    """
+    from scipy.stats import friedmanchisquare, wilcoxon
+    from statsmodels.stats.multitest import multipletests
+
+    pivot_table, df_best = accuracy_prediction_table(
+        batch_size=batch_size,
+        pretrain=pretrain,
+    )
+
+    if df_best.empty:
+        print("[method_statistical_tests] no rows available.")
+        return pd.DataFrame(), pd.DataFrame()
+
+    # Aggregate to reduce dependence among intensities/folds from the same shift family.
+    agg = (
+        df_best
+        .groupby(["Dataset", "shift_type", "Method"], as_index=False)["MAE"]
+        .mean()
+    )
+
+    paired = (
+        agg
+        .pivot_table(
+            index=["Dataset", "shift_type"],
+            columns="Method",
+            values="MAE",
+            aggfunc="mean",
+        )
+        .dropna()
+    )
+
+    method_order = [
+        m for m in ["Ours", "ATC-MC", "ATC-NE", "PRE"]
+        if m in paired.columns
+    ]
+    paired = paired[method_order]
+
+    if paired.shape[0] < 2 or paired.shape[1] < 2:
+        print("[method_statistical_tests] not enough paired data.")
+        return paired, pd.DataFrame()
+
+    print("\n=== Paired MAE matrix ===")
+    print(paired.round(4).to_string())
+
+    # -----------------------------
+    # Global Friedman test
+    # -----------------------------
+    friedman_df = pd.DataFrame()
+
+    if paired.shape[1] >= 3:
+        stat, p = friedmanchisquare(*[paired[m].values for m in paired.columns])
+        friedman_df = pd.DataFrame([{
+            "test": "Friedman",
+            "n_pairs": paired.shape[0],
+            "n_methods": paired.shape[1],
+            "statistic": float(stat),
+            "p_value": float(p),
+        }])
+
+        print("\n=== Friedman test ===")
+        print(friedman_df.round(6).to_string(index=False))
+    else:
+        print("\n[Friedman] skipped: requires at least 3 methods.")
+
+    # -----------------------------
+    # Pairwise Wilcoxon tests
+    # -----------------------------
+    rows = []
+
+    methods = paired.columns.tolist()
+
+    for i in range(len(methods)):
+        for j in range(i + 1, len(methods)):
+            m1 = methods[i]
+            m2 = methods[j]
+
+            x = paired[m1].values
+            y = paired[m2].values
+            diff = x - y
+
+            nonzero = diff[diff != 0]
+
+            if len(nonzero) == 0:
+                stat = np.nan
+                p = 1.0
+            else:
+                stat, p = wilcoxon(
+                    x,
+                    y,
+                    zero_method="wilcox",
+                    alternative="two-sided",
+                )
+
+            rows.append({
+                "method_1": m1,
+                "method_2": m2,
+                "n_pairs": int(len(diff)),
+                "mean_mae_1": float(np.mean(x)),
+                "mean_mae_2": float(np.mean(y)),
+                "median_mae_1": float(np.median(x)),
+                "median_mae_2": float(np.median(y)),
+                "mean_diff_m1_minus_m2": float(np.mean(diff)),
+                "median_diff_m1_minus_m2": float(np.median(diff)),
+                "win_rate_m1": float(np.mean(x < y)),
+                "win_rate_m2": float(np.mean(y < x)),
+                "tie_rate": float(np.mean(x == y)),
+                "wilcoxon_statistic": float(stat) if np.isfinite(stat) else np.nan,
+                "p_value": float(p),
+            })
+
+    results = pd.DataFrame(rows)
+
+    if not results.empty:
+        reject, p_adj, _, _ = multipletests(
+            results["p_value"].values,
+            alpha=alpha,
+            method="fdr_bh",
+        )
+
+        results["p_adj_fdr_bh"] = p_adj
+        results["significant"] = reject
+
+        results = results.sort_values("p_adj_fdr_bh")
+
+    print("\n=== Pairwise Wilcoxon signed-rank tests ===")
+    print(results.round(6).to_string(index=False))
+
+    paired.to_csv("figures/stat_test_paired_mae.csv")
+    results.to_csv("figures/stat_test_pairwise_wilcoxon.csv", index=False)
+
+    if not friedman_df.empty:
+        friedman_df.to_csv("figures/stat_test_friedman.csv", index=False)
+
+    return paired, results
+
+def make_ci_table(df_best, alpha=0.05):
+    """
+    Builds per-dataset mean MAE ± 95% CI table for each method.
+    Uses paired folds as units (same as statistical test).
+    """
+    import numpy as np
+    from scipy.stats import t
+
+    rows = []
+
+    for (dataset, method), grp in df_best.groupby(["Dataset", "Method"]):
+        vals = grp["MAE"].values.astype(float)
+        n = len(vals)
+
+        if n < 2:
+            continue
+
+        mean = np.mean(vals)
+        std = np.std(vals, ddof=1)
+        sem = std / np.sqrt(n)
+
+        # 95% CI using t-distribution
+        tval = t.ppf(1 - alpha/2, df=n-1)
+        ci = tval * sem
+
+        rows.append({
+            "Dataset": dataset,
+            "Method": method,
+            "mean": mean,
+            "ci": ci,
+        })
+
+    df = pd.DataFrame(rows)
+
+    # pivot into table form
+    table = df.pivot(index="Method", columns="Dataset", values=["mean", "ci"])
+
+    return df, table
+
+def format_latex_ci_table(df_ci):
+    """
+    Formats table as: mean ± CI
+    """
+    out = {}
+
+    for _, r in df_ci.iterrows():
+        d = r["Dataset"]
+        m = r["Method"]
+        val = f"{r['mean']:.3f} $\\pm$ {r['ci']:.3f}"
+        if d not in out:
+            out[d] = {}
+        out[d][m] = val
+
+    datasets = ["CCT", "OfficeHome", "Office31", "NICO", "Polyp"]
+    methods = ["ATC-MC", "ATC-NE", "PRE", "Ours"]
+
+    lines = []
+    lines.append("\\begin{tabular}{lccccc}")
+    lines.append("\\toprule")
+    lines.append(" & " + " & ".join(datasets) + " \\\\")
+    lines.append("\\midrule")
+
+    for m in methods:
+        row = [m]
+        for d in datasets:
+            row.append(out.get(d, {}).get(m, "--"))
+        lines.append(" & ".join(row) + " \\\\")
+
+        if m == "PRE":
+            lines.append("\\midrule")
+
+    lines.append("\\bottomrule")
+    lines.append("\\end{tabular}")
+
+    return "\n".join(lines)

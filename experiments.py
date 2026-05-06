@@ -20,11 +20,7 @@ np.set_printoptions(precision=3, suppress=True)
 
 
 def run_acc_prediction_experiments():
-    # seq_df = sequence_length_sensitivity(
-    #     lengths=[1, 5, 10, 25, 50, 100, 250, 500],
-    #     n_samples=100,
-    #     error="ci95",
-    # )
+
 
     # test_generalization_gap_estimation(1, pretrain=True)
     # dr_gap_correlation_distribution(1, pretrain=True)
@@ -34,6 +30,14 @@ def run_acc_prediction_experiments():
         batch_size=1,
         pretrain=True,
     )
+    # test_generalization_gap_estimation(1, pretrain=True)
+    # dr_gap_correlation_distribution(1, pretrain=True)
+    # threshold_method_comparison(1, pretrain=True)
+    # paired, stats = method_statistical_tests(batch_size=1, pretrain=True)
+    # pivot, corrected_rows = accuracy_prediction_table(
+    #     batch_size=1,
+    #     pretrain=True,
+    # )
     #
     # pivot.to_csv("figures/corrected_shift_type_loo_comparison.csv")
     # corrected_rows.to_csv("figures/corrected_shift_type_loo_rows.csv", index=False)
@@ -44,6 +48,7 @@ def run_acc_prediction_experiments():
     # predicted_vs_true_gap_grid(corrected_rows)
     # error_per_accuracy(corrected_rows)
     intensity_breakdown_plot(corrected_rows)
+
 
     # ood_detector_ba()
 
