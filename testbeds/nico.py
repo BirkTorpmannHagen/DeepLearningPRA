@@ -15,9 +15,13 @@ class NICOTestBed(BaseTestBed):
         self.contexts.remove("dim")
 
         prefix = "classifier_logs" if pretrained else "classifier_logs_no_pretrain"
-        self.classifier = ResNetClassifier.load_from_checkpoint(
-            f"{prefix}/{model}/NICODataset/checkpoints/best.ckpt", num_classes=num_classes,
-            resnet_version=101).to("cuda").eval()
+        if model == "resnet":
+            self.classifier = ResNetClassifier.load_from_checkpoint(
+                f"{prefix}/{model}/NICO/checkpoints/best.ckpt", num_classes=num_classes,
+                resnet_version=101).to("cuda").eval()
+        else:
+            self.classifier = ViTClassifier.load_from_checkpoint(f"{prefix}/{model}/NICO/checkpoints/best.ckpt",
+                                                                 num_classes=num_classes, )
         self.glow = GlowPL.load_from_checkpoint("glow_logs/NICODataset/checkpoints/epoch=499-step=312500.ckpt",  in_channel=3, n_flow=32, n_block=4, conv_lu=True, affine=True).cuda().eval()
         self.mode=mode
 
