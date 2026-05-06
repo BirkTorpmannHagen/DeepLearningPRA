@@ -28,17 +28,20 @@ class Simulator:
         self.df = df
 
         self.ood_test_fold= ood_test_fold
-        self.ood_val_fold = ood_val_fold
-        # self.ood_detector = OODDetector(df)
+        if isinstance(ood_val_fold, str):
+            self.ood_val_folds = [ood_val_fold]
+        else:
+            self.ood_val_folds = list(ood_val_fold)
+        # back-compat alias for existing call sites that read .ood_val_fold
+        self.ood_val_fold = self.ood_val_folds[0] if len(self.ood_val_folds) == 1 else self.ood_val_folds
 
-        self.ood_detector = OODDetector(df, ood_val_fold)
-        train_df = df[(df["fold"] == ood_val_fold) | (df["fold"] == "ind_val")]
+        train_df = df[df["fold"].isin(self.ood_val_folds) | (df["fold"] == "ind_val")]
 
         self.ood_detector = OODDetector(train_df, "val_optimal")
         dsd_tpr, dsd_tnr = self.ood_detector.get_likelihood()
 
 
-        self.ood_val_acc = self.get_predictor_accuracy(self.ood_val_fold)
+        self.ood_val_acc = self.get_predictor_accuracy(self.ood_val_folds)
         self.ood_test_acc = self.get_predictor_accuracy(self.ood_test_fold)
         self.ind_val_acc = self.get_predictor_accuracy("ind_val")
         self.ind_test_acc = self.get_predictor_accuracy("ind_test")
@@ -49,8 +52,8 @@ class Simulator:
 
         ind_ndsd_acc = self.get_conditional_prediction_likelihood_estimates("ind_val", False)
         ind_dsd_acc = self.get_conditional_prediction_likelihood_estimates("ind_val", True)
-        ood_ndsd_acc = self.get_conditional_prediction_likelihood_estimates(ood_val_fold, False)
-        ood_dsd_acc = self.get_conditional_prediction_likelihood_estimates(ood_val_fold, True)
+        ood_ndsd_acc = self.get_conditional_prediction_likelihood_estimates(self.ood_val_folds, False)
+        ood_dsd_acc = self.get_conditional_prediction_likelihood_estimates(self.ood_val_folds, True)
 
 
         self.detector_tree = DetectorEventTree(dsd_tpr, dsd_tnr, ind_ndsd_acc, ind_dsd_acc, ood_ndsd_acc, ood_dsd_acc,
@@ -62,7 +65,10 @@ class Simulator:
         self.folds = self.df[self.df["ood"]]["fold"].unique()
 
     def get_conditional_prediction_likelihood_estimates(self, fold, monitor_verdict, num_samples=1000):
-        frame_copy = self.df[(self.df["fold"] == fold)]
+        if isinstance(fold, str):
+            frame_copy = self.df[self.df["fold"] == fold]
+        else:
+            frame_copy = self.df[self.df["fold"].isin(list(fold))]
         samples = []
         for i in range(num_samples):
             sample = frame_copy.sample(replace=True).copy()
@@ -77,7 +83,9 @@ class Simulator:
         return likelihood
 
     def get_predictor_accuracy(self, fold):
-        return self.df[self.df["fold"] == fold]["correct_prediction"].mean()
+        if isinstance(fold, str):
+            return self.df[self.df["fold"] == fold]["correct_prediction"].mean()
+        return self.df[self.df["fold"].isin(list(fold))]["correct_prediction"].mean()
 
 
 

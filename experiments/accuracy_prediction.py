@@ -1671,7 +1671,7 @@ def shift_type_loo_predictions(batch_size=1, pretrain=True, seq_length=-1):
         # ------------------------------------------------------------
         organic_targets = grp[
             (grp["category"] == "Organic")
-            & (~grp["fold"].isin(["train", "ind_val", "ind_test"]))
+            & (~grp["fold"].isin(["train", "ind_val"]))
         ].copy()
 
         for _, r in organic_targets.iterrows():
@@ -2029,7 +2029,7 @@ def shift_type_loo_predictions_subsampled(
         # ------------------------------------------------------------
         organic_targets = grp[
             (grp["category"] == "Organic")
-            & (~grp["fold"].isin(["train", "ind_val", "ind_test"]))
+            & (~grp["fold"].isin(["train", "ind_val"]))
         ].copy()
 
         for organic_fold, raw_test in organic_targets.groupby("fold"):

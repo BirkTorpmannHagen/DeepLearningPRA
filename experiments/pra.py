@@ -26,11 +26,16 @@ def simulate_dsd_accuracy_estimation(data, rate, val_set, test_fold, feature_nam
                                 estimator=ErrorAdjustmentEstimator)
     results = sim.sim(rate, 600)
     results = results.groupby(["Tree"]).mean().reset_index()
-    # results = results.mean()
     results["dsd"] = feature_name
     results["rate"] = rate
     results["test_set"] = test_fold
-    results["val_set"] = val_set
+    # When calibrated on multiple folds (leave-one-shift-type-out protocol),
+    # `val_set` is a list and cannot be broadcast into a column without care;
+    # store a stable string identifier and let the caller overwrite if needed.
+    if isinstance(val_set, str):
+        results["val_set"] = val_set
+    else:
+        results["val_set"] = ",".join(map(str, val_set))
     return results
 
 
@@ -266,7 +271,26 @@ def collect_tpr_tnr_sensitivity_data():
         df_final.to_csv(f"pra_data/{dataset}_sensitivity_results.csv")
 
 
+def _shift_type_of_fold(fold):
+    fold = str(fold)
+    if fold in ("train", "ind_val", "ind_test"):
+        return fold
+    if "_" in fold:
+        return fold.split("_")[0]
+    return "Organic"
+
+
 def collect_re_accuracy_estimation_data(pretrain=True):
+    """
+    Leave-one-synthetic-shift-type-out PRE calibration.
+
+    For each synthetic shift type S in a dataset, calibrate on every synthetic
+    fold whose shift type != S, then evaluate on (a) every fold in S and
+    (b) every organic OoD fold. Organic folds are never used for calibration.
+    This mirrors the protocol used by the regression-based "Ours" method, so
+    PRE no longer gets the unfair advantage of seeing organic folds during
+    calibration.
+    """
     bins = 11
 
     best = get_all_ood_detector_data(batch_size=1, filter_organic=False, filter_best=True, pretrain=pretrain)
@@ -286,23 +310,56 @@ def collect_re_accuracy_estimation_data(pretrain=True):
             continue
 
 
-        ood_folds = data[~data["fold"].isin(["ind_val", "ind_test", "train"])]["fold"].unique()
-        organic_ood_sets = data[(data["Organic"]==True)&(~data["fold"].isin(["ind_val", "ind_test", "train"]))]["fold"].unique()
+        all_folds = data["fold"].unique().tolist()
+        synthetic_folds = [
+            f for f in all_folds
+            if _shift_type_of_fold(f) in SYNTHETIC_SHIFTS
+        ]
+        organic_ood_folds = [
+            f for f in all_folds
+            if (f not in ("train", "ind_val", "ind_test"))
+            and (_shift_type_of_fold(f) not in SYNTHETIC_SHIFTS)
+        ]
+        synthetic_shift_types = sorted({_shift_type_of_fold(f) for f in synthetic_folds})
 
-        with tqdm(total=bins * len(ood_folds) * (len(organic_ood_sets) - 1)) as pbar:
-            for val_fold in organic_ood_sets:
-                for test_fold in ood_folds:
-                    print(f"{dataset}-{model}-val:{val_fold}-test:{test_fold}")
+        if len(synthetic_shift_types) < 2:
+            print(f"[PRE] {dataset}: <2 synthetic shift types available, skipping")
+            continue
+
+        with tqdm(total=bins * len(synthetic_shift_types)
+                       * (len(synthetic_folds) + len(organic_ood_folds))) as pbar:
+            for held_shift_type in synthetic_shift_types:
+                # Calibrate on every synthetic fold whose shift type is NOT the
+                # held-out one. Organic folds are never used for calibration —
+                # this matches the leave-one-synthetic-shift-type-out protocol
+                # used by the regression-based "Ours" method.
+                calibration_folds = [
+                    f for f in synthetic_folds
+                    if _shift_type_of_fold(f) != held_shift_type
+                ]
+                if not calibration_folds:
+                    continue
+
+                test_folds = [
+                    f for f in synthetic_folds
+                    if _shift_type_of_fold(f) == held_shift_type
+                ] + list(organic_ood_folds)
+
+                for test_fold in test_folds:
+                    print(f"{dataset}-{model}-heldout:{held_shift_type}-test:{test_fold}")
 
                     pool = Pool(bins)
-                    print("multiprocessing...")
                     results = pool.starmap(simulate_dsd_accuracy_estimation, [
-                        (data, rate, val_fold, test_fold, feature_name) for rate
+                        (data, rate, calibration_folds, test_fold, feature_name) for rate
                         in np.linspace(0, 1, bins)])
                     pool.close()
-                    # results = results.groupby(["tpr", "tnr", "rate", "test_set", "val_set", "Tree"]).mean().reset_index()
+
                     for result in results:
-                        result["Model"]= model
+                        result["Model"] = model
+                        result["heldout_shift_type"] = held_shift_type
+                        # Overwrite the list of calibration folds with the
+                        # single held-out type identifier for downstream joins.
+                        result["val_set"] = held_shift_type
                         dfs.append(result)
                         pbar.update(1)
         df_final = pd.concat(dfs)
