@@ -171,7 +171,7 @@ def test_generalization_gap_estimation(batch_size, pretrain=False):
     for ax in g.axes.flatten():
         ax.set_ylim(0.1, -1)
         ax.set_xlim(0, 1)
-    g.add_legend(title="Shift Type", bbox_to_anchor=(1.0, 0.5), loc="center left",
+    g.add_legend(title="Shift Type", bbox_to_anchor=(0.65, 0.25), loc="center left",
                  frameon=True, fontsize="x-small")
     plt.savefig("figures/da_vs_generalization.pdf", bbox_inches="tight")
     plt.show()
@@ -1532,8 +1532,6 @@ def shift_type_loo_predictions(batch_size=1, pretrain=True, seq_length=-1):
         for held_shift_type in synthetic_pool["shift_type"].unique():
             train = synthetic_pool[synthetic_pool["shift_type"] != held_shift_type]
             test = synthetic_pool[synthetic_pool["shift_type"] == held_shift_type]
-            print(test)
-            input()
             if len(train) < 2 or test.empty:
                 continue
 
