@@ -540,7 +540,7 @@ def intensity_breakdown_plot(rows):
         print("[intensity_breakdown_plot] no rows.")
         return df
 
-    df = df[df["Method"].isin(["Ours", "ATC-MC", "ATC-NE", "PRE"])].copy()
+    df = df[df["Method"].isin(["Ours", "ATC-MC", "ATC-NE", "PRE", "PRE-0"])].copy()
     def parse_intensity(fold):
         fold = str(fold)
         if "_" not in fold:
@@ -553,8 +553,8 @@ def intensity_breakdown_plot(rows):
     df["intensity"] = df["fold"].apply(parse_intensity)
 
     cb = sns.color_palette("colorblind")
-    palette = {"Ours": cb[2], "ATC-MC": cb[1], "ATC-NE": cb[3], "PRE": cb[0]}
-    method_order = [m for m in ["Ours", "ATC-MC", "ATC-NE", "PRE"] if m in df["Method"].unique()]
+    palette = {"Ours": cb[2], "ATC-MC": cb[1], "ATC-NE": cb[3], "PRE": cb[0], "PRE-0": cb[4]}
+    method_order = [m for m in ["Ours", "ATC-MC", "ATC-NE", "PRE", "PRE-0"] if m in df["Method"].unique()]
 
     synth = df[df["category"] == "Synthetic"].copy()
     organic = df[df["category"] == "Organic"].copy()
@@ -1447,7 +1447,7 @@ def predicted_vs_true_gap_grid(rows):
     calib["abs_error"] = calib["residual"].abs()
 
     method_order = [
-        m for m in ["Ours", "ATC-MC", "ATC-NE", "PRE"]
+        m for m in ["Ours", "ATC-MC", "ATC-NE", "PRE", "PRE-0"]
         if m in calib["Method"].unique()
     ]
 
@@ -1457,6 +1457,7 @@ def predicted_vs_true_gap_grid(rows):
         "ATC-MC": cb[1],
         "ATC-NE": cb[7],
         "PRE": cb[0],
+        "PRE-0": cb[4],
     }
 
     summary = (
@@ -1799,6 +1800,8 @@ def pre_predictions(pretrain=True):
 
     rows = []
 
+    has_zero_ood = "E[f(x)=y]_zero_ood" in pre.columns
+
     for _, r in pre.iterrows():
         fold = r["test_set"]
         shift_type = _parse_shift_type_from_fold(fold)
@@ -1806,18 +1809,36 @@ def pre_predictions(pretrain=True):
         if shift_type in ("FGSM", "adv", "ind", "train", "ind_val"):
             continue
 
+        observed_gap = float(r["Accuracy"]) - float(r["ind_acc"])
+        category = "Synthetic" if _is_synthetic_shift_type(shift_type) else "Organic"
+
         rows.append({
             "Dataset": r["Dataset"],
             "Model": r["Model"],
             "feature_name": r["dsd"],
             "fold": fold,
             "shift_type": shift_type,
-            "category": "Synthetic" if _is_synthetic_shift_type(shift_type) else "Organic",
-            "observed_gap": float(r["Accuracy"]) - float(r["ind_acc"]),
+            "category": category,
+            "observed_gap": observed_gap,
             "predicted_gap": float(r["E[f(x)=y]"]) - float(r["ind_acc"]),
             "MAE": abs(float(r["E[f(x)=y]"]) - float(r["Accuracy"])),
             "Method": "PRE",
         })
+
+        if has_zero_ood and pd.notna(r["E[f(x)=y]_zero_ood"]):
+            zero_pred = float(r["E[f(x)=y]_zero_ood"])
+            rows.append({
+                "Dataset": r["Dataset"],
+                "Model": r["Model"],
+                "feature_name": r["dsd"],
+                "fold": fold,
+                "shift_type": shift_type,
+                "category": category,
+                "observed_gap": observed_gap,
+                "predicted_gap": zero_pred - float(r["ind_acc"]),
+                "MAE": abs(zero_pred - float(r["Accuracy"])),
+                "Method": "PRE-0",
+            })
 
     return pd.DataFrame(rows)
 
@@ -1892,7 +1913,7 @@ def accuracy_prediction_table(batch_size=1, pretrain=True):
     )
 
     method_order = [
-        m for m in ["Ours", "ATC-MC", "ATC-NE", "PRE"]
+        m for m in ["Ours", "ATC-MC", "ATC-NE", "PRE", "PRE-0"]
         if m in pivot.columns
     ]
 
@@ -2178,7 +2199,7 @@ def method_statistical_tests(batch_size=1, pretrain=True, alpha=0.05):
     )
 
     method_order = [
-        m for m in ["Ours", "ATC-MC", "ATC-NE", "PRE"]
+        m for m in ["Ours", "ATC-MC", "ATC-NE", "PRE", "PRE-0"]
         if m in paired.columns
     ]
     paired = paired[method_order]

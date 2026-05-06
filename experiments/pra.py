@@ -292,6 +292,7 @@ def collect_re_accuracy_estimation_data(pretrain=True):
     calibration.
     """
     bins = 11
+    prefix = "data/pretrain" if pretrain else "data/nopretrain"
 
     best = get_all_ood_detector_data(batch_size=1, filter_organic=False, filter_best=True, pretrain=pretrain)
 
@@ -327,8 +328,8 @@ def collect_re_accuracy_estimation_data(pretrain=True):
             print(f"[PRE] {dataset}: <2 synthetic shift types available, skipping")
             continue
 
-        with tqdm(total=bins * len(synthetic_shift_types)
-                       * (len(synthetic_folds) + len(organic_ood_folds))) as pbar:
+        with tqdm(total=bins * (len(synthetic_folds)
+                                + len(synthetic_shift_types) * len(organic_ood_folds))) as pbar:
             for held_shift_type in synthetic_shift_types:
                 # Calibrate on every synthetic fold whose shift type is NOT the
                 # held-out one. Organic folds are never used for calibration —
@@ -365,9 +366,10 @@ def collect_re_accuracy_estimation_data(pretrain=True):
                         pbar.update(1)
         df_final = pd.concat(dfs)
         print(df_final.head(10))
-        if not os.path.exists(f"data/{model}/pra_data/"):
-            os.makedirs(f"data/{model}/pra_data/")
-        df_final.to_csv(f"data/{model}/pra_data/{dataset}_pre_results.csv")
+        out_dir = f"{prefix}/{model}/pra_data/"
+        if not os.path.exists(out_dir):
+            os.makedirs(out_dir)
+        df_final.to_csv(f"{out_dir}{dataset}_pre_results.csv")
 
 
 def plot_ba_rate_sensitivity():
