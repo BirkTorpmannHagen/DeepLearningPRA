@@ -295,7 +295,8 @@ def collect_re_accuracy_estimation_data(pretrain=True):
 
     best = get_all_ood_detector_data(batch_size=1, filter_organic=False, filter_best=True, pretrain=pretrain)
 
-    for dataset in best["Dataset"].unique():
+    for dataset in best["Dataset"].unique()[::-1]:
+
         assert best[best["Dataset"] == dataset]["Model"].unique().shape[0] == 1, "Multiple models found for dataset"
         model = best[best["Dataset"] == dataset]["Model"].unique()[0]
         dsd_accuracies = best[(best["Dataset"] == dataset)&(best["Model"]==model)]
