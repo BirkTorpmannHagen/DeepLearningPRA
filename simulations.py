@@ -55,6 +55,10 @@ class Simulator:
         ood_ndsd_acc = self.get_conditional_prediction_likelihood_estimates(self.ood_val_folds, False)
         ood_dsd_acc = self.get_conditional_prediction_likelihood_estimates(self.ood_val_folds, True)
 
+        # Stash these so the zero-OoD-accuracy ablation tree can reuse them
+        # without rerunning the calibration.
+        self.ind_ndsd_acc = ind_ndsd_acc
+        self.ind_dsd_acc = ind_dsd_acc
 
         self.detector_tree = DetectorEventTree(dsd_tpr, dsd_tnr, ind_ndsd_acc, ind_dsd_acc, ood_ndsd_acc, ood_dsd_acc,
                                                estimator=estimator)
@@ -153,9 +157,25 @@ class UniformBatchSimulator(Simulator):
             current_base_expected_accuracy = self.base_tree.calculate_expected_accuracy(self.base_tree.root)
             true_base_risk = self.base_tree.get_true_risk_for_sample(batch)
             accuracy = batch["correct_prediction"].mean()
-            # accuracy = self.ind_test_acc
+
+            # PRE-0 ablation: same calibration, but assume OoD samples are
+            # always wrong (ood_acc = 0). For both trees the leaves with
+            # `corresponds_to_correct_prediction` that sit under the OoD
+            # branch contribute zero, so E[f(x)=y] reduces to the InD branch:
+            #   - BaseTree:     (1 - r) * ind_acc
+            #   - DetectorTree: (1 - r) * [tnr * ind_ndsd_acc + (1-tnr) * ind_dsd_acc]
+            tnr = self.detector_tree.dsd_tnr
+            det_rate = self.detector_tree.rate
+            base_rate = self.base_tree.rate
+            current_expected_accuracy_zero_ood = (
+                (1 - det_rate)
+                * (tnr * self.ind_ndsd_acc + (1 - tnr) * self.ind_dsd_acc)
+            )
+            current_base_expected_accuracy_zero_ood = (1 - base_rate) * self.ind_val_acc
+
             data = pd.DataFrame( {"t":[index, index], "Tree": ["Detector Tree", "Base Tree"], "Risk Estimate": [current_risk, current_base_risk],
                                            "True Risk": [true_dsd_risk, true_base_risk], "E[f(x)=y]":[current_expected_accuracy, current_base_expected_accuracy],
+                                           "E[f(x)=y]_zero_ood": [current_expected_accuracy_zero_ood, current_base_expected_accuracy_zero_ood],
                                            "Accuracy": [accuracy, accuracy], "ood_pred": [ood_pred, ood_pred], "is_ood": [shifted, shifted],
                                            "Estimated Rate":[self.detector_tree.rate, self.base_tree.rate],
                  "ind_acc": [self.ind_val_acc, self.ind_val_acc], "ood_val_acc": [self.ood_val_acc, self.ood_val_acc], "ood_test_acc": [self.ood_test_acc, self.ood_test_acc],
